@@ -1,0 +1,113 @@
+---
+title: "Subscriptions with Swig"
+description: "\"Please like and most importantly, subscribe\" - Swig Content Influencers Everywhere"
+---
+
+# Building Subscription Services with SWIG
+
+SWIG's token limit feature provides a powerful way to implement subscription-based services on Solana. This guide demonstrates how to create a subscription service that charges users monthly using SWIG's token limit capabilities.
+
+You can find the complete example code in the [swig-ts/examples/subscriptions.ts](https://github.com/anagrambuild/swig-ts/tree/main/examples/transfer/subscription-svm.ts) file.
+<Tip>
+Examples with svm in the file name use LiteSVM for testing. Those without svm in the file name use a local validator. Which you can run with the `bun start-validator` command.</Tip>
+## Overview
+
+In this example, we'll create a subscription service that:
+- Charges users $10 USDC monthly
+- Uses SWIG's token limit feature to enforce the subscription amount and period
+- Demonstrates how the limit resets after the specified period
+
+## Key Concepts
+
+### Token Limits
+
+SWIG's token limit feature allows you to:
+- Set a maximum amount of tokens that can be transferred within a specified block period
+- Automatically reset the limit after the period expires
+- Track limits per token mint (supporting multiple tokens)
+
+### Block Period
+
+In this example, we use a block period of 216,000 blocks, which approximates one month given Solana's average block time of 400ms:
+```typescript
+// 400ms per block
+// 1 month ≈ 30 days * 24 hours * 60 minutes * 60 seconds * (1/0.4) blocks/second
+// ≈ 216,000 blocks
+```
+
+## Implementation
+
+The example demonstrates:
+1. Creating a SWIG wallet with root authority
+2. Setting up a subscription service authority with token limits
+3. Processing subscription paymentsI
+4. Handling period resets
+
+Here's a key snippet showing how to set up the subscription authority:
+
+```typescript
+let subscriptionActions = Actions.set()
+  .tokenLimit({
+    mint: usdcMint,
+    amount: BigInt(10_000_000), // $10 with 6 decimals
+    blocks: 216000, // ~1 month at 400ms per block
+  })
+  .get();
+
+let addSubscriptionAuthorityIx = await addAuthorityInstruction(
+  rootRole,
+  rootKeypair.publicKey,
+  createEd25519AuthorityInfo(subscriptionServiceKeypair.publicKey),
+  subscriptionActions,
+);
+```
+
+## Use Cases
+
+This pattern enables various subscription-based services:
+
+1. **SaaS Applications**
+   - Monthly software subscriptions
+   - Tiered service plans
+   - Usage-based billing
+
+2. **Content Platforms**
+   - Premium content access
+   - Streaming services
+   - Digital publication subscriptions
+
+3. **Gaming Services**
+   - Monthly game passes
+   - Premium features access
+   - In-game subscription benefits
+
+4. **DeFi Services**
+   - Trading fee subscriptions
+   - Premium analytics access
+   - Automated trading services
+
+## Complete Example
+
+For a complete working example that includes both client and server implementations, check out the [SWIG SDK Example Repository](https://github.com/anagrambuild/swig-rs-sdk-example). This repository demonstrates:
+
+- Frontend subscription management
+- Backend subscription processing
+- Error handling and edge cases
+- User management integration
+
+## Best Practices
+
+1. **Error Handling**
+   - Always verify transaction success
+   - Handle failed payments gracefully
+   - Implement retry mechanisms
+
+2. **User Experience**
+   - Notify users before renewal
+   - Provide clear subscription status
+   - Implement grace periods
+
+3. **Security**
+   - Secure key management
+   - Rate limiting
+   - Transaction monitoring

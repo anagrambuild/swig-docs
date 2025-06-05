@@ -1,0 +1,152 @@
+---
+title: 'Working with Sessions in Swig'
+description: '\"You can fit so many sessions in this bad boy\" - Toly slapping the hood of a gently used 2012 Swig (probably)'
+---
+
+This guide explains how to work with sessions in Swig, which allow you to create temporary authorities with limited permissions. Sessions are perfect for dApp integrations where you need to delegate authority for a specific duration.
+You can find all example code in the [swig-ts/examples/transfer](https://github.com/swig-wallet/swig/tree/main/swig-ts/examples/transfer) directory.
+
+<Tip>Examples with svm in the file name use LiteSVM for testing. Those without svm in the file name use a local validator. Which you can run with the `bun start-validator` command.</Tip>
+
+## Creating a Basic Session
+
+The simplest way to create a session is with Ed25519 keys. Here are the key parts:
+
+```typescript
+// Setup - Create root authority and session keypair
+const userRootKeypair = Keypair.generate();
+const dappSessionKeypair = Keypair.generate();
+
+// Create Swig with session support
+const rootActions = Actions.set().all().get();
+await createSwig(
+  connection,
+  id,
+  createEd25519SessionAuthorityInfo(userRootKeypair.publicKey, 100n),
+  rootActions,
+  userRootKeypair.publicKey,
+  [userRootKeypair],
+);
+
+// Create a session that lasts 50 slots
+const createSessionIx = await createSessionInstruction(
+  rootRole,
+  userRootKeypair.publicKey,
+  dappSessionKeypair.publicKey,
+  50n,
+);
+
+await sendTransaction(connection, createSessionIx, userRootKeypair);
+```
+
+## Using Session Authority
+
+Once a session is created, you can use it to sign transactions within its duration:
+
+```typescript
+// Find the role by session key
+const rootRole = swig.findRoleBySessionKey(dappSessionKeypair.publicKey);
+
+if (!rootRole || !rootRole.isSessionBased())
+  throw new Error('Role not found for authority');
+
+// Create and sign a transfer using session authority
+const transfer = SystemProgram.transfer({
+  fromPubkey: swigAddress,
+  toPubkey: dappTreasury,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
+
+const signTransfer = await signInstruction(
+  rootRole,
+  dappSessionKeypair.publicKey,
+  [transfer],
+);
+
+await sendTransaction(connection, signTransfer, dappSessionKeypair);
+```
+
+## Secp256k1 Sessions (EVM Compatible)
+
+For EVM compatibility, you can create sessions with Secp256k1 keys:
+
+```typescript
+// Setup with Ethereum wallet
+const userWallet = Wallet.generate();
+
+// Create Swig with Secp256k1 session support
+const createSwigInstruction = Swig.create({
+  authorityInfo: createSecp256k1SessionAuthorityInfo(
+    userWallet.getPublicKey(),
+    100n,
+  ),
+  id,
+  payer: userRootKeypair.publicKey,
+  actions: rootActions,
+});
+
+// Create a session
+const newSessionInstruction = await createSessionInstruction(
+  rootRole,
+  userRootKeypair.publicKey,
+  dappSessionKeypair.publicKey,
+  50n,
+  {
+    currentSlot,
+    signingFn: getSigningFnForSecp256k1PrivateKey(
+      userWallet.getPrivateKeyString(),
+    ),
+  },
+);
+```
+
+## Revoking Sessions
+
+You can revoke a session by creating a new session with an all-zero session key:
+
+```typescript
+// Create a zero key to revoke the session
+const zeroKey = new Uint8Array(32).fill(0);
+
+// Create revocation instruction
+const revokeSessionIx = await createSessionInstruction(
+  rootRole,
+  userRootKeypair.publicKey,
+  zeroKey,
+  1n, // Duration doesn't matter for revocation
+);
+
+await sendTransaction(connection, revokeSessionIx, userRootKeypair);
+```
+
+## Key Aspects of Sessions
+
+Sessions in Swig have several important characteristics:
+
+- **Temporary Authority**: Sessions expire after their specified duration
+- **Unique Keys**: Each session must use a unique key (can't reuse previous session keys)
+- **Root Override**: The root authority can always override or revoke session permissions
+- **Inheritance**: Sessions inherit permissions from their root role
+- **Multiple Sessions**: You can have multiple active sessions for the same root authority
+
+## Testing Environment Options
+
+These examples can be run in different environments:
+
+- **Local Validator**: Use `transfer-local-session.ts`
+  - Requires running a local Solana validator
+  - Real blockchain environment
+  - Good for final testing
+
+- **LiteSVM**: Use `transfer-svm-session.ts` or `transfer-svm-secp-session.ts`
+  - No validator required
+  - Instant transaction confirmation
+  - Perfect for rapid development
+  - Simulates the Solana runtime
+
+- **Devnet**: All examples work with devnet
+  - Change connection URL to `https://api.devnet.solana.com`
+  - Real network environment
+  - Free to use with airdropped SOL
+
+LiteSVM is recommended for initial development as it provides the fastest feedback loop. Move to local validator or devnet for more thorough testing.

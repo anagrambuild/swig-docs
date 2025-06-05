@@ -1,0 +1,35 @@
+---
+title: 'Sub Accounts in Swig'
+description: '\"Its sub accounts all the way down\" - Ancient Swig Proverb'
+---
+
+# Sub Accounts (Preview)
+
+<Note>
+Sub account support in the TypeScript SDK is currently under development. However, full support is available in the Rust SDK. This guide provides an overview of the feature and its core concepts.
+</Note>
+
+## What are Sub Accounts?
+
+Sub accounts in Swig allow an authority to create and manage a single sub account address and perform any actions on behalf of that sub account. This is a super high level of permission so use with care. It works for usecases like portfolio management, where you want to allow an unlimited complexity of actions on behalf of a single address, but you dont want to give the authority control over all the assets of the swig. The root authority can always pull funds SOL and tokens from the sub account back to the main Swig wallet. 
+A great example of this is Breeze, anagrams onchain yield optimizer. Allows breeze to optimize the yield of a users portfolio without giving them control over their whole swig. 
+
+## How Sub Accounts Work
+
+To work with sub accounts, there are two key requirements:
+
+1. **Sub Account Permission**: The authority must have the sub account permission to create the sub account. This permission is set when creating or modifying a role.
+
+2. **Sub Account Sign**: Once created, sub accounts can perform on-chain actions using the `sub_account_sign` instruction.
+
+
+You can find working examples in our [test suite](https://github.com/anagrambuild/swig-wallet/blob/main/program/tests/sub_account_test.rs#L33).
+
+## Coming Soon to TypeScript
+
+We're actively working on bringing full sub account support to our TypeScript SDK. The implementation will include:
+
+- Easy-to-use APIs for sub account creation and management
+- TypeScript-native permission management
+- Event handling for sub account activities
+- Comprehensive documentation and examples

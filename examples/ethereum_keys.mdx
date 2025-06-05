@@ -1,0 +1,147 @@
+---
+title: Using Ethereum Keys with Swig
+description: "\"Just use swig\" - Vitalik Buterin (probably one day)"
+---
+
+Swig supports using Ethereum-style secp256k1 keys for authorization, enabling you to use your Ethereum wallet to control assets on Solana. This guide explains how to integrate Ethereum wallets with Swig and showcases different implementation approaches.
+
+## Current Implementation
+
+Currently, Swig uses the compressed public key format for authentication (not the Ethereum address). A future update will introduce an `EvmAddress` authority type that uses the hashed form of the public key (the standard Ethereum address).
+
+## Integration Examples
+
+### Viem Integration (Recommended)
+
+The recommended approach for Ethereum wallet integration uses the Viem library. Here's a complete example showing different signing methods:
+
+```typescript
+import { Wallet } from '@ethereumjs/wallet';
+import { privateKeyToAccount } from 'viem/accounts';
+import { hexToBytes, keccak256 } from 'viem';
+import {
+  createSecp256k1AuthorityInfo,
+  signInstruction,
+  Swig,
+} from '@swig-wallet/classic';
+
+// Create an Ethereum wallet account
+const userWallet = Wallet.generate();
+const privateKeyAccount = privateKeyToAccount(userWallet.getPrivateKeyString());
+
+// Create Swig with secp256k1 authority
+const createSwigInstruction = Swig.create({
+  authorityInfo: createSecp256k1AuthorityInfo(privateKeyAccount.publicKey),
+  id,
+  payer: transactionPayer.publicKey,
+  actions: rootActions,
+});
+
+// Different signing methods available:
+
+// 1. Standard eth_sign
+const viemSign = async (message: Uint8Array) => {
+  const sig = await privateKeyAccount.sign({ hash: keccak256(message) });
+  return { signature: hexToBytes(sig) };
+};
+
+// 2. eth_sign with personal_sign prefix
+const viemSignWithPrefix = async (message: Uint8Array) => {
+  const prefix = getEvmPersonalSignPrefix(message.length);
+  const prefixedMessage = new Uint8Array(prefix.length + message.length);
+
+  prefixedMessage.set(prefix);
+  prefixedMessage.set(message, prefix.length);
+
+  const sig = await privateKeyAccount.sign({ 
+    hash: keccak256(prefixedMessage) 
+  });
+
+  return { signature: hexToBytes(sig), prefix };
+};
+
+// 3. personal_sign
+const viemSignMessage = async (message: Uint8Array) => {
+  const sig = await privateKeyAccount.signMessage({ 
+    message: { raw: message } 
+  });
+  
+  return {
+    signature: hexToBytes(sig),
+    prefix: getEvmPersonalSignPrefix(message.length),
+  };
+};
+
+// Sign a transaction using any of the signing methods
+const signedTransfer = await signInstruction(
+  rootRole,
+  transactionPayer.publicKey,
+  [transfer],
+  {
+    currentSlot: svm.getClock().slot,
+    signingFn: viemSign, // or viemSignWithPrefix, or viemSignMessage
+  },
+);
+```
+
+### Session-Based Authorization
+
+For enhanced security and better UX, you can use session-based authorization with secp256k1 keys:
+
+```typescript
+import {
+  createSecp256k1SessionAuthorityInfo,
+  createSessionInstruction,
+} from '@swig-wallet/classic';
+
+// Create a session-based Swig
+const createSwigInstruction = Swig.create({
+  authorityInfo: createSecp256k1SessionAuthorityInfo(
+    userWallet.getPublicKey(),
+    100n, // session duration in slots
+  ),
+  id,
+  payer: userRootKeypair.publicKey,
+  actions: rootActions,
+});
+
+// Create a new session
+const newSessionInstruction = await createSessionInstruction(
+  rootRole,
+  userRootKeypair.publicKey,
+  dappSessionKeypair.publicKey,
+  50n, // session duration
+  { currentSlot, signingFn }
+);
+```
+
+## Best Practices
+
+1. **Wallet Integration**
+   - Use the Viem example as your primary reference for Ethereum wallet integration
+   - Choose the appropriate signing method based on your wallet implementation
+   - Always verify the signing method (eth_sign vs personal_sign) matches your wallet's capabilities
+
+2. **Security Considerations**
+   - Use session-based authorities for dApp integrations to limit exposure
+   - Keep session durations appropriate for your use case
+   - Remember that while using Ethereum keys, you still need a Solana account for transaction fees
+
+3. **Implementation Tips**
+   - Use the provided helper functions like `createSecp256k1AuthorityInfo`
+   - Implement proper error handling for signing operations
+   - Consider implementing all three signing methods for maximum wallet compatibility
+
+## Future Developments
+
+The upcoming `EvmAddress` authority type will allow using the standard Ethereum address format (the hashed form of the public key) instead of the current compressed public key format. This will make integration even more straightforward and familiar to Ethereum developers.
+
+## Additional Resources
+
+For complete working examples, check out these files in the [swig-ts](https://github.com/anagrambuild/swig-ts) repository:
+- [`examples/transfer/transfer-svm-viem.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/transfer/transfer-svm-viem.ts) - Viem integration example
+- [`examples/transfer/transfer-svm-secp-session.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/transfer/transfer-svm-secp-session.ts) - Session-based authorization
+- [`examples/transfer/transfer-svm-secp.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/transfer/transfer-svm-secp.ts) - Basic secp256k1 usage
+- [`examples/transfer/transfer-local-secp.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/transfer/transfer-local-secp.ts) - Local testing example
+
+You can also explore the full examples directory in the [swig-ts repository](https://github.com/anagrambuild/swig-ts/tree/main/examples) for more implementation patterns and use cases.

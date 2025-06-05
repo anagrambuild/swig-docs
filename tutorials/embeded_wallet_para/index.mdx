@@ -1,0 +1,405 @@
+---
+title: "Build an Embedded Wallet with Swig and Para"
+description: "\"The best wallet is the one your users don't even know they're using\" - Web3 UX Manifesto"
+---
+
+Welcome to the Para Embedded Wallet tutorial! This guide will walk you through setting up a Swig account with Para's solution for embedded wallets. Para provides a modal that makes authentication simple and easy for both developers and users.
+
+## What You'll Learn
+
+In this tutorial, you'll learn how to:
+- Set up a Para developer account
+- Create a React + Vite project with Para integration
+- Implement Para's authentication modal
+- Create a Swig account using the Para-generated wallet
+
+## Live Demos
+
+- [Para Modal Example](https://para-modal-example-git-main-anagram.vercel.app/)
+- [In App Wallet Example](https://in-app-wallet-example.vercel.app/)
+
+
+## Time Commitment
+
+This tutorial is designed to be completed in approximately 45 minutes.
+
+## Prerequisites
+
+Before starting this tutorial:
+1. Set up a Para account on their [developer portal](https://developer.getpara.com)
+2. Generate an API Key
+3. Enable Solana as a supported network
+
+## Tutorial Sections
+
+1. Project Setup
+2. Para SDK Integration
+3. Creating the UI Components
+4. Implementing Swig Account Creation
+
+## 1. Project Setup
+
+First, let's create a new Vite project and install the necessary dependencies.
+
+### Create a Vite Project
+
+Follow the [Vite docs](https://vite.dev/guide) to create a new project.
+
+### Install Dependencies
+
+```bash
+yarn add @getpara/react-sdk @tanstack/react-query @getpara/solana-web3.js-v1-integration @solana/web3.js @swig-wallet/classic @swig-wallet/coder
+```
+
+### Set up Vite Polyfills
+
+Install the polyfills package:
+
+```bash
+yarn add vite-plugin-node-polyfills -D
+```
+
+Create or update your `vite.config.ts`:
+
+```typescript
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import { nodePolyfills } from "vite-plugin-node-polyfills";
+import path from "path";
+
+export default defineConfig({
+  plugins: [react(), nodePolyfills()],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+});
+```
+
+## 2. Para SDK Integration
+
+### Set up the Para Provider
+
+Create a file called `providers.tsx` in your `src` directory:
+
+```typescript
+import React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Environment, ParaProvider } from "@getpara/react-sdk";
+import "@getpara/react-sdk/styles.css";
+
+const queryClient = new QueryClient();
+
+interface ProvidersProps {
+  children: React.ReactNode;
+}
+
+export function Providers({ children }: ProvidersProps) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ParaProvider
+        paraClientConfig={{
+          apiKey: import.meta.env.VITE_PARA_API_KEY || "",
+          env: Environment.BETA,
+        }}
+      >
+        {children}
+      </ParaProvider>
+    </QueryClientProvider>
+  );
+}
+```
+
+### Add TypeScript Environment Types
+
+Create a file called `vite-env-d.ts` in your `src` directory:
+
+```typescript
+/// <reference types="vite/client" />
+```
+
+### Configure Environment Variables
+
+Create a `.env.local` file in your project root:
+
+```env
+VITE_PARA_API_KEY=<your_api_key>
+```
+
+> 🔒 Never commit your API key to version control!
+
+## 3. Creating the UI Components
+
+### Update App Component
+
+Modify your `App.tsx`:
+
+```typescript
+import React from "react";
+import { Providers } from "./providers";
+import { AppContent } from "./components/AppContent";
+
+const App = () => {
+  return (
+    <Providers>
+      <AppContent />
+    </Providers>
+  );
+};
+
+export default App;
+```
+
+### Create the Main Component
+
+Create `AppContent.tsx` in `src/components/`:
+
+```typescript
+import React, { useState, useEffect } from "react";
+import { useAccount, useWallet, useClient } from "@getpara/react-sdk";
+import { ParaSolanaWeb3Signer } from "@getpara/solana-web3.js-v1-integration";
+import { Connection, LAMPORTS_PER_SOL, PublicKey, Transaction } from "@solana/web3.js";
+import { Actions, Swig, findSwigPda, createEd25519AuthorityInfo } from "@swig-wallet/classic";
+import { LoginButton } from "./LoginButton";
+
+export const AppContent: React.FC = () => {
+  const { data: account } = useAccount();
+  const { data: wallet } = useWallet();
+  const [swigAddress, setSwigAddress] = useState<string | null>(null);
+  const [solBalance, setSolBalance] = useState<number | null>(null);
+  const [isCreatingSwig, setIsCreatingSwig] = useState(false);
+
+  const para = useClient();
+  const connection = new Connection("https://api.devnet.solana.com");
+
+  const createSwigAccount = async () => {
+    if (!wallet?.address || !para) return;
+    setIsCreatingSwig(true);
+
+    try {
+      // Generate random ID for the Swig account
+      const id = new Uint8Array(32);
+      crypto.getRandomValues(id);
+
+      const paraPubkey = new PublicKey(wallet.address);
+      const [swigPdaAddress] = findSwigPda(id);
+
+      // Create Para Solana signer
+      const signer = new ParaSolanaWeb3Signer(para, connection, wallet.id);
+
+      // Create root authority info
+      const rootAuthorityInfo = createEd25519AuthorityInfo(paraPubkey);
+
+      // Set up actions
+      const rootActions = Actions.set().all().get();
+
+      // Create the Swig creation instruction
+      const createSwigInstruction = Swig.create({
+        authorityInfo: rootAuthorityInfo,
+        id,
+        payer: paraPubkey,
+        actions: rootActions,
+      });
+
+      // Build transaction
+      const transaction = new Transaction();
+      transaction.add(createSwigInstruction);
+      transaction.feePayer = paraPubkey;
+
+      // Get recent blockhash
+      const { blockhash } = await connection.getLatestBlockhash();
+      transaction.recentBlockhash = blockhash;
+
+      // Sign transaction using Para's Solana signer
+      const signedTransaction = await signer.signTransaction(transaction);
+
+      // Send the signed transaction
+      const signature = await connection.sendRawTransaction(signedTransaction.serialize());
+
+      // Wait for confirmation
+      await connection.confirmTransaction({
+        signature,
+        blockhash,
+        lastValidBlockHeight: (await connection.getLatestBlockhash()).lastValidBlockHeight,
+      });
+
+      setSwigAddress(swigPdaAddress.toBase58());
+      setIsCreatingSwig(false);
+
+      console.log("Swig account created successfully!");
+      console.log("Swig address:", swigPdaAddress.toBase58());
+      console.log("Transaction signature:", signature);
+    } catch (error) {
+      console.error("Error in transaction signing:", error);
+      setIsCreatingSwig(false);
+    }
+  };
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (wallet?.address) {
+        try {
+          const balance = await connection.getBalance(new PublicKey(wallet.address));
+          setSolBalance(balance / LAMPORTS_PER_SOL);
+        } catch (e) {
+          setSolBalance(null);
+        }
+      }
+    };
+    fetchBalance();
+  }, [wallet?.address]);
+
+  return (
+    <div className="min-h-screen flex justify-center p-4">
+      <div className="max-w-md w-full space-y-6 p-8">
+        <div className="text-center">
+          <h2 className="text-3xl font-extrabold text-gray-900">Para Solana Web3.js Example</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Using Para's Solana Web3.js integration for transaction signing
+          </p>
+        </div>
+        {account?.isConnected && wallet && (
+          <div className="text-center mb-4">
+            <p className="text-green-700 font-medium">You are signed in!</p>
+            <p className="text-sm text-gray-700">
+              Wallet address:{" "}
+              <span className="font-mono break-all">
+                {para
+                  ? para.getDisplayAddress(wallet.id, { truncate: false, addressType: wallet.type })
+                  : wallet.id}
+              </span>
+            </p>
+            {solBalance !== null && (
+              <p className="text-sm text-gray-700">
+                Balance: <span className="font-mono">{solBalance} SOL</span>
+              </p>
+            )}
+            {swigAddress && (
+              <p className="text-sm text-gray-700">
+                Swig address: <span className="font-mono break-all">{swigAddress}</span>
+              </p>
+            )}
+          </div>
+        )}
+        <div className="flex justify-center">
+          <div className="w-full max-w-xs gap-4 flex flex-col">
+            {account?.isConnected && (
+              <button
+                onClick={createSwigAccount}
+                disabled={isCreatingSwig}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-400"
+              >
+                {isCreatingSwig ? "Creating Swig..." : "Create Swig"}
+              </button>
+            )}
+            <LoginButton />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+```
+
+### Create the Login Button Component
+
+Create `LoginButton.tsx` in `src/components/`:
+
+```typescript
+import React from "react";
+import { ParaModal, useModal, OAuthMethod, useAccount, useLogout } from "@getpara/react-sdk";
+
+export const LoginButton: React.FC = () => {
+  const { openModal } = useModal();
+  const { data: account } = useAccount();
+  const { logoutAsync } = useLogout();
+
+  const handleClick = () => {
+    if (account?.isConnected) {
+      logoutAsync();
+    } else {
+      openModal();
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={handleClick}
+        className={`w-full px-4 py-2 rounded-md ${
+          account?.isConnected
+            ? "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            : "bg-blue-600 text-white hover:bg-blue-700"
+        }`}
+      >
+        {account?.isConnected ? "Sign out" : "Sign in with Para"}
+      </button>
+
+      <ParaModal
+        appName="Para Modal Example"
+        logo="https://onswig.com/raccoon-logo.svg"
+        oAuthMethods={[OAuthMethod.GOOGLE, OAuthMethod.TWITTER, OAuthMethod.DISCORD]}
+      />
+    </>
+  );
+};
+```
+
+## 4. Understanding the Implementation
+
+### Para Modal Integration
+
+The Para modal handles:
+- User authentication via OAuth providers
+- Wallet creation and management
+- Secure key storage
+
+> 💡 Para abstracts away the complexity of wallet creation and management
+
+### Swig Account Creation
+
+The `createSwigAccount` function:
+1. Generates a unique ID for the Swig account
+2. Creates a Para Solana signer
+3. Sets up root authority with full permissions
+4. Builds and signs the transaction using Para's signer
+5. Sends the transaction to create the Swig account
+
+> 🔒 The Para-generated wallet becomes the root authority for the Swig account
+
+### Important Notes
+
+1. **Devnet SOL**: Before creating the Swig account, you need to send devnet SOL to the Para-generated wallet address.
+
+2. **Error Handling**: The implementation includes proper error handling and loading states.
+
+3. **Balance Display**: The UI shows the wallet's SOL balance and Swig address after creation.
+
+## Running the Application
+
+1. Start the development server:
+```bash
+yarn dev
+```
+
+2. Open your browser to the displayed URL (usually `http://localhost:5173`)
+
+3. Click "Sign in with Para" to authenticate
+
+4. After authentication, send some devnet SOL to your wallet address
+
+5. Click "Create Swig" to create your Swig account
+
+## Next Steps
+
+Now that you have a Swig account with Para integration, you can:
+- Implement additional Swig functionality (transfers, token management, etc.)
+- Customize the Para modal appearance
+- Add more OAuth providers
+- Implement additional security features
+
+For more information, check out:
+- [Para Documentation](https://docs.getpara.com)
+- [Swig SDK Documentation](/reference/typescript)
+- [Example Source Code](https://github.com/anagrambuild/swig-sdk-dapp-examples/tree/main/apps/para-modal-example)
