@@ -3,7 +3,7 @@
   "theme": "almond",
   "name": "Swig",
   "colors": {
-    "primary": "#8dff02",
+    "primary": "#000",
     "light": "#fff",
     "dark": "#000"
   },
