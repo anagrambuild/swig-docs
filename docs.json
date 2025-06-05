@@ -13,7 +13,8 @@
       {
         "tab": "Introduction",
         "pages": [
-          "index"
+          "index",
+          "deepdive"
         ]
       },
       {
@@ -39,38 +40,36 @@
       },
       {
         "tab": "How To",
-       "groups": [
-        {
-          "group": "Basics",
-          "pages": [
-            "examples/index", 
-            "examples/transfer",
-            "examples/swap"
-          ]
-        },
-        {
-          "group": "Payments",
-          "pages": [
-            "examples/subscription",
-            "examples/credit_card"
-          ]
-        },
-       
-        {
-          "group": "Ethereum Onboarding",
-          "pages": [
-            "examples/ethereum_keys"
-          ]
-        },
-        {
-          "group": "Advanced",
-          "pages": [
-            "examples/sessions",
-            "examples/sub_accounts"
-
-          ]
-        }
-       ]
+        "groups": [
+          {
+            "group": "Basics",
+            "pages": [
+              "examples/index",
+              "examples/transfer",
+              "examples/swap"
+            ]
+          },
+          {
+            "group": "Payments",
+            "pages": [
+              "examples/subscription",
+              "examples/credit_card"
+            ]
+          },
+          {
+            "group": "Ethereum Onboarding",
+            "pages": [
+              "examples/ethereum_keys"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "examples/sessions",
+              "examples/sub_accounts"
+            ]
+          }
+        ]
       },
       {
         "tab": "Reference",
