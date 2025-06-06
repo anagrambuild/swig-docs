@@ -1,0 +1,70 @@
+---
+title: "Deep Dive"
+description: "\"I swig therefor I am\" - Rene Descartes using Swig"
+---
+
+# Deep Dive
+
+Let's dive into how Swig works under the hood! I'm excited to share some of the cool technical innovations we've built to make Swig blazing fast while maintaining rock-solid security.
+
+## The Need for Speed 🏃‍♂️
+
+When we started building Swig, we knew that smart wallets needed to be FAST. Like, really fast. Nobody wants to wait around for their transactions, especially in DeFi where every millisecond counts. This led us down a fascinating path of optimization at every level of the stack.
+
+## Zero-Copy Architecture
+
+One of our proudest achievements is Swig's zero-copy architecture. Instead of constantly allocating and copying data around (which is slow and expensive), we've built Swig to work directly with data in place whenever possible. We use Rust's powerful zero-copy parsing capabilities through libraries like Pinnochio to handle instruction data and account parsing with minimal overhead.
+
+This means when you send a transaction through Swig, we're not wasting time shuffling data around - we're getting straight to the important stuff like signature verification and permission checks.
+
+## Smart Account Classification
+
+A key innovation in Swig is our account classification system. When a transaction comes in, we need to know exactly what we're dealing with - is this a Swig account? A token account? Something else entirely? 
+
+We've built a lightning-fast classification engine that can identify account types and validate their structure in a single pass. This isn't just about speed - it's also a critical security feature that ensures we're always working with exactly the account types we expect.
+
+The classification system uses a combination of:
+- Account ownership checks
+- Data structure validation
+- PDA derivation verification
+
+All of this happens automatically at the program entry point, so by the time we get to instruction processing, we know exactly what we're working with.
+
+## Extensible Authority System
+
+While speed is crucial, flexibility is just as important. That's why we built Swig with an extensible authority system that can grow with the ecosystem. Right now, we support Ed25519 and Secp256k1 signatures, but that's just the beginning.
+
+We've designed the system so we can continuously add new authority types without breaking existing functionality. Some exciting things we're working on include:
+
+- Program-based authorities (letting other Solana programs act as authorities)
+- Groth16 zero-knowledge proof authorities (for privacy-preserving operations)
+- Simplified EVM-compatible authority systems (making it easier to bridge from Ethereum)
+
+## Permission System That Makes Sense
+
+Security doesn't have to be complicated. We've built a permission system that's both powerful and intuitive. Whether you need to:
+- Manage specific tokens
+- Set spending limits
+- Control program access
+- Set time-based restrictions
+
+It all just works, and more importantly, it's easy to understand and audit.
+
+## Looking Forward 🔭
+
+We're not stopping here! Some exciting things in the pipeline:
+
+### Paymaster Network
+We're working on a decentralized paymaster network that will make gas-less transactions accessible to everyone. This is a game-changer for user experience, especially for newcomers to Solana.
+
+### More Authority Types
+The crypto ecosystem is constantly evolving, and so is Swig. We're actively working on supporting more signature schemes and authority types to make Swig the most versatile smart wallet platform out there.
+
+### Enhanced Performance
+While we're already blazing fast, we're constantly finding new ways to optimize. Our team is obsessed with performance, and we're always looking for ways to squeeze out every last bit of efficiency.
+
+## Wrapping Up
+
+Swig is more than just a smart wallet - it's a platform built for the future of decentralized finance. By combining cutting-edge performance optimizations with a flexible, extensible architecture, we're creating something that can grow and evolve with the ecosystem.
+
+Stay tuned for more updates, and feel free to dive into our docs to learn more about specific features and implementations. We're just getting started! 🚀
