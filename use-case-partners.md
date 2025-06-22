@@ -1,3 +1,7 @@
+---
+title: "Use Cases: Partners"
+---
+
 # **Use Cases: Partners**
 
 Swig’s smart wallet tooling helps embedded wallets, wallets, SVM L2s, and other partners better service their ecosystem of developers, which in turn helps them build better use cases for their users.

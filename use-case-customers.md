@@ -1,3 +1,7 @@
+---
+title: "Use Cases: Customers"
+---
+
 # **Use Cases: Customers**
 
 Swig is built for developers. Our smart wallet tooling is allowing developers to quickly unlock both fundamental and advanced functionality for their end-users. We’re early, but we’re already powering a diverse set of use cases across payments, dApps, AI, cross-chain, and many more.
