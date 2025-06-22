@@ -116,6 +116,11 @@
           "anchor": "Typescript Sdk",
           "href": "https://github.com/anagrambuild/swig-ts",
           "icon": "github"
+        },
+        {
+          "anchor": "Telegram Group",
+          "href": "https://t.me/onswig",
+          "icon": "telegram"
         }
       ]
     }
