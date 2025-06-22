@@ -14,7 +14,9 @@
         "tab": "Introduction",
         "pages": [
           "index",
-          "deepdive"
+          "deepdive",
+          "use-case-partners",
+          "use-case-customers"
         ]
       },
       {
