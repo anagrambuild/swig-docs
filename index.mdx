@@ -1,41 +1,53 @@
 ---
-title: "Swig: The Smart Wallet Infrastructure for Solana"
-description: "Swig is a powerful account abstraction toolkit that enables developers to create advanced, programmable Solana smart wallets with features like delegated access controls, fine-grained permissions, social recovery, and cross-chain compatibility."
+title: "Swig: Smart Wallet Tooling for Solana"
 ---
 
-<Note>
-  SWIG is on mainnet and devnet but should be considered AT YOUR OWN RISK RIGHT NOW.\
-  Our first audit is in progress and we are busy hardening the program to bring you Solana Wallet Interface Greatness.
-</Note>
+## **What is Swig?**
 
+Swig is an account abstraction toolkit that empowers developers to create sophisticated, programmable smart wallets on Solana. It’s powerful, open-sourced, and fast to build on - most use cases can be built on Swig in \<30 minutes.
 
-# Introduction to Swig
+Smart wallet functionality has been popular on EVM chains, but less developed on Solana. Swig changes that. Developers can now build smarter on Solana with Swig. See how below.
 
-Swig is revolutionizing the way developers build and users interact with wallets on Solana. As a comprehensive smart wallet framework, Swig enables powerful features that were previously difficult or impossible to implement on Solana.
+### **Current Market Problems**
 
-## What is Swig?
+Developments in Web3 have brought many benefits, but simultaneously some table stakes Web2 functions have been lost along the way. Traditional crypto wallets are part of this problem:
 
-Swig is an account abstraction toolkit that empowers developers to create sophisticated, programmable Solana smart wallets. Built inside a Solana program, a Swig wallet is an on-chain account that can perform all standard wallet functions while adding powerful programmable features:
+- **Poor UX:** Traditional wallets force users to either give up full control or do everything manually themselves. You could be the best dev, but your app’s experience would inherently be downgraded as a result.
+- **Payments:** While crypto solves many payments challenges, the automated and configurable transaction tooling critical for most payments use cases is still limited.
+- **General Abstraction:** Developers need to rely on users who are blockchain experts to gain traction on their apps due to limited abstraction tooling in the market.
+- **Onboarding:** Seed phrases, onramps, and gas all make onboarding to a new app complicated. Devs are losing the battle before it even starts.
 
-- **Non-Custodial Smart Wallets**: Create embedded wallets with no intermediaries, allowing developers to request permissions without managing keys
-- **Granular Permissions**: Delegate specific transaction permissions rather than full wallet control
-- **Session Keys**: Enable temporary, permissioned access for applications without constant manual approvals
-- **Automated Transactions**: Power subscription payments, payment streaming, and conditional transactions
-- **Social Recovery**: Manage wallets using social accounts like Google, X, or Facebook through zero-knowledge proofs
-- **Chain Abstraction**: Operate seamlessly across multiple SVM chains
-- **Paymaster Integration**: Cover gas fees for users through a central account
+Smart wallets solve these problems, but while smart wallets have seen widespread adoption on Ethereum, Solana has remained underserved - until now.
 
-## Why Swig Matters
+### **How Swig Solves These Problems**
 
-Smart wallets have become essential infrastructure for modern blockchain applications, offering features like automated transactions, multi-signature support, and delegated spending limits. While smart wallets have seen wide adoption on Ethereum, Solana has remained underserved - until now.
+A Swig wallet is an on-chain account built inside a Solana program that can perform all standard wallet functions while adding powerful programmable features:
 
-Swig addresses this gap by providing:
+| Swig Features                                                                                                                       | Pre-Swig Paradigm                                                                                                                                     | Post-Swig Paradigm                                                                                                                                         |
+| :---------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **🗝️ Non-Custodial Smart Wallets** <br /> _Devs can create Web2 UX without sacrificing on Web3 self-custody standards_             | **Custody vs. UX Tradeoff** <br />❌ Devs choose between: Self-custody, but complex UX <br />Or<br />❌ Custodial services, but security risks          | **Web2 UX \+ Web3 Self-Custody Control** <br />✅ Create embedded wallets with no intermediaries <br />✅ Apps can request permissions without managing keys |
+| **⏳ Session-Based Authorization** <br /> _Enable temporary, permissioned app access without constant manual approvals_              | **Manual Approval Friction** <br />❌ Users manually approve every transaction <br />❌ Apps lose traction due to “approve fatigue”                     | **Seamless Session Mgmt**<br />✅ Users approve once per session period <br />✅ Configurable time limited permissions                                       |
+| **🔓 Granular Permissions** <br /> _Delegate specific transaction permissions rather than full wallet control_                      | **All-or-Nothing Access** <br />❌ Wallets require full signing authority                                                                              | **Fine-Grained Controls** <br />✅ Role-based permissions <br />✅ Transaction-type permissions                                                              |
+| **🔄 Automated Transactions** <br /> _Power subscription payments, payment streaming, and conditional transactions_                 | **Manual Payments**<br />❌ Payments are not programmable <br />❌ Advanced payment logic done off-chain                                                | **Programmable Payments**<br />✅ Subscription billing <br />✅ Payment streaming <br />✅ Automated rebalancing <br />✅ Dollar-cost averaging                |
+| **🌐 Social Recovery & Authentication** <br /> _Manage wallets using social accounts like Google, X, or Facebook through ZK proofs_ | **Seed Phrase Vulnerability & Onboarding Frictions** <br />❌ Complicated user onboarding <br />❌ No key recovery options                              | **Familiar Recovery & Onboarding Methods** <br />✅ Seamless Web2 user onboarding <br />✅ Multi-guardian recovery with trusted contacts                     |
+| **⛓️ Chain Abstraction** <br /> _Operate seamlessly across multiple chains_                                                         | **Single Chain Limitations** <br />❌ Separate wallets needed for different chains                                                                     | **Unified Multi-Chain Experience**<br />✅ 1 wallet operates across all SVM chains <br />✅ Sign SVM transactions with EVM Keys                              |
+| **⛽ Paymaster Integration** <br /> _Cover gas fees for users through a central account_                                             | **Gas Fee Barriers** <br />❌ Users must hold native SOL tokens for every trx <br />❌ High-friction onboarding <br />❌ App experiences can’t be “free” | **No Gas, No Problem** <br />✅ Apps cover gas for users <br />✅ Users can pay gas with other tokens <br />✅ “Freemium” app experiences possible            |
 
-1. **Payment Infrastructure**: As Solana emerges as a leader in payments, Swig enables powerful non-custodial payment solutions for both consumers and businesses
-2. **Enhanced User Experience**: Smart wallet capabilities dramatically improve UX, critical for Solana's consumer applications
-3. **Performance at Scale**: Swig's optimized design maintains Solana's high speed and low fees, even with advanced wallet features
+---
 
-## How Swig Works
+## **Why Swig Makes Solana More Powerful**
+
+Solana combined with Swig is a game changer for developers.
+
+|                             | Solana                                                                                                                                                                                                                                                               | Solana \+ Swig                                                                                                                                               |
+| :-------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Payments Infrastructure** | Solana is emerging as a leader in payments due in large part to its fast transaction settlement speed                                                                                                                                                                | Swig expands on this by allowing developers to **abstract complexity** and create **powerful non-custodial payments solutions** for consumers and businesses |
+| **Consumer Adoption**       | Solana is the hub for consumer apps                                                                                                                                                                                                                                  | Swig **dramatically improves UX** for Solana app developers by enhancing key management systems to enable **simple and secure product flows**                |
+| **Performance at Scale**    | Solana’s fast transaction speeds and low fees make it particularly attractive for high-velocity trading and payment use cases But, legacy wallet experiences limit this performance advantage with constant manual approvals and limited transaction programmability | Swig’s optimized design **maintains Solana’s high speed and low fees**, even with advanced wallet features                                                   |
+
+---
+
+## **How Swig Works**
 
 The Swig protocol operates through a role-based system that enables seamless interaction with various services and platforms on Solana. Each role has:
 
@@ -43,8 +55,4 @@ The Swig protocol operates through a role-based system that enables seamless int
 - A set of configurable permissions that control what actions can be taken
 - Optional session-based authentication for enhanced security
 
-This flexible architecture allows developers to create custom wallet solutions while maintaining security and user control. Whether you're building DeFi applications, NFT marketplaces, or next-generation consumer wallets, Swig provides the infrastructure needed to create powerful, user-friendly experiences.
-
-# SECURITY
-
-Swig is currently under Audit with accreetion. More audits to follow.
+This flexible architecture allows developers to create custom wallet solutions while maintaining security and user control. Whether you’re building DeFi apps, payment solutions, or next-generation consumer wallets, Swig provides the infrastructure needed to create powerful, user-friendly experiences.
