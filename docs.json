@@ -11,18 +11,18 @@
   "navigation": {
     "tabs": [
       {
-        "tab": "Introduction",
-        "pages": [
-          "index",
-          "deepdive",
-          "use-case-partners",
-          "use-case-customers",
-          "mcp-support"
-        ]
-      },
-      {
-        "tab": "Tutorials",
+        "tab": "Swig Documentation",
         "groups": [
+          {
+            "group": "Introduction",
+            "pages": [
+              "index",
+              "deepdive",
+              "use-case-partners",
+              "use-case-customers",
+              "mcp-support"
+            ]
+          },
           {
             "group": "Typescript Quickstart",
             "pages": [
@@ -38,12 +38,7 @@
             "pages": [
               "tutorials/embeded_wallet_para/index"
             ]
-          }
-        ]
-      },
-      {
-        "tab": "How To",
-        "groups": [
+          },
           {
             "group": "Basics",
             "pages": [
@@ -71,26 +66,21 @@
               "examples/sessions",
               "examples/sub_accounts"
             ]
-          }
-        ]
-      },
-      {
-        "tab": "Reference",
-        "groups": [
+          },
           {
-            "group": "General",
+            "group": "General Reference",
             "pages": [
               "reference/index"
             ]
           },
           {
-            "group": "TypeScript",
+            "group": "TypeScript Reference",
             "pages": [
               "reference/typescript/index"
             ]
           },
           {
-            "group": "Rust",
+            "group": "Rust Reference",
             "pages": [
               "reference/rust/index",
               "reference/rust/instruction_builder",
