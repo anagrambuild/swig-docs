@@ -1,144 +1,144 @@
 {
-    "$schema": "https://mintlify.com/docs.json",
-    "theme": "almond",
-    "name": "Swig",
-    "colors": {
-        "primary": "#000",
-        "light": "#fff",
-        "dark": "#000"
-    },
-    "favicon": "/favicon.png",
-    "navigation": {
-        "tabs": [
-            {
-                "tab": "Introduction",
-                "pages": [
-                    "index",
-                    "deepdive",
-                    "use-case-partners",
-                    "use-case-customers",
-                    "mcp-support"
-                ]
-            },
-            {
-                "tab": "Tutorials",
-                "groups": [
-                    {
-                        "group": "Typescript Quickstart",
-                        "pages": [
-                            "tutorials/typescript/index",
-                            "tutorials/typescript/env",
-                            "tutorials/typescript/create",
-                            "tutorials/typescript/managing_authorities",
-                            "tutorials/typescript/sign"
-                        ]
-                    },
-                    {
-                        "group": "Embedded Wallets",
-                        "pages": [
-                            "tutorials/embeded_wallet_para/index"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tab": "How To",
-                "groups": [
-                    {
-                        "group": "Basics",
-                        "pages": [
-                            "examples/index",
-                            "examples/classic/transfer",
-                            "examples/swap"
-                        ]
-                    },
-                    {
-                        "group": "Payments",
-                        "pages": [
-                            "examples/subscription",
-                            "examples/credit_card"
-                        ]
-                    },
-                    {
-                        "group": "Ethereum Onboarding",
-                        "pages": [
-                            "examples/ethereum_keys"
-                        ]
-                    },
-                    {
-                        "group": "Advanced",
-                        "pages": [
-                            "examples/sessions",
-                            "examples/sub_accounts"
-                        ]
-                    }
-                ]
-            },
-            {
-                "tab": "Reference",
-                "groups": [
-                    {
-                        "group": "General",
-                        "pages": [
-                            "reference/index"
-                        ]
-                    },
-                    {
-                        "group": "TypeScript",
-                        "pages": [
-                            "reference/typescript/index"
-                        ]
-                    },
-                    {
-                        "group": "Rust",
-                        "pages": [
-                            "reference/rust/index",
-                            "reference/rust/instruction_builder",
-                            "reference/rust/rust_wallet"
-                        ]
-                    }
-                ]
-            }
-        ],
-        "global": {
-            "anchors": [
-                {
-                    "anchor": "Awesome Swig",
-                    "href": "https://github.com/anagrambuild/awesome-swig",
-                    "icon": "globe"
-                },
-                {
-                    "anchor": "Protocol/ Rust SDK",
-                    "href": "https://github.com/anagrambuild/swig-wallet",
-                    "icon": "github"
-                },
-                {
-                    "anchor": "Typescript Sdk",
-                    "href": "https://github.com/anagrambuild/swig-ts",
-                    "icon": "github"
-                },
-                {
-                    "anchor": "Telegram Group",
-                    "href": "https://t.me/onswig",
-                    "icon": "telegram"
-                }
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "almond",
+  "name": "Swig",
+  "colors": {
+    "primary": "#000",
+    "light": "#fff",
+    "dark": "#000"
+  },
+  "favicon": "/favicon.png",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Introduction",
+        "pages": [
+          "index",
+          "deepdive",
+          "use-case-partners",
+          "use-case-customers",
+          "mcp-support"
+        ]
+      },
+      {
+        "tab": "Tutorials",
+        "groups": [
+          {
+            "group": "Typescript Quickstart",
+            "pages": [
+              "tutorials/typescript/index",
+              "tutorials/typescript/env",
+              "tutorials/typescript/create",
+              "tutorials/typescript/managing_authorities",
+              "tutorials/typescript/sign"
             ]
+          },
+          {
+            "group": "Embedded Wallets",
+            "pages": [
+              "tutorials/embeded_wallet_para/index"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "How To",
+        "groups": [
+          {
+            "group": "Basics",
+            "pages": [
+              "examples/index",
+              "examples/classic/transfer",
+              "examples/swap"
+            ]
+          },
+          {
+            "group": "Payments",
+            "pages": [
+              "examples/subscription",
+              "examples/credit_card"
+            ]
+          },
+          {
+            "group": "Ethereum Onboarding",
+            "pages": [
+              "examples/ethereum_keys"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "examples/sessions",
+              "examples/sub_accounts"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "General",
+            "pages": [
+              "reference/index"
+            ]
+          },
+          {
+            "group": "TypeScript",
+            "pages": [
+              "reference/typescript/index"
+            ]
+          },
+          {
+            "group": "Rust",
+            "pages": [
+              "reference/rust/index",
+              "reference/rust/instruction_builder",
+              "reference/rust/rust_wallet"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "Awesome Swig",
+          "href": "https://github.com/anagrambuild/awesome-swig",
+          "icon": "globe"
+        },
+        {
+          "anchor": "Protocol/ Rust SDK",
+          "href": "https://github.com/anagrambuild/swig-wallet",
+          "icon": "github"
+        },
+        {
+          "anchor": "Typescript Sdk",
+          "href": "https://github.com/anagrambuild/swig-ts",
+          "icon": "github"
+        },
+        {
+          "anchor": "Telegram Group",
+          "href": "https://t.me/onswig",
+          "icon": "telegram"
         }
-    },
-    "logo": {
-        "light": "/swiglogodark.png",
-        "dark": "/swiglogolight.png"
-    },
-    "navbar": {
-        "links": [],
-        "primary": {
-            "type": "github",
-            "href": "https://github.com/anagrambuild/swig-wallet"
-        }
-    },
-    "footer": {
-        "socials": {
-            "github": "https://github.com/anagrambuild/swig-wallet"
-        }
+      ]
     }
+  },
+  "logo": {
+    "light": "/swiglogodark.png",
+    "dark": "/swiglogolight.png"
+  },
+  "navbar": {
+    "links": [],
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/anagrambuild/swig-wallet"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/anagrambuild/swig-wallet"
+    }
+  }
 }
