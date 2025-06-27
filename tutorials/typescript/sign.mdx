@@ -5,14 +5,16 @@ description: "\"I came. I saw. I signed it with Swig.\" - Julius Caesar, probabl
 
 Now that we have our Swig account set up with proper authorities from the previous tutorials, let's explore how to sign transactions. If you haven't completed the previous tutorials, please go back and complete them first as we'll be building on those concepts.
 
-Create a new file called `tutorial-3.ts` in your `examples/classic/transfer/tutorial` directory:
+Create a new file called `tutorial-3.ts` in your `examples/classic/transfer/tutorial` directory for the `classic` version or `examples/kit/transfer/tutorial` for `kit`:
 
 ```bash
-touch tutorial-3.ts
+touch tutorial/tutorial-3.ts
 ```
 
 ## Example
 
+<Tabs>
+  <Tab title="Classic">
 ```typescript
 import {
   Keypair,
@@ -261,22 +263,47 @@ async function displayTokenBalance(
   console.log(chalk.cyan(`https://explorer.solana.com/address/${swigAddress}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899`));
 })();
 ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 Let's break down how signing works with Swig.
 
 ## 1. Fetch the Swig Account
 
+<Tabs>
+  <Tab title="Classic">
 ```typescript
 const swig = await fetchSwig(connection, swigAddress);
 ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 First, we need to fetch the current state of our Swig account. This contains all the roles and their permissions that we set up in the previous tutorials.
 
 ## 2. Find the Appropriate Role
 
+<Tabs>
+  <Tab title="Classic">
 ```typescript
 const tokenRole = swig.findRolesByEd25519SignerPk(tokenAuthority.publicKey)[0];
 ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 We locate the role associated with our token authority. Remember from the previous tutorial that this role was created with specific token transfer limits.
 
@@ -284,6 +311,8 @@ We locate the role associated with our token authority. Remember from the previo
 
 ## 3. Create the Instruction
 
+<Tabs>
+  <Tab title="Classic">
 ```typescript
 const transferIx = createTransferInstruction(
   swigTokenAccount,
@@ -292,11 +321,20 @@ const transferIx = createTransferInstruction(
   BigInt(10)
 );
 ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 Create the instruction that needs to be signed. In this case, it's a token transfer instruction, but Swig can sign any type of instruction as long as the role has the appropriate permissions.
 
 ## 4. Sign the Instruction
 
+<Tabs>
+  <Tab title="Classic">
 ```typescript
 const signedTransfer = await signInstruction(
   tokenRole,
@@ -304,6 +342,13 @@ const signedTransfer = await signInstruction(
   [transferIx]
 );
 ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 This is where the magic happens. The `signInstruction` function:
 1. Verifies that the role has permission to sign this type of instruction
@@ -314,10 +359,19 @@ This is where the magic happens. The `signInstruction` function:
 
 ## 5. Build and Send the Transaction
 
-```typescript
-const transaction = new Transaction().add(signedTransfer);
-await sendAndConfirmTransaction(connection, transaction, [tokenAuthority]);
-```
+<Tabs>
+  <Tab title="Classic">
+  ```typescript
+  const transaction = new Transaction().add(signedTransfer);
+  await sendAndConfirmTransaction(connection, transaction, [tokenAuthority]);
+  ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 Finally, we build the transaction with our signed instruction and send it to the network. Note that the transaction still needs to be signed by the authority's keypair because they're the one paying for the transaction fees.
 
@@ -341,7 +395,7 @@ Make sure you have:
 Then run:
 
 ```bash
-bun run ./tutorial-3.ts
+bun run ./tutorial/tutorial-3.ts
 ```
 
 The link at the end of the tutorial will take you to the swig on the Solana Explorer. You will see multiple transactions and there should be one failed which shows the negative case.

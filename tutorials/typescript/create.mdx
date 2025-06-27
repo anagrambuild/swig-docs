@@ -5,16 +5,18 @@ description: "\"A journey of a thousand steps starts with one Swig.\" - Somebody
 
 Before we begin our quest lets make sure you have the basics ready so lets set up a basic project, if you have already done this, feel free to move on. If you have not finished step 0 in this tutorial please go back and run through that as we refer back and depend on this step.
 
-Now that you have your environment all setup and ready to role, make a new file called `tutorial.ts`, make sure you are in the `examples/classic/transfer` folder. Don't forget to start your validator with `bun start-validator`
+Now that you have your environment all setup and ready to role, make a new file called `tutorial.ts`, make sure you are in the `examples/classic/transfer` folder for the `classic` version and `examples/kit/transfer` folder for `kit`. Don't forget to start your validator with `bun start-validator`
 
-```bash
-mkdir tutorial && touch tutorial-1.ts
-```
+  ```bash 
+  mkdir tutorial && touch tutorial-1.ts 
+  ```
 
-Open that file up in your favorite editor, or AI overlord super virtual reality googles. Lets make a function called `createSwigAccount`
+Open that file up in your favorite editor, or AI overlord super virtual reality goggles. Lets make a function called `createSwigAccount`
 
 ## Example
 
+<Tabs>
+  <Tab title="Classic">
 ```typescript
 import {
   Keypair,
@@ -78,30 +80,56 @@ async function createSwigAccount(
   }, 2000);
 })();
 ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 Lets save this and get ready to run it, but before we do lets break it down step by step.
 
 ## 1. Import Required SDKs
 
-```typescript
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { 
-  Actions, 
-  createSwig, 
-  Ed25519Authority, 
-  findSwigPda 
-} from "@swig-wallet/classic";
-```
+<Tabs>
+  <Tab title="Classic">
+    ```typescript
+    import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+    import { 
+      Actions, 
+      createSwig, 
+      Ed25519Authority, 
+      findSwigPda 
+    } from "@swig-wallet/classic";
+    ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 Imports Solana primitives and essential utilities from the Swig SDK.
 
 ## 2. Generate a Unique Swig ID
 
-```typescript
-//in the create swig function
-const id = new Uint8Array(32);
-crypto.getRandomValues(id);
-```
+<Tabs>
+  <Tab title="Classic">
+    ```typescript
+    //in the create swig function
+    const id = new Uint8Array(32);
+    crypto.getRandomValues(id);
+    ```
+
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 Generates a secure 32-byte ID that uniquely identifies this Swig wallet instance. This ID is used to derive the PDA (Program Derived Address).
 
@@ -109,9 +137,18 @@ Generates a secure 32-byte ID that uniquely identifies this Swig wallet instance
 
 ## 3. Derive the Swig PDA
 
-```typescript
-const [swigAddress] = findSwigPda(id);
-```
+<Tabs>
+  <Tab title="Classic">
+    ```typescript
+      const [swigAddress] = findSwigPda(id);
+    ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 Computes the wallet's on-chain PDA using the generated ID. This is the unique address of the Swig account on Solana.
 
@@ -121,15 +158,24 @@ Computes the wallet's on-chain PDA using the generated ID. This is the unique ad
 
 Swig is role-based: it combines Authorities (who) and Actions (what) to determine permissions. This section builds the root role.
 
-```typescript
-const rootAuthority = Ed25519Authority.fromPublicKey(user.publicKey);
-const rootActions = Actions.set().manageAuthority().get();
-```
+<Tabs>
+  <Tab title="Classic">
+    ```typescript
+      const rootAuthority = Ed25519Authority.fromPublicKey(user.publicKey);
+      const rootActions = Actions.set().manageAuthority().get();
+    ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 This sets up the root role. Since this is the root, it must have at least `manageAuthority()` or `all()`.
 
 > ✅ `manageAuthority()` is restrictive but safe.
-> 
+>
 > 🚨 `all()` gives full control—use carefully in production.
 
 You can find all available action types in the [Swig SDK docs](https://anagrambuild.github.io/swig-ts/enums/_swig-wallet_coder.Permission.html). New types may be added over time.
@@ -138,61 +184,106 @@ Swig supports multiple Authority types—this example uses `Ed25519Authority`, b
 
 ## 5. Create the Swig Account On-Chain
 
-```typescript
-const tx = await createSwig(
-  connection,
-  id,
-  rootAuthority,
-  rootActions,
-  user.publicKey,
-  [user]
-);
-```
+<Tabs>
+  <Tab title="Classic">
+    ```typescript
+      const tx = await createSwig(
+        connection,
+        id,
+        rootAuthority,
+        rootActions,
+        user.publicKey,
+        [user]
+      );
+    ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+     ```
+  </Tab>
+</Tabs>
 
 Creates the Swig account by sending a transaction to the Solana blockchain. The transaction must be signed by the user. In this case the payer of the transaction and the rent is the user, but you can also have a different fee payer for transaction for an example see this.
 
 ## 6. Simulate a Funded User
 
-```typescript
-const userKeypair = Keypair.generate();
-let f = await connection.requestAirdrop(userKeypair.publicKey, 100 * LAMPORTS_PER_SOL);
-let blockhash = await connection.getLatestBlockhash();
-await connection.confirmTransaction({
-  signature: f,
-  blockhash: blockhash.blockhash,
-  lastValidBlockHeight: blockhash.lastValidBlockHeight,
-});
-```
+<Tabs>
+  <Tab title="Classic">
+    ```typescript
+      const userKeypair = Keypair.generate();
+      let f = await connection.requestAirdrop(userKeypair.publicKey, 100 * LAMPORTS_PER_SOL);
+      let blockhash = await connection.getLatestBlockhash();
+      await connection.confirmTransaction({
+        signature: f,
+        blockhash: blockhash.blockhash,
+        lastValidBlockHeight: blockhash.lastValidBlockHeight,
+      });
+    ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 Creates a fresh Keypair and airdrops some SOL from the local validator so it can pay for the transaction.
 
 ## 7. Connect to the Validator
 
-```typescript
-const connection = new Connection('http://localhost:8899', 'confirmed');
-```
+<Tabs>
+  <Tab title="Classic">
+    ```typescript 
+      const connection = new Connection('http://localhost:8899', 'confirmed');
+    ```
+  </Tab>
+    <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 Creates a connection to the local Solana cluster. Ensure you've run:
 
-```bash
-//in the transfer folder
-bun start-validator
-```
+<Tabs>
+  <Tab title="Classic">
+   ```bash
+      //in the transfer folder
+      bun start-validator
+    ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 This spins up a local testnet with the Swig programs deployed.
 
 ## 8. Log Success
 
-```typescript
-console.log(chalk.green("✓ Swig account created at:"), chalk.cyan(swigAddress.toBase58()));
-```
+<Tabs>
+  <Tab title="Classic">
+    ```typescript
+    console.log(chalk.green("✓ Swig account created at:"), chalk.cyan(swigAddress.toBase58()));
+    ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // kit version coming soon
+    ```
+  </Tab>
+</Tabs>
 
 Prints the address of the new Swig account in a colorized format.
 
 ## Ready to run it?
 
-```bash
-bun run ./tutorial-1.ts
+  ```bash
+bun run ./tutorial/tutorial-1.ts
 ```
 
 Congratulations on your first Swig!
