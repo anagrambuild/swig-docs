@@ -38,6 +38,12 @@
             "pages": [
               "tutorials/embeded_wallet_para/index"
             ]
+          },
+          {
+            "group": "v1.0 Release",
+            "pages": [
+              "tutorials/typescript/migration-v1"
+            ]
           }
         ]
       },
