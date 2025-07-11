@@ -1,6 +1,6 @@
 ---
 title: "1. Creating a Swig"
-description: "\"A journey of a thousand steps starts with one Swig.\" - Somebody"
+description: '"A journey of a thousand steps starts with one Swig." - Somebody'
 ---
 
 Before we begin our quest lets make sure you have the basics ready so lets set up a basic project, if you have already done this, feel free to move on. If you have not finished step 0 in this tutorial please go back and run through that as we refer back and depend on this step.
@@ -24,16 +24,16 @@ import {
   LAMPORTS_PER_SOL,
   Transaction,
   sendAndConfirmTransaction,
-} from '@solana/web3.js';
+} from "@solana/web3.js";
 
 import {
   Actions,
   createEd25519AuthorityInfo,
   findSwigPda,
   getCreateSwigInstruction,
-} from '@swig-wallet/classic';
+} from "@swig-wallet/classic";
 
-import chalk from 'chalk';
+import chalk from "chalk";
 
 async function createSwigAccount(connection: Connection, user: Keypair) {
   try {
@@ -56,14 +56,14 @@ async function createSwigAccount(connection: Connection, user: Keypair) {
     ]);
 
     console.log(
-      chalk.green('✓ Swig account created at:'),
+      chalk.green("✓ Swig account created at:"),
       chalk.cyan(swigAddress.toBase58()),
     );
-    console.log(chalk.blue('Transaction signature:'), chalk.cyan(signature));
+    console.log(chalk.blue("Transaction signature:"), chalk.cyan(signature));
     return swigAddress;
   } catch (error) {
     console.error(
-      chalk.red('✗ Error creating Swig account:'),
+      chalk.red("✗ Error creating Swig account:"),
       chalk.red(error),
     );
     throw error;
@@ -71,8 +71,8 @@ async function createSwigAccount(connection: Connection, user: Keypair) {
 }
 
 (async () => {
-  console.log(chalk.blue('🚀 Starting tutorial'));
-  const connection = new Connection('http://localhost:8899', 'confirmed');
+  console.log(chalk.blue("🚀 Starting tutorial"));
+  const connection = new Connection("http://localhost:8899", "confirmed");
   const userKeypair = Keypair.generate();
   let f = await connection.requestAirdrop(
     userKeypair.publicKey,
@@ -85,14 +85,14 @@ async function createSwigAccount(connection: Connection, user: Keypair) {
     lastValidBlockHeight: blockhash.lastValidBlockHeight,
   });
   console.log(
-    chalk.green('👤 User public key:'),
+    chalk.green("👤 User public key:"),
     chalk.cyan(userKeypair.publicKey.toBase58()),
   );
   let swigAddress = await createSwigAccount(connection, userKeypair);
   setTimeout(() => {
-    console.log(chalk.green('\n✨ Everything looks good!'));
+    console.log(chalk.green("\n✨ Everything looks good!"));
     console.log(
-      chalk.yellow('🔍 Check out your transaction on Solana Explorer:'),
+      chalk.yellow("🔍 Check out your transaction on Solana Explorer:"),
     );
     console.log(
       chalk.cyan(
@@ -399,7 +399,7 @@ This sets up the root role. Since this is the root, it must have at least `manag
 
 You can find all available action types in the [Swig SDK docs](https://anagrambuild.github.io/swig-ts/enums/_swig-wallet_coder.Permission.html). New types may be added over time.
 
-Swig supports multiple Authority types—this example uses `Ed25519Authority`, but others are available for different credentials or verification methods. These handle the Authentication half of Swig's model. You can find all the types of authorities on the [SDK Docs](https://anagrambuild.github.io/swig-ts/enums/_swig-wallet_coder.AuthorityType.html).
+Swig supports multiple Authority types—this example uses Ed25519 authorities, but others are available for different credentials or verification methods. These handle the Authentication half of Swig's model. You can find all the types of authorities on the [SDK Docs](https://anagrambuild.github.io/swig-ts/enums/_swig-wallet_coder.AuthorityType.html).
 
 ## 5. Create the Swig Account On-Chain
 
@@ -431,7 +431,7 @@ Swig supports multiple Authority types—this example uses `Ed25519Authority`, b
   </Tab>
 </Tabs>
 
-Creates the Swig account by sending a transaction to the Solana blockchain. The transaction must be signed by the user. In this case the payer of the transaction and the rent is the user, but you can also have a different fee payer for transaction for an example see this.
+Creates the Swig account by building and sending a transaction to the Solana blockchain. The transaction must be signed by the user. In this case the payer of the transaction and the rent is the user, but you can also have a different fee payer for the transaction.
 
 ## 6. Simulate a Funded User
 

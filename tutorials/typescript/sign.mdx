@@ -1,6 +1,6 @@
 ---
 title: "3. Signing with Swig"
-description: "\"I came. I saw. I signed it with Swig.\" - Julius Caesar, probably"
+description: '"I came. I saw. I signed it with Swig." - Julius Caesar, probably'
 ---
 
 Now that we have our Swig account set up with proper authorities from the previous tutorials, let's explore how to sign transactions. If you haven't completed the previous tutorials, please go back and complete them first as we'll be building on those concepts.
@@ -17,61 +17,67 @@ touch tutorial/tutorial-3.ts
   <Tab title="Classic">
 ```typescript
 import {
+  Connection,
   Keypair,
   LAMPORTS_PER_SOL,
-  Connection,
+  PublicKey,
   Transaction,
   sendAndConfirmTransaction,
-  PublicKey,
-} from '@solana/web3.js';
+} from "@solana/web3.js";
 
 import {
   Actions,
-  createSwig,
-  Ed25519Authority,
-  findSwigPda,
-  addAuthorityInstruction,
-  fetchSwig,
   createEd25519AuthorityInfo,
-  signInstruction,
+  fetchSwig,
+  findSwigPda,
+  getAddAuthorityInstructions,
+  getCreateSwigInstruction,
+  getSignInstructions,
 } from "@swig-wallet/classic";
 
 import {
-  TOKEN_PROGRAM_ID,
   ASSOCIATED_TOKEN_PROGRAM_ID,
-  createMint,
+  TOKEN_PROGRAM_ID,
   createAssociatedTokenAccount,
-  mintTo,
-  getAssociatedTokenAddress,
-  getAccount,
+  createMint,
   createTransferInstruction,
+  getAccount,
+  mintTo,
 } from "@solana/spl-token";
 
-import chalk from 'chalk';
+import chalk from "chalk";
 
-async function createSwigAccount(
-  connection: Connection,
-  user: Keypair,
-) {
+async function createSwigAccount(connection: Connection, user: Keypair) {
   try {
     const id = new Uint8Array(32);
     crypto.getRandomValues(id);
-    const [swigAddress] = findSwigPda(id);
-    const rootAuthority = Ed25519Authority.fromPublicKey(user.publicKey);
+    const swigAddress = findSwigPda(id);
+    const rootAuthorityInfo = createEd25519AuthorityInfo(user.publicKey);
     const rootActions = Actions.set().manageAuthority().get();
-    const tx = await createSwig(
-      connection,
-      id,
-      rootAuthority,
-      rootActions,
-      user.publicKey,
-      [user]
-    );
 
-    console.log(chalk.green("✓ Swig account created at:"), chalk.cyan(swigAddress.toBase58()));
+    const createSwigIx = await getCreateSwigInstruction({
+      payer: user.publicKey,
+      id,
+      actions: rootActions,
+      authorityInfo: rootAuthorityInfo,
+    });
+
+    const transaction = new Transaction().add(createSwigIx);
+    const signature = await sendAndConfirmTransaction(connection, transaction, [
+      user,
+    ]);
+
+    console.log(
+      chalk.green("✓ Swig account created at:"),
+      chalk.cyan(swigAddress.toBase58()),
+    );
+    console.log(chalk.blue("Transaction signature:"), chalk.cyan(signature));
     return swigAddress;
   } catch (error) {
-    console.error(chalk.red("✗ Error creating Swig account:"), chalk.red(error));
+    console.error(
+      chalk.red("✗ Error creating Swig account:"),
+      chalk.red(error),
+    );
     throw error;
   }
 }
@@ -82,27 +88,33 @@ async function addNewAuthority(
   newAuthority: Keypair,
   swigAddress: PublicKey,
   actions: any,
-  description: string
+  description: string,
 ) {
   try {
     const swig = await fetchSwig(connection, swigAddress);
     const rootRole = swig.findRolesByEd25519SignerPk(rootUser.publicKey)[0];
     if (!rootRole) {
-      throw new Error('Root role not found for authority');
+      throw new Error("Root role not found for authority");
     }
 
-    const addAuthorityIx = await addAuthorityInstruction(
-      rootRole,
-      rootUser.publicKey,
+    const addAuthorityInstructions = await getAddAuthorityInstructions(
+      swig,
+      rootRole.id,
       createEd25519AuthorityInfo(newAuthority.publicKey),
       actions,
     );
 
-    const transaction = new Transaction().add(addAuthorityIx);
+    const transaction = new Transaction().add(...addAuthorityInstructions);
     await sendAndConfirmTransaction(connection, transaction, [rootUser]);
-    console.log(chalk.green(`✓ New ${description} authority added:`), chalk.cyan(newAuthority.publicKey.toBase58()));
+    console.log(
+      chalk.green(`✓ New ${description} authority added:`),
+      chalk.cyan(newAuthority.publicKey.toBase58()),
+    );
   } catch (error) {
-    console.error(chalk.red(`✗ Error adding ${description} authority:`), chalk.red(error));
+    console.error(
+      chalk.red(`✗ Error adding ${description} authority:`),
+      chalk.red(error),
+    );
     throw error;
   }
 }
@@ -110,23 +122,34 @@ async function addNewAuthority(
 async function displayTokenBalance(
   connection: Connection,
   tokenAccount: PublicKey,
-  label: string
+  label: string,
 ) {
   const account = await getAccount(connection, tokenAccount);
-  console.log(chalk.yellow(`${label} token balance:`), chalk.cyan(account.amount.toString()));
+  console.log(
+    chalk.yellow(`${label} token balance:`),
+    chalk.cyan(account.amount.toString()),
+  );
 }
 
 (async () => {
-  console.log(chalk.blue("🚀 Starting tutorial - Token Authority and Transfers"));
+  console.log(
+    chalk.blue("🚀 Starting tutorial - Token Authority and Transfers"),
+  );
 
   // Connect to local Solana network
-  const connection = new Connection('http://localhost:8899', 'confirmed');
+  const connection = new Connection("http://localhost:8899", "confirmed");
 
   // Create and fund the root user
   const rootUser = Keypair.generate();
-  console.log(chalk.green("👤 Root user public key:"), chalk.cyan(rootUser.publicKey.toBase58()));
+  console.log(
+    chalk.green("👤 Root user public key:"),
+    chalk.cyan(rootUser.publicKey.toBase58()),
+  );
 
-  let airdrop = await connection.requestAirdrop(rootUser.publicKey, 100 * LAMPORTS_PER_SOL);
+  let airdrop = await connection.requestAirdrop(
+    rootUser.publicKey,
+    100 * LAMPORTS_PER_SOL,
+  );
   let blockhash = await connection.getLatestBlockhash();
   await connection.confirmTransaction({
     signature: airdrop,
@@ -146,9 +169,12 @@ async function displayTokenBalance(
     rootUser,
     mintAuthority.publicKey,
     null,
-    0
+    0,
   );
-  console.log(chalk.green("✓ Token mint created:"), chalk.cyan(tokenMint.toBase58()));
+  console.log(
+    chalk.green("✓ Token mint created:"),
+    chalk.cyan(tokenMint.toBase58()),
+  );
 
   // Create token accounts
   console.log(chalk.yellow("\n💰 Creating token accounts..."));
@@ -160,18 +186,24 @@ async function displayTokenBalance(
     {},
     TOKEN_PROGRAM_ID,
     ASSOCIATED_TOKEN_PROGRAM_ID,
-    true
+    true,
   );
-  console.log(chalk.green("✓ Swig token account created:"), chalk.cyan(swigTokenAccount.toBase58()));
+  console.log(
+    chalk.green("✓ Swig token account created:"),
+    chalk.cyan(swigTokenAccount.toBase58()),
+  );
 
   const recipientKeypair = Keypair.generate();
   const recipientTokenAccount = await createAssociatedTokenAccount(
     connection,
     rootUser,
     tokenMint,
-    recipientKeypair.publicKey
+    recipientKeypair.publicKey,
   );
-  console.log(chalk.green("✓ Recipient token account created:"), chalk.cyan(recipientTokenAccount.toBase58()));
+  console.log(
+    chalk.green("✓ Recipient token account created:"),
+    chalk.cyan(recipientTokenAccount.toBase58()),
+  );
 
   // Mint initial tokens to Swig account
   console.log(chalk.yellow("\n🏦 Minting tokens to Swig account..."));
@@ -181,41 +213,56 @@ async function displayTokenBalance(
     tokenMint,
     swigTokenAccount,
     mintAuthority,
-    10
+    10,
   );
   await displayTokenBalance(connection, swigTokenAccount, "Swig");
   await displayTokenBalance(connection, recipientTokenAccount, "Recipient");
 
   // Create token authority with permission to send exactly 10 tokens
   const tokenAuthority = Keypair.generate();
-  console.log(chalk.green("\n👥 Token authority public key:"), chalk.cyan(tokenAuthority.publicKey.toBase58()));
-  await connection.requestAirdrop(tokenAuthority.publicKey, 100 * LAMPORTS_PER_SOL);
+  console.log(
+    chalk.green("\n👥 Token authority public key:"),
+    chalk.cyan(tokenAuthority.publicKey.toBase58()),
+  );
+  await connection.requestAirdrop(
+    tokenAuthority.publicKey,
+    100 * LAMPORTS_PER_SOL,
+  );
   console.log(chalk.yellow("\n🔑 Adding token authority..."));
   const tokenActions = Actions.set()
     .tokenLimit({ mint: tokenMint, amount: BigInt(10) })
     .get();
-  await addNewAuthority(connection, rootUser, tokenAuthority, swigAddress, tokenActions, "token");
+  await addNewAuthority(
+    connection,
+    rootUser,
+    tokenAuthority,
+    swigAddress,
+    tokenActions,
+    "token",
+  );
 
   // Add some delay to ensure the authority is added
-  await new Promise(resolve => setTimeout(resolve, 2000));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 
   // First transfer - should succeed
   console.log(chalk.yellow("\n💸 Attempting first transfer of 10 tokens..."));
   try {
     const swig = await fetchSwig(connection, swigAddress);
-    const tokenRole = swig.findRolesByEd25519SignerPk(tokenAuthority.publicKey)[0];
+    const tokenRole = swig.findRolesByEd25519SignerPk(
+      tokenAuthority.publicKey,
+    )[0];
 
     const transferIx = createTransferInstruction(
       swigTokenAccount,
       recipientTokenAccount,
       swigAddress,
-      BigInt(10)
+      BigInt(10),
     );
 
     const signedTransfer = await signInstruction(
       tokenRole,
       tokenAuthority.publicKey,
-      [transferIx]
+      [transferIx],
     );
 
     const transaction = new Transaction().add(signedTransfer);
@@ -231,19 +278,21 @@ async function displayTokenBalance(
   console.log(chalk.yellow("\n💸 Attempting second transfer (should fail)..."));
   try {
     const swig = await fetchSwig(connection, swigAddress);
-    const tokenRole = swig.findRolesByEd25519SignerPk(tokenAuthority.publicKey)[0];
+    const tokenRole = swig.findRolesByEd25519SignerPk(
+      tokenAuthority.publicKey,
+    )[0];
 
     const transferIx = createTransferInstruction(
       swigTokenAccount,
       recipientTokenAccount,
       swigAddress,
-      BigInt(10)
+      BigInt(10),
     );
 
     const signedTransfer = await signInstruction(
       tokenRole,
       tokenAuthority.publicKey,
-      [transferIx]
+      [transferIx],
     );
 
     const transaction = new Transaction().add(signedTransfer);
@@ -252,15 +301,28 @@ async function displayTokenBalance(
     });
     console.error(chalk.red("✗ Second transfer unexpectedly succeeded!"));
   } catch (error) {
-    console.log(chalk.green("✓ Second transfer failed as expected:"), "Authority has no remaining token allowance");
+    console.log(
+      chalk.green("✓ Second transfer failed as expected:"),
+      "Authority has no remaining token allowance",
+    );
   }
 
   await displayTokenBalance(connection, swigTokenAccount, "Final Swig");
-  await displayTokenBalance(connection, recipientTokenAccount, "Final Recipient");
+  await displayTokenBalance(
+    connection,
+    recipientTokenAccount,
+    "Final Recipient",
+  );
 
   console.log(chalk.green("\n✨ Tutorial completed successfully!"));
-  console.log(chalk.yellow("🔍 Check out your transaction on Solana Explorer:"));
-  console.log(chalk.cyan(`https://explorer.solana.com/address/${swigAddress}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899`));
+  console.log(
+    chalk.yellow("🔍 Check out your transaction on Solana Explorer:"),
+  );
+  console.log(
+    chalk.cyan(
+      `https://explorer.solana.com/address/${swigAddress}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899`,
+    ),
+  );
 })();
 ```
   </Tab>
@@ -541,7 +603,7 @@ const transferIx = createTransferInstruction(
   swigTokenAccount,
   recipientTokenAccount,
   swigAddress,
-  BigInt(10)
+  BigInt(10),
 );
 ```
   </Tab>
@@ -566,10 +628,10 @@ Create the instruction that needs to be signed. In this case, it's a token trans
 <Tabs>
   <Tab title="Classic">
 ```typescript
-const signedTransfer = await signInstruction(
-  tokenRole,
-  tokenAuthority.publicKey,
-  [transferIx]
+const signedTransferInstructions = await getSignInstructions(
+  swig,
+  tokenRole.id,
+  [transferIx],
 );
 ```
   </Tab>
@@ -580,9 +642,10 @@ const signedTransfer = await signInstruction(
   </Tab>
 </Tabs>
 
-This is where the magic happens. The `signInstruction` function:
+This is where the magic happens. The `getSignInstructions` function:
+
 1. Verifies that the role has permission to sign this type of instruction
-2. Creates a signature using the authority's credentials
+2. Creates the necessary signing instructions
 3. Wraps the original instruction with Swig's signing logic
 
 > 🔒 Swig validates both the authority type and action permissions at this stage
@@ -592,8 +655,8 @@ This is where the magic happens. The `signInstruction` function:
 <Tabs>
   <Tab title="Classic">
   ```typescript
-  const transaction = new Transaction().add(signedTransfer);
-  await sendAndConfirmTransaction(connection, transaction, [tokenAuthority]);
+  const transaction = new Transaction().add(...signedTransferInstructions);
+await sendAndConfirmTransaction(connection, transaction, [tokenAuthority]);
   ```
   </Tab>
   <Tab title="Kit">
@@ -603,11 +666,12 @@ This is where the magic happens. The `signInstruction` function:
   </Tab>
 </Tabs>
 
-Finally, we build the transaction with our signed instruction and send it to the network. Note that the transaction still needs to be signed by the authority's keypair because they're the one paying for the transaction fees.
+Finally, we build the transaction with our signed instructions and send it to the network. Note that the transaction still needs to be signed by the authority's keypair because they're the one paying for the transaction fees.
 
 ## Understanding Signature Verification
 
 When the transaction reaches the Solana network, the Swig program will:
+
 1. Extract the original instruction
 2. Verify the authority's signature
 3. Check that the role's permissions allow this action
@@ -618,6 +682,7 @@ When the transaction reaches the Solana network, the Swig program will:
 ## Ready to try it?
 
 Make sure you have:
+
 1. Completed the previous tutorials
 2. Have a running validator (`bun start-validator`)
 3. Created a Swig account with appropriate authorities

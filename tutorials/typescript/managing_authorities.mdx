@@ -1,6 +1,6 @@
 ---
 title: "2. Managing Authorities and Actions"
-description: "\"The road to heaven is paved with good role based access control.\" - Codex Walleticus"
+description: '"The road to heaven is paved with good role based access control." - Codex Walleticus'
 ---
 
 In this tutorial, we'll learn how to add multiple authorities to a Swig account with different permission sets. We'll create a root authority that can manage other authorities, then add two specialized authorities: one for SOL spending and another for token management.
@@ -15,6 +15,7 @@ Before starting this tutorial:
    ```
 
 ## Quick Review
+
 In [Tutorial 1](./tutorial-1.md), we learned how to create a basic Swig account. Now we'll expand on that by managing multiple authorities with different permissions.
 
 ```bash
@@ -35,7 +36,7 @@ import {
   PublicKey,
   Transaction,
   sendAndConfirmTransaction,
-} from '@solana/web3.js';
+} from "@solana/web3.js";
 
 import {
   Actions,
@@ -44,9 +45,9 @@ import {
   findSwigPda,
   getAddAuthorityInstructions,
   getCreateSwigInstruction,
-} from '@swig-wallet/classic';
+} from "@swig-wallet/classic";
 
-import chalk from 'chalk';
+import chalk from "chalk";
 
 async function createSwigAccount(connection: Connection, user: Keypair) {
   try {
@@ -69,14 +70,14 @@ async function createSwigAccount(connection: Connection, user: Keypair) {
     ]);
 
     console.log(
-      chalk.green('✓ Swig account created at:'),
+      chalk.green("✓ Swig account created at:"),
       chalk.cyan(swigAddress.toBase58()),
     );
-    console.log(chalk.blue('Transaction signature:'), chalk.cyan(signature));
+    console.log(chalk.blue("Transaction signature:"), chalk.cyan(signature));
     return swigAddress;
   } catch (error) {
     console.error(
-      chalk.red('✗ Error creating Swig account:'),
+      chalk.red("✗ Error creating Swig account:"),
       chalk.red(error),
     );
     throw error;
@@ -96,7 +97,7 @@ async function addNewAuthority(
 
     const rootRole = swig.findRolesByEd25519SignerPk(rootUser.publicKey)[0];
     if (!rootRole) {
-      throw new Error('Root role not found for authority');
+      throw new Error("Root role not found for authority");
     }
 
     const addAuthorityInstructions = await getAddAuthorityInstructions(
@@ -124,11 +125,12 @@ async function addNewAuthority(
 (async () => {
   console.log(chalk.blue('🚀 Starting tutorial - Adding Multiple Authorities'));
 
-  const connection = new Connection('http://localhost:8899', 'confirmed');
+  // Connect to local Solana network
+  const connection = new Connection("http://localhost:8899", "confirmed");
 
   const rootUser = Keypair.generate();
   console.log(
-    chalk.green('👤 Root user public key:'),
+    chalk.green("👤 Root user public key:"),
     chalk.cyan(rootUser.publicKey.toBase58()),
   );
 
@@ -147,17 +149,19 @@ async function addNewAuthority(
   const swigAddress = await createSwigAccount(connection, rootUser);
 
   const spendingAuthority = Keypair.generate();
-  const tokenAuthority = Keypair.generate();
-
   console.log(
-    chalk.green('\n👥 Spending authority public key:'),
+    chalk.green("\n👥 Spending authority public key:"),
     chalk.cyan(spendingAuthority.publicKey.toBase58()),
   );
+
+  // Create the token authority
+  const tokenAuthority = Keypair.generate();
   console.log(
-    chalk.green('👥 Token authority public key:'),
+    chalk.green("👥 Token authority public key:"),
     chalk.cyan(tokenAuthority.publicKey.toBase58()),
   );
 
+  // Add some delay to ensure the Swig account is created
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
   const spendingActions = Actions.set()
@@ -513,6 +517,7 @@ Don't forget that the full list of actions an authority can have is [here](https
 </Tabs>
 
 This creates an authority that:
+
 - Can only spend SOL (no token permissions)
 - Has a spending limit of 0.1 SOL
 - Cannot manage other authorities
@@ -557,6 +562,7 @@ This creates an authority that:
 </Tabs>
 
 This creates an authority that:
+
 - Can only manage tokens for a specific mint
 - Has a token spending limit of 1,000,000 units
 - Cannot spend SOL or manage other authorities
@@ -564,6 +570,7 @@ This creates an authority that:
 ## Understanding the Output
 
 When you run the tutorial, you'll see:
+
 1. The root user's public key
 2. The Swig account address
 3. Two new authority public keys
@@ -575,7 +582,7 @@ The tutorial provides links to view your transactions on Solana Explorer (using 
 
 - **Root Authority**: An authority with management permissions that can add or remove other authorities
 - **Specialized Authorities**: Authorities with specific, limited permissions (e.g., SOL spending or token management)
-- **Permission Limits**: 
+- **Permission Limits**:
   - SOL limits are set in lamports (1 SOL = 1,000,000,000 lamports)
   - Token limits are set based on the token's decimals
 - **Action Sets**: Define what an authority can do using methods like:
@@ -586,6 +593,7 @@ The tutorial provides links to view your transactions on Solana Explorer (using 
 ## Running the Tutorial
 
 Execute the tutorial with:
+
 ```bash
 bun run ./tutorial/tutorial-2.ts
 ```
