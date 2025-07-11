@@ -39,6 +39,12 @@
               "tutorials/embeded_wallet_para/index"
             ]
           }
+          {
+            "group": "Migrate from beta to v1.0",
+            "pages": [
+              "tutorials/typescript/migration-v1.mdx"
+            ]
+          }
         ]
       },
       {
