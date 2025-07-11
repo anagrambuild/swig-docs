@@ -7,24 +7,27 @@ Welcome to the TypeScript SWIG SDK tutorial! This comprehensive guide will walk 
 
 <Tip>
   The tutorial code is available in the
-  [swig-ts](https://github.com/anagrambuild/swig-ts) repository. You can find
-  the code for each tutorial in the `examples/classic/transfer/tutorial` folder.
+  [swig-ts](https://github.com/anagrambuild/swig-ts) repository.
+  <br />- For the <b>Classic</b> version (compatible with <code>
+    @solana/web3.js
+  </code>), see: <code>examples/classic/transfer/tutorial</code>
+  <br />- For the <b>Kit</b> version (compatible with <code>@solana/kit</code>),
+  see: <code>examples/kit/transfer/tutorial</code>
 </Tip>
 
-## What's New in v1.0
-
-The v1.0 release represents a complete architectural overhaul:
-
-- **Modular Architecture**: Core logic moved to `@swig-wallet/lib` with `@swig-wallet/classic` as a wrapper
-- **Instruction-Based API**: Functions now return `TransactionInstruction[]` for better composability
-- **Simplified Imports**: Most functionality available through `@swig-wallet/classic`
-- **Enhanced Type Safety**: Better TypeScript support throughout
+> **Note:**  
+> This tutorial provides two versions of each code example:
+>
+> - **Classic:** Uses the `@solana/web3.js` library and is compatible with the classic Solana SDK.
+> - **Kit:** Uses the new `@solana/kit` library for a modern, streamlined Solana development experience.
+>
+> You can switch between Classic and Kit code snippets using the tabs above each example.
 
 ## What You'll Learn
 
 In this tutorial, you'll learn how to:
 
-- Set up your development environment for SWIG v1.0
+- Set up your development environment for SWIG
 - Create and manage SWIGs
 - Manage authorities and permissions with
 - Sign transactions using the new instruction-based approach
