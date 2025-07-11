@@ -19,72 +19,255 @@ Open that file up in your favorite editor, or AI overlord super virtual reality 
   <Tab title="Classic">
 ```typescript
 import {
+  Connection,
   Keypair,
   LAMPORTS_PER_SOL,
-  Connection,
+  Transaction,
+  sendAndConfirmTransaction,
 } from '@solana/web3.js';
 
 import {
   Actions,
-  createSwig,
-  Ed25519Authority,
-  findSwigPda
-} from "@swig-wallet/classic";
+  createEd25519AuthorityInfo,
+  findSwigPda,
+  getCreateSwigInstruction,
+} from '@swig-wallet/classic';
 
 import chalk from 'chalk';
 
-async function createSwigAccount(
-  connection: Connection,
-  user: Keypair,
-) {
+async function createSwigAccount(connection: Connection, user: Keypair) {
   try {
     const id = new Uint8Array(32);
     crypto.getRandomValues(id);
-    const [swigAddress] = findSwigPda(id);
-    const rootAuthority = Ed25519Authority.fromPublicKey(user.publicKey);
+    const swigAddress = findSwigPda(id);
+    const rootAuthorityInfo = createEd25519AuthorityInfo(user.publicKey);
     const rootActions = Actions.set().manageAuthority().get();
-    const tx = await createSwig(
-      connection,
-      id,
-      rootAuthority,
-      rootActions,
-      user.publicKey,
-      [user]
-    );
 
-    console.log(chalk.green("✓ Swig account created at:"), chalk.cyan(swigAddress.toBase58()));
+    const createSwigIx = await getCreateSwigInstruction({
+      payer: user.publicKey,
+      id,
+      actions: rootActions,
+      authorityInfo: rootAuthorityInfo,
+    });
+
+    const transaction = new Transaction().add(createSwigIx);
+    const signature = await sendAndConfirmTransaction(connection, transaction, [
+      user,
+    ]);
+
+    console.log(
+      chalk.green('✓ Swig account created at:'),
+      chalk.cyan(swigAddress.toBase58()),
+    );
+    console.log(chalk.blue('Transaction signature:'), chalk.cyan(signature));
     return swigAddress;
   } catch (error) {
-    console.error(chalk.red("✗ Error creating Swig account:"), chalk.red(error));
+    console.error(
+      chalk.red('✗ Error creating Swig account:'),
+      chalk.red(error),
+    );
     throw error;
   }
 }
 
 (async () => {
-  console.log(chalk.blue("🚀 Starting tutorial"));
+  console.log(chalk.blue('🚀 Starting tutorial'));
   const connection = new Connection('http://localhost:8899', 'confirmed');
   const userKeypair = Keypair.generate();
-  let f = await connection.requestAirdrop(userKeypair.publicKey, 100 * LAMPORTS_PER_SOL);
+  let f = await connection.requestAirdrop(
+    userKeypair.publicKey,
+    100 * LAMPORTS_PER_SOL,
+  );
   let blockhash = await connection.getLatestBlockhash();
   await connection.confirmTransaction({
     signature: f,
     blockhash: blockhash.blockhash,
     lastValidBlockHeight: blockhash.lastValidBlockHeight,
-  })
-  console.log(chalk.green("👤 User public key:"), chalk.cyan(userKeypair.publicKey.toBase58()));
+  });
+  console.log(
+    chalk.green('👤 User public key:'),
+    chalk.cyan(userKeypair.publicKey.toBase58()),
+  );
   let swigAddress = await createSwigAccount(connection, userKeypair);
-  await setTimeout(() => {
-    console.log(chalk.green("\n✨ Everything looks good!"));
-    console.log(chalk.yellow("🔍 Check out your transaction on Solana Explorer:"));
-    console.log(chalk.cyan(`https://explorer.solana.com/address/${swigAddress.toBase58()}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899`));
+  setTimeout(() => {
+    console.log(chalk.green('\n✨ Everything looks good!'));
+    console.log(
+      chalk.yellow('🔍 Check out your transaction on Solana Explorer:'),
+    );
+    console.log(
+      chalk.cyan(
+        `https://explorer.solana.com/address/${swigAddress.toBase58()}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899`,
+      ),
+    );
   }, 2000);
 })();
 ```
   </Tab>
   <Tab title="Kit">
-    ```typescript
-    // kit version coming soon
-    ```
+```typescript
+import {
+  createSolanaRpc,
+  createSolanaRpcSubscriptions,
+  generateKeyPairSigner,
+  sendAndConfirmTransactionFactory,
+  signTransactionMessageWithSigners,
+  getSignatureFromTransaction,
+  lamports,
+  pipe,
+  createTransactionMessage,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  appendTransactionMessageInstructions,
+  addSignersToTransactionMessage,
+  type IInstruction,
+  type KeyPairSigner,
+  type Blockhash,
+} from '@solana/kit';
+
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  findSwigPda,
+  getCreateSwigInstruction,
+} from '@swig-wallet/kit';
+
+import chalk from 'chalk';
+import { sleepSync } from 'bun';
+
+// ---------------------------------------
+// Util
+// ---------------------------------------
+function randomBytes(length: number): Uint8Array {
+  const array = new Uint8Array(length);
+  crypto.getRandomValues(array);
+  return array;
+}
+
+function getTransactionMessage<Inst extends IInstruction[]>(
+  instructions: Inst,
+  latestBlockhash: Readonly<{
+    blockhash: Blockhash;
+    lastValidBlockHeight: bigint;
+  }>,
+  feePayer: KeyPairSigner,
+  signers: KeyPairSigner[] = [],
+) {
+  return pipe(
+    createTransactionMessage({ version: 0 }),
+    (tx) => setTransactionMessageFeePayerSigner(feePayer, tx),
+    (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+    (tx) => appendTransactionMessageInstructions(instructions, tx),
+    (tx) => addSignersToTransactionMessage(signers, tx),
+  );
+}
+
+async function sendTransaction<T extends IInstruction[]>(
+  connection: {
+    rpc: ReturnType<typeof createSolanaRpc>;
+    rpcSubscriptions: ReturnType<typeof createSolanaRpcSubscriptions>;
+  },
+  instructions: T,
+  payer: KeyPairSigner,
+  signers: KeyPairSigner[] = [],
+) {
+  const { value: latestBlockhash } = await connection.rpc
+    .getLatestBlockhash()
+    .send();
+  const transactionMessage = getTransactionMessage(
+    instructions,
+    latestBlockhash,
+    payer,
+    signers,
+  );
+  const signedTransaction =
+    await signTransactionMessageWithSigners(transactionMessage);
+
+  await sendAndConfirmTransactionFactory(connection as any)(signedTransaction, {
+    commitment: 'confirmed',
+  });
+
+  const signature = getSignatureFromTransaction(signedTransaction);
+
+  return signature.toString();
+}
+
+// ---------------------------------------
+// Create Swig Account
+// ---------------------------------------
+async function createSwigAccount(
+  connection: {
+    rpc: ReturnType<typeof createSolanaRpc>;
+    rpcSubscriptions: ReturnType<typeof createSolanaRpcSubscriptions>;
+  },
+  user: KeyPairSigner,
+) {
+  try {
+    const id = randomBytes(32);
+    const swigAddress = await findSwigPda(id);
+    const authorityInfo = createEd25519AuthorityInfo(user.address);
+    const actions = Actions.set().manageAuthority().get();
+
+    const ix = await getCreateSwigInstruction({
+      payer: user.address,
+      id,
+      authorityInfo,
+      actions,
+    });
+
+    const sig = await sendTransaction(connection, [ix], user);
+
+    console.log(
+      chalk.green('✓ Swig account created at:'),
+      chalk.cyan(swigAddress.toString()),
+    );
+    console.log(chalk.blue('Transaction signature:'), chalk.cyan(sig));
+    return swigAddress;
+  } catch (error) {
+    console.error(chalk.red('✗ Error creating Swig account:'), chalk.red(error));
+    throw error;
+  }
+}
+
+// ---------------------------------------
+// Main
+// ---------------------------------------
+(async () => {
+  console.log(chalk.blue('🚀 Starting tutorial'));
+
+  const connection = {
+    rpc: createSolanaRpc('http://localhost:8899'),
+    rpcSubscriptions: createSolanaRpcSubscriptions('ws://localhost:8900'),
+  };
+
+  const user = await generateKeyPairSigner();
+
+  // Airdrop
+  await connection.rpc
+    .requestAirdrop(user.address, lamports(BigInt(100 * 1_000_000_000)))
+    .send();
+
+  await sleepSync(2000);
+
+  console.log(
+    chalk.green('👤 User public key:'),
+    chalk.cyan(user.address.toString()),
+  );
+
+  const swigAddress = await createSwigAccount(connection, user);
+
+  setTimeout(() => {
+    console.log(chalk.green('\n✨ Everything looks good!'));
+    console.log(
+      chalk.yellow('🔍 Check out your transaction on Solana Explorer:'),
+    );
+    console.log(
+      chalk.cyan(
+        `https://explorer.solana.com/address/${swigAddress.toString()}?cluster=custom&customUrl=http%3A%2F%2Flocalhost%3A8899`,
+      ),
+    );
+  }, 2000);
+})();
+```
   </Tab>
 </Tabs>
 
@@ -95,18 +278,49 @@ Lets save this and get ready to run it, but before we do lets break it down step
 <Tabs>
   <Tab title="Classic">
     ```typescript
-    import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-    import { 
-      Actions, 
-      createSwig, 
-      Ed25519Authority, 
-      findSwigPda 
-    } from "@swig-wallet/classic";
+    import {
+      Connection,
+      Keypair,
+      LAMPORTS_PER_SOL,
+      Transaction,
+      sendAndConfirmTransaction,
+    } from '@solana/web3.js';
+
+    import {
+      Actions,
+      createEd25519AuthorityInfo,
+      findSwigPda,
+      getCreateSwigInstruction,
+    } from '@swig-wallet/classic';
     ```
   </Tab>
   <Tab title="Kit">
     ```typescript
-    // kit version coming soon
+    import {
+      createSolanaRpc,
+      createSolanaRpcSubscriptions,
+      generateKeyPairSigner,
+      sendAndConfirmTransactionFactory,
+      signTransactionMessageWithSigners,
+      getSignatureFromTransaction,
+      lamports,
+      pipe,
+      createTransactionMessage,
+      setTransactionMessageFeePayerSigner,
+      setTransactionMessageLifetimeUsingBlockhash,
+      appendTransactionMessageInstructions,
+      addSignersToTransactionMessage,
+      type IInstruction,
+      type KeyPairSigner,
+      type Blockhash,
+    } from '@solana/kit';
+
+    import {
+      Actions,
+      createEd25519AuthorityInfo,
+      findSwigPda,
+      getCreateSwigInstruction,
+    } from '@swig-wallet/kit';
     ```
   </Tab>
 </Tabs>
@@ -118,15 +332,19 @@ Imports Solana primitives and essential utilities from the Swig SDK.
 <Tabs>
   <Tab title="Classic">
     ```typescript
-    //in the create swig function
     const id = new Uint8Array(32);
     crypto.getRandomValues(id);
     ```
-
   </Tab>
   <Tab title="Kit">
     ```typescript
-    // kit version coming soon
+    function randomBytes(length: number): Uint8Array {
+      const array = new Uint8Array(length);
+      crypto.getRandomValues(array);
+      return array;
+    }
+
+    const id = randomBytes(32);
     ```
   </Tab>
 </Tabs>
@@ -140,12 +358,12 @@ Generates a secure 32-byte ID that uniquely identifies this Swig wallet instance
 <Tabs>
   <Tab title="Classic">
     ```typescript
-      const [swigAddress] = findSwigPda(id);
+    const [swigAddress] = findSwigPda(id);
     ```
   </Tab>
   <Tab title="Kit">
     ```typescript
-    // kit version coming soon
+    const swigAddress = await findSwigPda(id);
     ```
   </Tab>
 </Tabs>
@@ -161,13 +379,14 @@ Swig is role-based: it combines Authorities (who) and Actions (what) to determin
 <Tabs>
   <Tab title="Classic">
     ```typescript
-      const rootAuthority = Ed25519Authority.fromPublicKey(user.publicKey);
-      const rootActions = Actions.set().manageAuthority().get();
+    const rootAuthority = createEd25519AuthorityInfo(user.publicKey);
+    const rootActions = Actions.set().manageAuthority().get();
     ```
   </Tab>
   <Tab title="Kit">
     ```typescript
-    // kit version coming soon
+    const authorityInfo = createEd25519AuthorityInfo(user.address);
+    const actions = Actions.set().manageAuthority().get();
     ```
   </Tab>
 </Tabs>
@@ -187,20 +406,28 @@ Swig supports multiple Authority types—this example uses `Ed25519Authority`, b
 <Tabs>
   <Tab title="Classic">
     ```typescript
-      const tx = await createSwig(
-        connection,
-        id,
-        rootAuthority,
-        rootActions,
-        user.publicKey,
-        [user]
-      );
+    const createSwigIx = await getCreateSwigInstruction({
+      payer: user.publicKey,
+      id,
+      actions: rootActions,
+      authorityInfo: rootAuthority,
+    });
+
+    const transaction = new Transaction().add(createSwigIx);
+    const signature = await sendAndConfirmTransaction(connection, transaction, [user]);
     ```
   </Tab>
   <Tab title="Kit">
     ```typescript
-    // kit version coming soon
-     ```
+    const ix = await getCreateSwigInstruction({
+      payer: user.address,
+      id,
+      authorityInfo,
+      actions,
+    });
+
+    const sig = await sendTransaction(connection, [ix], user);
+    ```
   </Tab>
 </Tabs>
 
@@ -211,19 +438,25 @@ Creates the Swig account by sending a transaction to the Solana blockchain. The 
 <Tabs>
   <Tab title="Classic">
     ```typescript
-      const userKeypair = Keypair.generate();
-      let f = await connection.requestAirdrop(userKeypair.publicKey, 100 * LAMPORTS_PER_SOL);
-      let blockhash = await connection.getLatestBlockhash();
-      await connection.confirmTransaction({
-        signature: f,
-        blockhash: blockhash.blockhash,
-        lastValidBlockHeight: blockhash.lastValidBlockHeight,
-      });
+    const userKeypair = Keypair.generate();
+    let f = await connection.requestAirdrop(userKeypair.publicKey, 100 * LAMPORTS_PER_SOL);
+    let blockhash = await connection.getLatestBlockhash();
+    await connection.confirmTransaction({
+      signature: f,
+      blockhash: blockhash.blockhash,
+      lastValidBlockHeight: blockhash.lastValidBlockHeight,
+    });
     ```
   </Tab>
   <Tab title="Kit">
     ```typescript
-    // kit version coming soon
+    const user = await generateKeyPairSigner();
+
+    await connection.rpc
+      .requestAirdrop(user.address, lamports(BigInt(100 * 1_000_000_000)))
+      .send();
+
+    await sleepSync(2000);
     ```
   </Tab>
 </Tabs>
@@ -234,13 +467,16 @@ Creates a fresh Keypair and airdrops some SOL from the local validator so it can
 
 <Tabs>
   <Tab title="Classic">
-    ```typescript 
-      const connection = new Connection('http://localhost:8899', 'confirmed');
+    ```typescript
+    const connection = new Connection('http://localhost:8899', 'confirmed');
     ```
   </Tab>
-    <Tab title="Kit">
+  <Tab title="Kit">
     ```typescript
-    // kit version coming soon
+    const connection = {
+      rpc: createSolanaRpc('http://localhost:8899'),
+      rpcSubscriptions: createSolanaRpcSubscriptions('ws://localhost:8900'),
+    };
     ```
   </Tab>
 </Tabs>
@@ -249,14 +485,13 @@ Creates a connection to the local Solana cluster. Ensure you've run:
 
 <Tabs>
   <Tab title="Classic">
-   ```bash
-      //in the transfer folder
-      bun start-validator
+    ```bash
+    bun start-validator
     ```
   </Tab>
   <Tab title="Kit">
-    ```typescript
-    // kit version coming soon
+    ```bash
+    bun start-validator
     ```
   </Tab>
 </Tabs>
@@ -273,7 +508,7 @@ This spins up a local testnet with the Swig programs deployed.
   </Tab>
   <Tab title="Kit">
     ```typescript
-    // kit version coming soon
+    console.log(chalk.green("✓ Swig account created at:"), chalk.cyan(swigAddress.toString()));
     ```
   </Tab>
 </Tabs>
@@ -282,7 +517,7 @@ Prints the address of the new Swig account in a colorized format.
 
 ## Ready to run it?
 
-  ```bash
+```bash
 bun run ./tutorial/tutorial-1.ts
 ```
 
