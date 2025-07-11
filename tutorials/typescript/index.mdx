@@ -1,20 +1,34 @@
 ---
-title: "Geting Started with Swig TS SDK "
-description: "\"The beginning of wisdom is this, get wisdom and above all get knowledge\" - Solomon"
+title: "Getting Started with Swig TS SDK"
+description: '"The beginning of wisdom is this, get wisdom and above all get knowledge" - Solomon'
 ---
 
 Welcome to the TypeScript SWIG SDK tutorial! This comprehensive guide will walk you through all the essential functions and features of the SWIG SDK, helping you understand how to integrate SWIG into your TypeScript applications.
 
-<Tip>The tutorial code is available in the [swig-ts](https://github.com/anagrambuild/swig-ts) repository. You can find the code for each tutorial in the `examples/classic/transfer/tutorial` folder.</Tip>
+<Tip>
+  The tutorial code is available in the
+  [swig-ts](https://github.com/anagrambuild/swig-ts) repository. You can find
+  the code for each tutorial in the `examples/classic/transfer/tutorial` folder.
+</Tip>
+
+## What's New in v1.0
+
+The v1.0 release represents a complete architectural overhaul:
+
+- **Modular Architecture**: Core logic moved to `@swig-wallet/lib` with `@swig-wallet/classic` as a wrapper
+- **Instruction-Based API**: Functions now return `TransactionInstruction[]` for better composability
+- **Simplified Imports**: Most functionality available through `@swig-wallet/classic`
+- **Enhanced Type Safety**: Better TypeScript support throughout
 
 ## What You'll Learn
 
 In this tutorial, you'll learn how to:
-- Set up your development environment for SWIG
+
+- Set up your development environment for SWIG v1.0
 - Create and manage SWIGs
-- Manage authorities and permissions
-- Interact with SWIG's core features
-- Signing transactions with Swig
+- Manage authorities and permissions with
+- Sign transactions using the new instruction-based approach
+- Migrate from previous versions
 
 ## Time Commitment
 
@@ -22,7 +36,7 @@ This tutorial is designed to be completed in approximately 30 minutes. Each sect
 
 ## Tutorial Scope
 
-This guide focuses on creating and managing SWIGs using regular Solana keypair authorities. While this covers the most common use cases, SWIG supports other authority types as well. 
+This guide focuses on creating and managing SWIGs using regular Solana keypair authorities. While this covers the most common use cases, SWIG supports other authority types as well.
 
 ## Tutorial Sections
 

@@ -1,0 +1,135 @@
+---
+title: "Swig TypeScript SDK v1.0 Release Notes"
+description: "Complete overview of the v1.0 release with breaking changes and new features"
+---
+
+# Swig TypeScript SDK v1.0 Release Notes
+
+The v1.0 release of the Swig TypeScript SDK represents a complete architectural overhaul designed to improve developer experience, maintainability, and extensibility.
+
+## 🚀 What's New
+
+### Modular Architecture
+
+- **`@swig-wallet/lib`**: Core business logic and functionality
+- **`@swig-wallet/classic`**: High-level wrapper for Web3.js 1.x compatibility
+- **`@swig-wallet/kit`**: High-level wrapper for Web3.js 2.0 (Solana Kit) compatibility
+- **`@swig-wallet/coder`**: Low-level encoding/decoding utilities
+
+### Instruction-Based API
+
+All functions now return `TransactionInstruction[]` for better composability:
+
+```typescript
+// v1.0
+const instructions = await getCreateSwigInstruction({...});
+const transaction = new Transaction().add(...instructions);
+```
+
+### Enhanced Type Safety
+
+- Better TypeScript support throughout the SDK
+- Clearer function signatures and return types
+- Improved error handling
+
+## 💥 Breaking Changes
+
+### Package Structure
+
+- Core functionality moved from `@swig-wallet/classic` to `@swig-wallet/lib`
+- `@swig-wallet/classic` now acts as a thin wrapper layer
+- All exports available through `@swig-wallet/classic` via re-exports
+
+### Function Signatures
+
+| Beta Version                   | v1.0 Version                       |
+| ------------------------------ | ---------------------------------- |
+| `createSwig()`                 | `getCreateSwigInstruction()`       |
+| `addAuthorityInstruction()`    | `getAddAuthorityInstructions()`    |
+| `signInstruction()`            | `getSignInstructions()`            |
+| `removeAuthorityInstruction()` | `getRemoveAuthorityInstructions()` |
+
+### Authority Creation
+
+```typescript
+// Beta
+const authority = Ed25519Authority.fromPublicKey(publicKey);
+
+// v1.0
+const authorityInfo = createEd25519AuthorityInfo(publicKey);
+```
+
+### PDA Derivation
+
+```typescript
+// Beta
+const [swigAddress] = findSwigPda(id);
+
+// v1.0
+const swigAddress = findSwigPda(id);
+```
+
+### Dependencies
+
+- **Removed**: `@solana/spl-token`
+- **Added**: `@solana-program/token@^0.5.1`
+- **Added**: `@swig-wallet/lib` (workspace dependency)
+- **Added**: `bn.js@^5.2.2`
+
+## 📦 Installation
+
+```bash
+npm install @swig-wallet/classic@^1.0.0 @solana-program/token@^0.5.1
+```
+
+Remove old dependencies:
+
+```bash
+npm uninstall @solana/spl-token
+```
+
+## 🔄 Migration Guide
+
+See the complete [Migration Guide](./tutorials/typescript/migration-v1) for detailed instructions on upgrading from beta versions.
+
+### Quick Migration Checklist
+
+- [ ] Update package dependencies
+- [ ] Replace single instruction functions with instruction array functions
+- [ ] Update authority creation from classes to info functions
+- [ ] Update PDA derivation calls
+- [ ] Use spread operator when adding instructions to transactions
+- [ ] Test all functionality with new API
+
+## 📚 Updated Documentation
+
+- [TypeScript SDK Reference](./reference/typescript/) - Updated for v1.0 API
+- [Getting Started Tutorial](./tutorials/typescript/) - Completely rewritten for v1.0
+- [Migration Guide](./tutorials/typescript/migration-v1) - Step-by-step migration instructions
+
+## 🐛 Bug Fixes
+
+- Improved error handling across all instruction builders
+- Better validation of input parameters
+- More consistent return types
+
+## 🔮 What's Next
+
+- Enhanced session management
+- Additional authority types
+- Integration with Gill
+- Performance optimizations for both Web3.js versions
+
+## 📖 Resources
+
+- [API Documentation](https://anagrambuild.github.io/swig-ts/modules.html)
+- [GitHub Repository](https://github.com/anagrambuild/swig-ts)
+- [Example Code](https://github.com/anagrambuild/swig-ts/tree/main/examples/classic/transfer/tutorial)
+
+## 🙏 Acknowledgments
+
+Thank you to all beta users who provided feedback that shaped this v1.0 release. The new architecture provides a solid foundation for future development while maintaining the powerful features that make Swig unique.
+
+---
+
+For questions or support, please open an issue on our [GitHub repository](https://github.com/anagrambuild/swig-ts/issues).

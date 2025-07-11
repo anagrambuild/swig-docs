@@ -3,22 +3,94 @@ title: "Swig TypeScript SDK"
 description: "The Swig TypeScript SDK provides a robust interface for interacting with Solana smart contracts and wallets."
 ---
 
-The Swig TypeScript SDK provides a robust interface for interacting with Solana smart contracts and wallets.Built on top of the Web3.js 1.0 line of Solana SDK, it offers developers a streamlined experience for building decentralized applications on Solana.
+The Swig TypeScript SDK provides a robust interface for interacting with Solana smart contracts and wallets. Built on top of the Web3.js 1.0 line of Solana SDK, it offers developers a streamlined experience for building decentralized applications on Solana.
+
+## Architecture Overview
+
+The v1.0 SDK has been completely refactored with a modular architecture:
+
+- **`@swig-wallet/coder`** - Low-level encoding/decoding utilities
+- **`@swig-wallet/lib`** - Core functionality
+- **`@swig-wallet/classic`** - High-level wrapper functions for Web3.js 1.x compatibility
+- **`@swig-wallet/kit`** - High-level wrapper functions for Web3.js 2.0 (Solana Kit) compatibility
 
 ## API Reference
 
 The canonical source for the Swig TypeScript SDK API documentation can be found at:
 [https://anagrambuild.github.io/swig-ts/modules.html](https://anagrambuild.github.io/swig-ts/modules.html)
 
-  This comprehensive reference includes detailed documentation for all modules, including:
-    - `@swig-wallet/classic`
-      - `@swig-wallet/coder`
+### Key Packages
+
+#### `@swig-wallet/classic`
+
+For Web3.js 1.x applications, providing:
+
+- Instruction builders returning `TransactionInstruction[]`
+- Account fetching utilities using `Connection`
+- PDA derivation functions (synchronous)
+- Re-exports of core functionality from `@swig-wallet/lib`
+
+#### `@swig-wallet/kit`
+
+For Web3.js 2.0 (Solana Kit) applications, providing:
+
+- Instruction builders returning `KitInstruction[]`
+- Account fetching utilities using `Rpc<GetAccountInfoApi>`
+- PDA derivation functions (asynchronous)
+- Same API surface as classic but with Web3.js 2.0 types
+
+#### `@swig-wallet/lib`
+
+Core logic including:
+
+- `Actions` class for permission management
+- `Swig` class for wallet representation
+- Authority management utilities
+- Instruction context builders
+
+#### `@swig-wallet/coder`
+
+Low-level utilities for:
+
+- Account data encoding/decoding
+- Instruction data serialization
+- Type definitions
+
+## Migration from Beta Versions
+
+**Breaking Changes in v1.0:**
+
+- Complete API restructure - most function signatures have changed
+- Functions now return `TransactionInstruction[]` instead of single instructions
+- Authority and Actions classes moved to `@swig-wallet/lib`
+- New dependency on `@solana-program/token` instead of `@solana/spl-token`
+
+## Web3.js Version Support
+
+The Swig SDK supports both major versions of the Solana Web3.js library:
+
+### Web3.js 1.x (`@swig-wallet/classic`)
+
+- Uses `Connection`, `PublicKey`, `TransactionInstruction`
+- Synchronous PDA derivation
+- Compatible with existing Web3.js 1.x applications
+- Stable and production-ready
+
+### Web3.js 2.0 (`@swig-wallet/kit`)
+
+- Uses `Rpc`, `Address`, `KitInstruction`
+- Asynchronous PDA derivation
+- Built for the new Solana Kit architecture
+- Future-ready with enhanced type safety
 
 ## Future Development
 
 We are actively working on expanding the SDK's capabilities. Upcoming features include:
-  - Support for Web3.js 2.0
-    - Integration with Gill
+
+- Enhanced session management
+- Additional authority types
+- Integration with Gill
+- Performance optimizations
 
 These additions will provide developers with even more flexibility and enhanced capabilities for building on Solana.
 

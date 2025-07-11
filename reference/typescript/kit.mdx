@@ -1,0 +1,205 @@
+---
+title: "Swig Kit Package (Web3.js 2.0)"
+description: "Using Swig with Web3.js 2.0 (Solana Kit)"
+---
+
+The `@swig-wallet/kit` package provides the same functionality as `@swig-wallet/classic` but is designed specifically for Web3.js 2.0 (Solana Kit) applications.
+
+## Installation
+
+```bash
+npm install @swig-wallet/kit @solana/kit @solana-program/token
+```
+
+## Key Differences from Classic
+
+### Type System
+
+- Uses `Address` instead of `PublicKey`
+- Uses `KitInstruction` instead of `TransactionInstruction`
+- Uses `Rpc<GetAccountInfoApi>` instead of `Connection`
+
+### Asynchronous PDA Derivation
+
+```typescript
+// Classic (synchronous)
+const swigAddress = findSwigPda(id);
+
+// Kit (asynchronous)
+const swigAddress = await findSwigPda(id);
+```
+
+### Account Fetching
+
+```typescript
+// Classic
+import { Connection } from "@solana/web3.js";
+const connection = new Connection("https://api.mainnet-beta.solana.com");
+const swig = await fetchSwig(connection, swigAddress);
+
+// Kit
+import { createSolanaRpc } from "@solana/kit";
+const rpc = createSolanaRpc("https://api.mainnet-beta.solana.com");
+const swig = await fetchSwig(rpc, swigAddress);
+```
+
+## Basic Usage
+
+### Creating a Swig
+
+```typescript
+import { createSolanaRpc, generateKeyPair } from "@solana/kit";
+import {
+  Actions,
+  getCreateSwigInstruction,
+  findSwigPda,
+  createEd25519AuthorityInfo,
+} from "@swig-wallet/kit";
+
+const rpc = createSolanaRpc("https://api.devnet.solana.com");
+const user = await generateKeyPair();
+
+// Generate unique ID
+const id = new Uint8Array(32);
+crypto.getRandomValues(id);
+
+// Derive Swig address (async in kit)
+const swigAddress = await findSwigPda(id);
+
+// Create authority info
+const rootAuthorityInfo = createEd25519AuthorityInfo(user.address);
+
+// Create actions
+const rootActions = Actions.set().manageAuthority().get();
+
+// Get create instruction
+const createSwigIx = await getCreateSwigInstruction({
+  payer: user.address,
+  id,
+  actions: rootActions,
+  authorityInfo: rootAuthorityInfo,
+});
+
+// Build and send transaction (using Web3.js 2.0 patterns)
+// ... transaction building code
+```
+
+### Adding Authorities
+
+```typescript
+import { fetchSwig, getAddAuthorityInstructions } from "@swig-wallet/kit";
+
+// Fetch the Swig account
+const swig = await fetchSwig(rpc, swigAddress);
+
+// Find the root role
+const rootRole = swig.findRolesByEd25519SignerPk(rootUser.address)[0];
+
+// Create new authority
+const newAuthorityInfo = createEd25519AuthorityInfo(newAuthority.address);
+const actions = Actions.set()
+  .solLimit({ amount: BigInt(1000000000) })
+  .get();
+
+// Get add authority instructions
+const addAuthorityInstructions = await getAddAuthorityInstructions(
+  swig,
+  rootRole.id,
+  newAuthorityInfo,
+  actions,
+);
+
+// Build transaction with instructions
+// ... transaction building code
+```
+
+### Signing Instructions
+
+```typescript
+import { getSignInstructions } from "@swig-wallet/kit";
+
+// Create the instruction to be signed
+const transferIx = createTransferInstruction({
+  source: sourceTokenAccount,
+  destination: destinationTokenAccount,
+  owner: swigAddress,
+  amount: BigInt(1000000),
+});
+
+// Get signing instructions
+const signedInstructions = await getSignInstructions(swig, roleId, [
+  transferIx,
+]);
+
+// Build transaction
+// ... transaction building code
+```
+
+## API Reference
+
+### Account Functions
+
+- `fetchSwig(rpc, address, config?)` - Fetch a Swig account
+- `fetchMaybeSwigAccount(rpc, address, config?)` - Fetch account or null
+- `fetchNullableSwig(rpc, address, config?)` - Fetch Swig or null
+
+### PDA Functions
+
+- `findSwigPda(id)` - Derive Swig PDA (async)
+- `findSwigSubAccountPda(swigId, roleId)` - Derive SubAccount PDA (async)
+
+### Instruction Functions
+
+- `getCreateSwigInstruction(args)` - Create Swig instruction
+- `getAddAuthorityInstructions(swig, roleId, authorityInfo, actions, options?)` - Add authority
+- `getRemoveAuthorityInstructions(swig, roleId, roleToRemoveId, options?)` - Remove authority
+- `getSignInstructions(swig, roleId, instructions, withSubAccount?, options?)` - Sign instructions
+- `getCreateSessionInstructions(swig, roleId, sessionKey, duration?, options?)` - Create session
+- `getCreateSubAccountInstructions(swig, roleId, options?)` - Create sub-account
+- `getToggleSubAccountInstructions(swig, roleId, enabled, options?)` - Toggle sub-account
+- `getWithdrawFromSubAccountSubAccountInstructions(swig, roleId, withdrawArgs, options?)` - Withdraw from sub-account
+
+## Migration from Classic
+
+The API surface is identical between `@swig-wallet/classic` and `@swig-wallet/kit`, with only type differences:
+
+```typescript
+// Classic
+import { ... } from '@swig-wallet/classic';
+
+// Kit
+import { ... } from '@swig-wallet/kit';
+```
+
+Key changes when migrating:
+
+1. Replace `Connection` with `Rpc<GetAccountInfoApi>`
+2. Replace `PublicKey` with `Address`
+3. Replace `TransactionInstruction` with `KitInstruction`
+4. Make PDA derivation calls async (`await findSwigPda(id)`)
+5. Update transaction building to use Web3.js 2.0 patterns
+
+## Benefits of Web3.js 2.0
+
+- **Enhanced Type Safety**: Better TypeScript support with stricter types
+- **Improved Performance**: More efficient RPC handling
+- **Modern Architecture**: Built for the future of Solana development
+- **Better Error Handling**: More descriptive error messages and handling
+
+## When to Use Kit vs Classic
+
+### Use `@swig-wallet/kit` when:
+
+- Building new applications
+- Want the latest Web3.js features
+- Need enhanced type safety
+- Planning for long-term maintenance
+
+### Use `@swig-wallet/classic` when:
+
+- Working with existing Web3.js 1.x codebases
+- Need immediate compatibility
+- Have dependencies that require Web3.js 1.x
+- Want proven stability
+
+Both packages are actively maintained and provide the same Swig functionality.
