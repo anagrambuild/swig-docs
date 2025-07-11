@@ -40,7 +40,7 @@
             ]
           },
           {
-            "group": "Migrate from beta to v1.0",
+            "group": "v1.0 Release",
             "pages": [
               "tutorials/typescript/migration-v1"
             ]
