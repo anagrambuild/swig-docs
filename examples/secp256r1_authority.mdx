@@ -1,0 +1,292 @@
+---
+title: Using Secp256r1 (P-256) Authorities in Swig
+description: "How to use P-256 (secp256r1) keys for secure, passkey-compatible authorization in Swig."
+---
+
+Secp256r1 (also known as P-256) is a widely adopted elliptic curve for public-key cryptography, supported by most modern cryptographic libraries and hardware.
+It is defined by parameters: prime p, coefficients a and b, base point G, and its prime order n.
+Unlike native Ed25519, secp256r1 requires a precompiled program for signature verification.
+
+## Why use Secp256r1 with Swig?
+
+- Native support for passkeys and hardware-backed authentication
+- Secure, standards-based cryptography
+- Compatible with modern browsers and devices
+- Enables session-based authorities for limited-lifetime delegation
+
+## Technical Overview
+
+Secp256r1 for SWIG Wallet:
+
+**Secp256r1 Authority**: Represents an account or role that can sign transactions using a Secp256r1 key.
+
+**Session Authority:** Supports session-based authorities for limited-lifetime delegation.
+
+**Signature Odometer:** Each authority tracks a counter to prevent replay attacks.
+
+### How to Use Secp256r1 Authority (Rust Walkthrough)
+
+The walkthrough covers:
+
+1.  Key Generation
+2.  Authority Management
+3.  Transaction Signing & Replay Protection
+4.  Session Authorities
+
+#### A. Key Generation:
+
+To use Secp256r1, a valid key pair is needed. A **create\_secp256r1\_keypair** function handles this using the **openssl** crate.
+
+*   **Curve:** It uses the **Nid::X9\_62\_PRIME256V1** curve, which is the standard for P-256.
+*   **Public Key Format:** The public key is serialized into a **33-byte compressed format**. This is crucial, as it's the format the on-chain program expects.
+
+```rust
+/// Helper to generate a real secp256r1 key pair for testing
+fn create_test_secp256r1_keypair() -> (openssl::ec::EcKey<openssl::pkey::Private>, [u8; 33]) {
+    use openssl::{
+        bn::BigNumContext,
+        ec::{EcGroup, EcKey, PointConversionForm},
+        nid::Nid,
+    };
+
+    // 1. Select the P-256 curve
+    let group = EcGroup::from_curve_name(Nid::X9_62_PRIME256V1).unwrap();
+
+    // 2. Generate the private/public key pair
+    let signing_key = EcKey::generate(&group).unwrap();
+    let mut ctx = BigNumContext::new().unwrap();
+
+    // 3. Serialize the public key to its 33-byte compressed format
+    let pubkey_bytes = signing_key
+        .public_key()
+        .to_bytes(&group, PointConversionForm::COMPRESSED, &mut ctx)
+        .unwrap();
+    let pubkey_array: [u8; 33] = pubkey_bytes.try_into().unwrap();
+
+    (signing_key, pubkey_array)
+}
+```
+
+#### B. Authority Management:
+
+A SWIG account can be created with a **secp256r1** key as its primary authority or have one added later. This gives the **secp256r1** key holder control over the account.
+
+For creating an Account with a **secp256r1** Authority, the **create\_swig\_secp256r1** function shows how to initialize a new swig account where a **secp256r1** public key is the owner.
+
+```rust
+/// Helper function to create a swig account with secp256r1 authority for testing
+fn create_swig_secp256r1(
+    context: &mut SwigTestContext,
+    public_key: &[u8; 33],
+    id: [u8; 32],
+) -> Result<(solana_sdk::pubkey::Pubkey, u8), Box<dyn std::error::Error>> {
+    // To use find program address to get the swig address and bump
+
+    // The instruction specifies the AuthorityType and the public key
+    let create_ix = swig_interface::CreateInstruction::new(
+        swig_address,
+        swig_bump,
+        payer_pubkey,
+        AuthorityConfig {
+            authority_type: AuthorityType::Secp256r1,
+            authority: public_key,
+        },
+        vec![ClientAction::All(All {})], // Granting full permissions
+        id,
+    )?;
+
+    // To create instruction using swig_interface::CreateInstruction
+    // To create message using v0::Message::try_compile
+    // To send transaction using context.svm.send_transaction
+
+    Ok((swig_address, swig_bump))
+}
+```
+
+A new **secp256r1** authority can be added to an existing account. This operation must be signed by a current authority. The test **test\_secp256r1\_add\_authority\_with\_secp256r1** demonstrates a **secp256r1** key authorizing the addition of another **secp256r1** key.
+
+```rust
+#[test_log::test]
+fn test_secp256r1_add_authority_with_secp256r1() {
+    // Setup test context
+
+    // The primary authority is secp256r1
+    let (signing_key, public_key) = create_test_secp256r1_keypair();
+    let (swig_key, _) = create_swig_secp256r1(&mut context, &public_key, id).unwrap();
+
+    // The new authority to be added
+    let (_, new_public_key) = create_test_secp256r1_keypair();
+
+    // Get current slot and counter for the authority
+
+    // Create the instruction to add the new authority.
+    // This must be signed by the existing `public_key`.
+    let instructions = swig_interface::AddAuthorityInstruction::new_with_secp256r1_authority(
+        swig_key,
+        context.default_payer.pubkey(),
+        authority_fn,
+        current_slot,
+        next_counter,
+        0, // role_id of the primary authority
+        &public_key,
+        AuthorityConfig {
+            authority_type: AuthorityType::Secp256r1,
+            authority: &new_public_key, // the new authority to be added
+        },
+        vec![ClientAction::All(All {})],
+    )
+    .unwrap();
+
+    // To create instruction using swig_interface::CreateInstruction
+    // To create message using v0::Message::try_compile
+    // To send transaction using context.svm.send_transaction
+
+    // Verify the authority was added
+    let swig_account = context.svm.get_account(&swig_key).unwrap();
+    let swig_state = SwigWithRoles::from_bytes(&swig_account.data).unwrap();
+    assert_eq!(swig_state.state.roles, 2);
+
+    // Verify the counter was incremented
+    let new_counter = get_secp256r1_counter(&context, &swig_key, &public_key).unwrap();
+    assert_eq!(
+        new_counter, next_counter,
+        "Counter should be incremented after successful transaction"
+    );
+}
+```
+
+#### C. Transaction Signing & Replay Protection:
+
+Signing transactions with **secp256r1** is more complex than with **Ed25519**. It involves a critical feature for security: the **signature\_odometer**.
+
+The **signature\_odometer:**
+
+This is an on-chain counter (u32) that is part of the **Secp256r1Authority** struct.
+
+A **get\_secp256r1\_counter** helper function reads this value from the swig account's data.
+
+```rust
+/// Standard Secp256r1 authority implementation for passkey support.
+///
+/// This struct represents a Secp256r1 authority with a compressed public key
+/// for signature verification using the Solana secp256r1 precompile program.
+#[derive(Debug, no_padding::NoPadding)]
+#[repr(C, align(8))]
+pub struct Secp256r1Authority {
+    /// The compressed Secp256r1 public key (33 bytes)
+    pub public_key: [u8; 33],
+    /// Padding for u32 alignment
+    _padding: [u8; 3],
+    /// Signature counter to prevent signature replay attacks
+    pub signature_odometer: u32,
+}
+```
+
+The **test\_secp256r1\_basic\_signing** test provides a perfect, low-level example of the signing flow.
+
+```rust
+#[test_log::test]
+fn test_secp256r1_basic_signing() {
+    // Create a real secp256r1 key pair for testing
+
+    // Create a new swig with the secp256r1 authority
+
+    // Set up a recipient and transaction
+    let transfer_ix = system_instruction::transfer(&swig_key, &recipient.pubkey(), transfer_amount);
+
+    // Get the current on-chain counter
+    let current_counter = get_secp256r1_counter(&context, &swig_key, &public_key).unwrap();
+    let next_counter = current_counter + 1;
+
+    // Create authority function that signs the message hash
+    let mut authority_fn = |message_hash: &[u8]| -> [u8; 64] {
+        use solana_secp256r1_program::sign_message;
+        let signature =
+            sign_message(message_hash, &signing_key.private_key_to_der().unwrap()).unwrap();
+        signature
+    };
+
+    // Create the secp256r1 signing instructions (returns Vec<Instruction>)
+    let instructions = swig_interface::SignInstruction::new_secp256r1(
+        swig_key,
+        context.default_payer.pubkey(),
+        authority_fn,
+        current_slot,
+        next_counter,        // Provide the next expected counter
+        transfer_ix.clone(), // The instruction to execute
+        0,                   // The role ID of the secp256r1 key
+        &public_key,
+    )
+    .unwrap();
+
+    // Build and send the transaction
+    let message = v0::Message::try_compile(
+        &context.default_payer.pubkey(),
+        &instructions, // These instructions include the secp256r1 program calls
+        &[],
+        context.svm.latest_blockhash(),
+    )
+    .unwrap();
+
+    let tx =
+        VersionedTransaction::try_new(VersionedMessage::V0(message), &[&context.default_payer])
+            .unwrap();
+    context.svm.send_transaction(tx).unwrap();
+
+    // Verify the odometer was incremented on-chain
+    let new_counter = get_secp256r1_counter(&context, &swig_key, &public_key).unwrap();
+    assert_eq!(new_counter, next_counter);
+}
+```
+
+#### D. Session Authorities:
+
+SWIG also supports session-based **secp256r1** authorities. These are temporary keys with a defined lifespan, measured in Solana slots.
+
+```rust
+/// Creation parameters for a session-based Secp256r1 authority.
+#[derive(Debug, no_padding::NoPadding)]
+#[repr(C, align(8))]
+pub struct CreateSecp256r1SessionAuthority {
+    /// The compressed Secp256r1 public key (33 bytes)
+    pub public_key: [u8; 33],
+    /// Padding for alignment
+    _padding: [u8; 7],
+    /// The session key for temporary authentication
+    pub session_key: [u8; 32],
+    /// Maximum duration a session can be valid for
+    pub max_session_length: u64,
+}
+
+/// The `test_secp256r1_session_authority_odometer` test verifies that a session authority is
+/// correctly initialized on-chain with its odometer set to 0.
+#[test_log::test]
+fn test_secp256r1_session_authority_odometer() {
+    // setup
+
+    // Create a swig with a session authority
+    let (swig_key, _) =
+        create_swig_secp256r1_session(&mut context, &public_key, id, 100, [0; 32]).unwrap();
+
+    // get_session_counter helper to read the current odometer
+    // Verify the initial counter is 0
+    let initial_counter = get_session_counter(&context).unwrap();
+    assert_eq!(initial_counter, 0, "Initial session counter should be 0");
+
+    // Verify the authority type and session properties
+    let swig_account = context.svm.get_account(&swig_key).unwrap();
+    let swig = SwigWithRoles::from_bytes(&swig_account.data).unwrap();
+    assert_eq!(swig.state.roles, 1);
+
+    let role = swig.get_role(0).unwrap().unwrap();
+    assert_eq!(
+        role.authority.authority_type(),
+        AuthorityType::Secp256r1Session
+    );
+    assert!(role.authority.session_based());
+
+    let auth: &Secp256r1SessionAuthority = role.authority.as_any().downcast_ref().unwrap();
+    assert_eq!(auth.max_session_age, 100);
+    assert_eq!(auth.signature_odometer, 0, "Initial odometer should be 0");
+}
+```
