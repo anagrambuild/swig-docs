@@ -102,6 +102,12 @@
               "reference/rust/instruction_builder",
               "reference/rust/rust_wallet"
             ]
+          },
+          {
+            "group": "Error Types",
+            "pages": [
+              "reference/error-types/index"
+            ]
           }
         ]
       }

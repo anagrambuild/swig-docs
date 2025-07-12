@@ -1,0 +1,51 @@
+---
+title: "Program error types"
+description: "A comprehensive list of error types for the Swig Program, in hex and there meanings."
+---
+
+## Overview
+
+The Swig Program defines a set of error types to help developers diagnose issues that may arise during development. Each error type is represented as a hex value, with a corresponding human-readable description.
+
+## Error Types related to State Management Operations
+| Error Type | Description                                      |
+| ---------- | ------------------------------------------------ |
+| 0x3E8      | Account data is invalid or corrupted             |
+| 0x3E9      | Action data is invalid or malformed              |
+| 0x3EA      | Authority data is invalid or malformed           |
+| 0x3EB      | Role data is invalid or malformed                |
+| 0x3EC      | Swig account data is invalid or malformed        |
+| 0x3ED      | Specified role could not be found                |
+| 0x3EE      | Error loading permissions                        |
+| 0x3EF      | Adding an authority requires at least one action |
+
+## Error Types related to Authentication Operations
+| Error Type | Description                                             |
+| ---------- | ------------------------------------------------------- |
+| 0xBB8      | Invalid authority provided                              |
+| 0xBB9      | Invalid authority payload format                        |
+| 0xBBA      | Invalid data payload format                             |
+| 0xBBB      | Missing Ed25519 authority account                       |
+| 0xBBC      | Authority does not support session-based authentication |
+| 0xBBD      | Generic permission denied error                         |
+| 0xBBE      | Missing required permission                             |
+| 0xBBF      | Token account permission check failed                   |
+| 0xBC0      | Token account has an active delegate or close authority |
+| 0xBC1      | Token account is not initialized                        |
+| 0xBC2      | No permission to manage authority                       |
+| 0xBC3      | Insufficient balance for operation                      |
+| 0xBC4      | Cannot remove root authority                            |
+| 0xBC5      | Session has expired                                     |
+| 0xBC6      | Invalid Secp256k1 signature                             |
+| 0xBC7      | Secp256k1 signature age is invalid                      |
+| 0xBC8      | Secp256k1 signature has been reused                     |
+| 0xBC9      | Invalid Secp256k1 hash                                  |
+| 0xBCA      | Secp256r1 signature has been reused                     |
+| 0xBCB      | Stake account is in an invalid state                    |
+| 0xBCC      | Cannot reuse session key                                |
+| 0xBCD      | Invalid session duration                                |
+| 0xBCE      | Token account authority is not the Swig account         |
+| 0xBCF      | Invalid Secp256r1 instruction                           |
+| 0xBD0      | Invalid Secp256r1 public key                            |
+| 0xBD1      | Invalid Secp256r1 message hash                          |
+| 0xBD2      | Invalid Secp256r1 message                               |
