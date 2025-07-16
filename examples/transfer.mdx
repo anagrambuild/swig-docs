@@ -231,22 +231,77 @@ For a more complete Ethereum wallet integration using Viem:
 // Using Viem account
 const privateKeyAccount = privateKeyToAccount(userWallet.getPrivateKeyString());
 
-const createSwigInstruction = Swig.create({
+const swigAddress = findSwigPda(id);
+const rootActions = Actions.set().all().get();
+
+const createSwigInstruction = await getCreateSwigInstruction({
   authorityInfo: createSecp256k1AuthorityInfo(privateKeyAccount.publicKey),
   id,
   payer: transactionPayer.publicKey,
   actions: rootActions,
 });
 
-const signTransfer = await signInstruction(
-  rootRole,
-  transactionPayer.publicKey,
-  [transfer],
-  {
-    currentSlot: svm.getClock().slot,
-    signingFn: viemSign,
-  },
-);
+sendSVMTransaction(svm, [createSwigInstruction], transactionPayer);
+
+let swig = fetchSwig(svm, swigAddress);
+svm.airdrop(swigAddress, BigInt(LAMPORTS_PER_SOL));
+
+let rootRole = swig.findRolesBySecp256k1SignerAddress(privateKeyAccount.address)[0];
+if (!rootRole) throw new Error('Role not found for authority');
+
+const viemSign: SigningFn = async (message: Uint8Array) => {
+  const sig = await privateKeyAccount.sign({ hash: keccak256(message) });
+  return { signature: hexToBytes(sig) };
+};
+
+const transfer = SystemProgram.transfer({
+  fromPubkey: swigAddress,
+  toPubkey: dappTreasury,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
+
+let signTransfer = await getSignInstructions(swig, rootRole.id, [transfer], false, {
+  currentSlot: svm.getClock().slot,
+  signingFn: viemSign,
+  payer: transactionPayer.publicKey,
+});
+
+sendSVMTransaction(svm, signTransfer, transactionPayer);
+
+const viemSignWithPrefix: SigningFn = async (message: Uint8Array) => {
+  const prefix = getEvmPersonalSignPrefix(message.length);
+  const prefixedMessage = new Uint8Array(prefix.length + message.length);
+
+  prefixedMessage.set(prefix);
+  prefixedMessage.set(message, prefix.length);
+
+  const sig = await privateKeyAccount.sign({ hash: keccak256(prefixedMessage) });
+  return { signature: hexToBytes(sig), prefix };
+};
+
+signTransfer = await getSignInstructions(swig, rootRole.id, [transfer], false, {
+  currentSlot: svm.getClock().slot,
+  signingFn: viemSignWithPrefix,
+  payer: transactionPayer.publicKey,
+});
+
+sendSVMTransaction(svm, signTransfer, transactionPayer);
+
+const viemSignMessage: SigningFn = async (message: Uint8Array) => {
+  const sig = await privateKeyAccount.signMessage({ message: { raw: message } });
+  return {
+    signature: hexToBytes(sig),
+    prefix: getEvmPersonalSignPrefix(message.length),
+  };
+};
+
+signTransfer = await getSignInstructions(swig, rootRole.id, [transfer], false, {
+  currentSlot: svm.getClock().slot,
+  signingFn: viemSignMessage,
+  payer: transactionPayer.publicKey,
+});
+
+sendSVMTransaction(svm, signTransfer, transactionPayer);
 ```
 
 See `transfer-svm-viem.ts` for the full working code.
@@ -259,22 +314,90 @@ Sessions allow limited, temporary authority:
 
 ### Ed25519 Sessions
 
+<Tabs>
+  <Tab title="Classic">
 ```ts
-const sessionAuthority = Keypair.generate();
-const sessionDuration = 100n; // slots
+// Key Setup
+const userRootKeypair = Keypair.generate();
+const dappSessionKeypair = Keypair.generate();
 
-const addSessionInstruction = await addAuthorityInstruction(
-  rootRole,
-  signer.publicKey,
-  {
-    currentSlot: BigInt(slot),
-    signingFn: ed25519SigningFn,
-    authorityInfo: createEd25519AuthorityInfo(sessionAuthority.publicKey),
-    actions: sessionActions,
-    duration: sessionDuration,
-  },
+// Create Swig with Session Authority
+const createSwigIx = await getCreateSwigInstruction({
+  id,
+  authorityInfo: createEd25519SessionAuthorityInfo(
+    userRootKeypair.publicKey,
+    100n, // session duration in slots
+  ),
+  actions: rootActions,
+  payer: userRootKeypair.publicKey,
+});
+
+// Create Session for dApp
+const createSessionIx = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.publicKey,
+  50n, // session duration
+);
+
+// Find and use session role
+const sessionRole = swig.findRoleBySessionKey(dappSessionKeypair.publicKey);
+if (!sessionRole || !sessionRole.isSessionBased()) {
+  throw new Error('Invalid session role');
+}
+
+// Sign with session key
+const signedTransfer = await getSignInstructions(
+  swig,
+  sessionRole.id,
+  [transfer],
+  false,
+  { payer: dappSessionKeypair.publicKey },
 );
 ```
+  </Tab>
+  <Tab title="Kit">
+```ts
+// Key Setup
+const userRootKeypair = await generateKeyPairSigner();
+const dappSessionKeypair = await generateKeyPairSigner();
+
+// Create Swig with Session Authority
+const createSwigIx = await getCreateSwigInstruction({
+  id,
+  authorityInfo: createEd25519SessionAuthorityInfo(
+    userRootKeypair.address,
+    100n, // session duration in slots
+  ),
+  actions: rootActions,
+  payer: userRootKeypair.address,
+});
+
+// Create Session for dApp
+const createSessionIx = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.address,
+  50n, // session duration
+);
+
+// Find and use session role
+const sessionRole = swig.findRolesByEd25519SignerPk(dappSessionKeypair.address)[0];
+if (!sessionRole || !sessionRole.isSessionBased()) {
+  throw new Error('Invalid session role');
+}
+
+// Sign with session key
+const signedTransferIx = await getSignInstructions(
+  swig,
+  sessionRole.id,
+  [transferIx],
+  false,
+  { payer: dappSessionKeypair.address },
+);
+```
+  </Tab>
+</Tabs>
 
 ### Secp256k1 Sessions
 
