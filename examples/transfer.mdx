@@ -104,33 +104,120 @@ You can find the complete example in `transfer-local.ts` and `transfer-svm.ts` f
 
 For EVM compatibility, Swig supports Secp256k1 keys. Note the key differences from the Ed25519 example:
 
+<Tabs>
+  <Tab title="Classic">
+
 ```ts
 // Key Setup - Using Ethereum wallet
 const userWallet = Wallet.generate(); // 👈 EVM wallet instead of Solana Keypair
 
+// Connect to network and create payers
+const connection = new Connection('http://localhost:8899', 'confirmed');
+const payer = Keypair.generate();
+await connection.requestAirdrop(payer.publicKey, LAMPORTS_PER_SOL);
+const signer = Keypair.generate();
+await connection.requestAirdrop(signer.publicKey, LAMPORTS_PER_SOL);
+
+// Find Swig PDA by ID
+const id = Uint8Array.from(Array(32).fill(1)); // use any 32-byte identifier
+const swigAddress = findSwigPda(id);
+
 // Create Swig with Secp256k1 authority
-const createSwigInstruction = Swig.create({
+const rootActions = Actions.set().all().get();
+const createSwigInstruction = await getCreateSwigInstruction({
   authorityInfo: createSecp256k1AuthorityInfo(userWallet.getPublicKey()),
   id,
-  payer: payer.publicKey, // Still needs a Solana account for fees
+  payer: payer.publicKey,
   actions: rootActions,
+});
+
+// Prepare transfer
+const transfer = SystemProgram.transfer({
+  fromPubkey: swigAddress,
+  toPubkey: dappTreasury,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
 });
 
 // Sign using the Secp256k1 private key
 const signingFn = getSigningFnForSecp256k1PrivateKey(
   userWallet.getPrivateKey(),
 );
+const slot = await connection.getSlot('finalized');
 
-const signedTransfer = await signInstruction(
-  rootRole,
-  signer.publicKey,
+const signedTransfer = await getSignInstructions(
+  swig,
+  rootRole.id,
   [transfer],
+  false,
   {
     currentSlot: BigInt(slot),
     signingFn,
+    payer: signer.publicKey,
   },
 );
 ```
+  </Tab>
+  <Tab title="Kit">
+
+```ts
+// Key Setup - Using Ethereum wallet
+const userWallet = Wallet.generate(); // 👈 EVM wallet instead of Solana keypair
+
+// RPC Setup
+const rpc = createSolanaRpc('http://localhost:8899');
+const rpcSubscriptions = createSolanaRpcSubscriptions('ws://localhost:8900');
+const connection = { rpc, rpcSubscriptions };
+
+// Solana accounts for fees and transactions
+const payer = await generateKeyPairSigner();
+const signer = await generateKeyPairSigner();
+const dappTreasury = await generateKeyPairSigner();
+
+// Find Swig PDA by ID
+const id = Uint8Array.from(Array(32).fill(1));
+const swigAddress = await findSwigPda(id);
+
+// Create Swig with Secp256k1 authority
+const rootActions = Actions.set().all().get();
+const createSwigIx = await getCreateSwigInstruction({
+  authorityInfo: createSecp256k1AuthorityInfo(userWallet.getPublicKey()),
+  id,
+  payer: payer.address,
+  actions: rootActions,
+});
+
+// Prepare transfer instruction
+const transfer = {
+  programAddress: SYSTEM_PROGRAM_ADDRESS,
+  accounts: [
+    {
+      address: swigAddress,
+      role: AccountRole.WRITABLE_SIGNER,
+    },
+    {
+      address: dappTreasury.address,
+      role: AccountRole.WRITABLE,
+    },
+  ],
+  data: new Uint8Array(
+    getTransferSolInstructionDataEncoder().encode({
+      amount: 100_000_000, // 0.1 SOL
+    }),
+  ),
+};
+
+// Sign using Secp256k1 private key
+const currentSlot = await rpc.getSlot().send();
+const signingFn = getSigningFnForSecp256k1PrivateKey(userWallet.getPrivateKey());
+
+const signIx = await getSignInstructions(swig, rootRole.id, [transfer], false, {
+  payer: signer.address,
+  currentSlot,
+  signingFn,
+});
+```
+  </Tab>
+</Tabs>
 
 Check out `transfer-local-secp.ts` and `transfer-svm-secp.ts` for complete examples.
 
