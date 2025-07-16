@@ -401,22 +401,116 @@ const signedTransferIx = await getSignInstructions(
 
 ### Secp256k1 Sessions
 
+<Tabs>
+  <Tab title="Classic">
 ```ts
-const sessionWallet = Wallet.generate();
-const sessionDuration = 100n;
+// Key Setup - EVM wallet with session capability
+const userWallet = Wallet.generate();
+const userRootKeypair = Keypair.generate();
+const dappSessionKeypair = Keypair.generate();
 
-const addSessionInstruction = await addAuthorityInstruction(
-  rootRole,
-  signer.publicKey,
+// Create Swig with Secp256k1 Session Authority
+const createSwigInstruction = await getCreateSwigInstruction({
+  authorityInfo: createSecp256k1SessionAuthorityInfo(
+    userWallet.getPublicKey(),
+    100n, // max session duration in slots
+  ),
+  id,
+  payer: userRootKeypair.publicKey,
+  actions: rootActions,
+});
+
+// Create Session with EVM signing
+const signingFn = getSigningFnForSecp256k1PrivateKey(
+  userWallet.getPrivateKeyString(),
+);
+const currentSlot = await connection.getSlot('confirmed');
+
+const sessionInstructions = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.publicKey,
+  50n, // session duration
   {
-    currentSlot: BigInt(slot),
-    signingFn: secp256k1SigningFn,
-    authorityInfo: createSecp256k1AuthorityInfo(sessionWallet.getPublicKey()),
-    actions: sessionActions,
-    duration: sessionDuration,
+    currentSlot: BigInt(currentSlot),
+    signingFn,
+    payer: userRootKeypair.publicKey,
+  },
+);
+
+// Find and use session role
+const sessionRole = swig.findRoleBySessionKey(dappSessionKeypair.publicKey);
+if (!sessionRole) throw new Error('Session role not found');
+
+// Sign with session key
+const signTransfer = await getSignInstructions(
+  swig,
+  sessionRole.id,
+  [transferIx],
+  false,
+  {
+    currentSlot: BigInt(currentSlot),
+    signingFn,
+    payer: dappSessionKeypair.publicKey,
   },
 );
 ```
+  </Tab>
+  <Tab title="Kit">
+```ts
+// Key Setup - EVM wallet with session capability
+const userWallet = Wallet.generate();
+const userRootKeypair = await generateKeyPairSigner();
+const dappSessionKeypair = await generateKeyPairSigner();
+
+// Create Swig with Secp256k1 Session Authority
+const authorityInfo = createSecp256k1SessionAuthorityInfo(
+  userWallet.getPublicKey(),
+  100n, // max session duration in slots
+);
+
+const createSwigInstruction = await getCreateSwigInstruction({
+  authorityInfo,
+  id,
+  payer: userRootKeypair.address,
+  actions: rootActions,
+});
+
+// Create Session with EVM signing
+const signingFn = getSigningFnForSecp256k1PrivateKey(userWallet.getPrivateKey());
+const currentSlot = await rpc.getSlot().send();
+
+const sessionInstructions = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.address,
+  50n, // session duration
+  { 
+    payer: userRootKeypair.address,
+    currentSlot,
+    signingFn,
+  },
+);
+
+// Find and use session role
+const sessionRole = swig.findRoleBySessionKey(dappSessionKeypair.address);
+if (!sessionRole) throw new Error('Session role not found');
+
+// Sign with session key
+const signTransfer = await getSignInstructions(
+  swig,
+  sessionRole.id,
+  [transferIx],
+  false,
+  {
+    payer: dappSessionKeypair.address,
+    currentSlot,
+    signingFn,
+  },
+);
+```
+  </Tab>
+</Tabs>
 
 ---
 
