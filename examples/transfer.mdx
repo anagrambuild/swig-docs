@@ -514,10 +514,44 @@ const signTransfer = await getSignInstructions(
 
 ---
 
+## Key aspects of sessions:
+
+- Can be created with any supported authority type (Ed25519, Secp256k1)
+- Limited duration specified in slots
+- Restricted set of actions (defined by sessionActions)
+- Perfect for dApp integrations where temporary access is needed
+
+You can find complete session examples in (we have just mentioned a few you can find all of them labelled a specific way but it will contain the word "sessions" in the file name):
+
+- `transfer-local-session.ts` (Ed25519)
+- `transfer-svm-session.ts` (Ed25519)
+- `transfer-svm-secp-session.ts` (Secp256k1)
+
+For more detailed information about sessions, check out the [Creating Sessions Guide](/examples/sessions).
+
+---
+
 ## Testing Environment Options
 
-* **Local Validator**: Use the `transfer-local-*` examples
-* **LiteSVM**: Use the `transfer-svm-*` examples
-* **Devnet**: Change connection URL to `https://api.devnet.solana.com`
+These examples can be run in different environments:
 
-LiteSVM is recommended for the fastest feedback. Use local validator/devnet for integration-level testing.
+**Local Validator**: Use the `transfer-local-*` examples
+
+- Requires running a local Solana validator
+- Real blockchain environment
+- Good for final testing
+
+**LiteSVM**: Use the `transfer-svm-*` examples
+
+- No validator required
+- Instant transaction confirmation
+- Perfect for rapid development
+- Simulates the Solana runtime
+
+**Devnet**: All examples work with devnet
+
+- Change connection URL to `https://api.devnet.solana.com`
+- Real network environment
+- Free to use with airdropped SOL
+
+LiteSVM is recommended for initial development as it provides the fastest feedback loop. Move to local validator or devnet for more thorough testing.
