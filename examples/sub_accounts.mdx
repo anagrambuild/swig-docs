@@ -5,6 +5,10 @@ description: '\"Its sub accounts all the way down\" - Ancient Swig Proverb'
 
 This guide explains how to work with sub accounts in Swig, which allow authorities to create and manage dedicated sub account addresses with specific permissions. Sub accounts are perfect for use cases like portfolio management where you want to delegate complex operations without giving control over all assets.
 
+You can find complete working examples in the Swig repository:
+- [Classic Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-subaccount.ts)
+- [Kit Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/transfer-local-subaccount.ts)
+
 ## What are Sub Accounts?
 
 Sub accounts in Swig allow an authority to create and manage a single sub account address and perform any actions on behalf of that sub account. This is a super high level of permission so use with care. It works for use cases like portfolio management, where you want to allow an unlimited complexity of actions on behalf of a single address, but you don't want to give the authority control over all the assets of the swig. The root authority can always pull funds (SOL and tokens) from the sub account back to the main Swig wallet.
@@ -328,4 +332,11 @@ Sub accounts are perfect for:
 - **Multi-Strategy Trading**: Separate accounts for different trading strategies
 - **Delegation**: Give specific permissions for particular use cases
 
-You can find working examples in our [test suite](https://github.com/anagrambuild/swig-wallet/blob/main/program/tests/sub_account_test.rs#L33).
+## Additional Resources
+
+You can find more working examples in our repositories:
+
+- **Rust Examples**: [Swig test suite](https://github.com/anagrambuild/swig-wallet/blob/main/program/tests/sub_account_test.rs#L33)
+- **Classic TypeScript**: [transfer-svm-subaccount.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-subaccount.ts)
+- **Kit TypeScript**: [transfer-local-subaccount.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/transfer-local-subaccount.ts)
+- **All Examples**: [Swig TypeScript examples](https://github.com/anagrambuild/swig-ts/tree/main/examples)
