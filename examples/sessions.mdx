@@ -12,39 +12,124 @@ You can find all example code in the [swig-ts/examples/classic/transfer](https:/
 
 The simplest way to create a session is with Ed25519 keys. Here are the key parts:
 
+<Tabs>
+<Tab title="Classic">
 ```typescript
+import {
+  Connection,
+  Keypair,
+  LAMPORTS_PER_SOL,
+} from '@solana/web3.js';
+import {
+  Actions,
+  createEd25519SessionAuthorityInfo,
+  findSwigPda,
+  getCreateSwigInstruction,
+  getCreateSessionInstructions,
+} from '@swig-wallet/classic';
+
 // Setup - Create root authority and session keypair
 const userRootKeypair = Keypair.generate();
 const dappSessionKeypair = Keypair.generate();
 
+const connection = new Connection('http://localhost:8899', 'confirmed');
+
 // Create Swig with session support
+const id = randomBytes(32);
+const swigAddress = findSwigPda(id);
 const rootActions = Actions.set().all().get();
-await createSwig(
-  connection,
+
+const ix = await getCreateSwigInstruction({
   id,
-  createEd25519SessionAuthorityInfo(userRootKeypair.publicKey, 100n),
-  rootActions,
-  userRootKeypair.publicKey,
-  [userRootKeypair],
-);
+  authorityInfo: createEd25519SessionAuthorityInfo(
+    userRootKeypair.publicKey,
+    100n,
+  ),
+  actions: rootActions,
+  payer: userRootKeypair.publicKey,
+});
 
 // Create a session that lasts 50 slots
-const createSessionIx = await createSessionInstruction(
-  rootRole,
-  userRootKeypair.publicKey,
+const createSessionIx = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
   dappSessionKeypair.publicKey,
   50n,
 );
-
-await sendTransaction(connection, createSessionIx, userRootKeypair);
+// Create a session that lasts 50 slots
+const createSessionIx = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.publicKey,
+  50n,
+);
 ```
+</Tab>
+<Tab title="Kit">
+```typescript
+import {
+  createSolanaRpc,
+  createSolanaRpcSubscriptions,
+  generateKeyPairSigner,
+  lamports,
+} from '@solana/kit';
+import {
+  Actions,
+  createEd25519SessionAuthorityInfo,
+  findSwigPda,
+  getCreateSwigInstruction,
+  getCreateSessionInstructions,
+} from '@swig-wallet/kit';
 
+// Setup - Create root authority and session keypair
+const userRootKeypair = await generateKeyPairSigner();
+const dappSessionKeypair = await generateKeyPairSigner();
+
+const connection = {
+  rpc: createSolanaRpc('http://localhost:8899'),
+  rpcSubscriptions: createSolanaRpcSubscriptions('ws://localhost:8900'),
+};
+
+// Create Swig with session support
+const id = randomBytes(32);
+const swigAddress = await findSwigPda(id);
+const rootActions = Actions.set().all().get();
+
+const createSwigIx = await getCreateSwigInstruction({
+  id,
+  authorityInfo: createEd25519SessionAuthorityInfo(userRootKeypair.address, 100n),
+  actions: rootActions,
+  payer: userRootKeypair.address,
+});
+
+// Create a session that lasts 50 slots
+const createSessionIx = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.address,
+  50n,
+);
+```
+</Tab>
+</Tabs>
 ## Using Session Authority
 
 Once a session is created, you can use it to sign transactions within its duration:
 
+<Tabs>
+<Tab title="Classic">
 ```typescript
+import {
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+} from '@solana/web3.js';
+import {
+  fetchSwig,
+  getSignInstructions,
+} from '@swig-wallet/classic';
+
 // Find the role by session key
+const swig = await fetchSwig(connection, swigAddress);
 const rootRole = swig.findRoleBySessionKey(dappSessionKeypair.publicKey);
 
 if (!rootRole || !rootRole.isSessionBased())
@@ -57,25 +142,86 @@ const transfer = SystemProgram.transfer({
   lamports: 0.1 * LAMPORTS_PER_SOL,
 });
 
-const signTransfer = await signInstruction(
-  rootRole,
-  dappSessionKeypair.publicKey,
+const signTransfer = await getSignInstructions(
+  swig,
+  rootRole.id,
   [transfer],
+  false,
+  { payer: dappSessionKeypair.publicKey },
 );
 
 await sendTransaction(connection, signTransfer, dappSessionKeypair);
 ```
+</Tab>
+<Tab title="Kit">
+```typescript
+import {
+  getTransferSolInstructionDataEncoder,
+  SYSTEM_PROGRAM_ADDRESS,
+} from '@solana-program/system';
+import {
+  AccountRole,
+  type IInstruction,
+} from '@solana/kit';
+import {
+  fetchSwig,
+  getSignInstructions,
+} from '@swig-wallet/kit';
+
+// Find the role by session key
+const swig = await fetchSwig(connection.rpc, swigAddress);
+const sessionRole = swig.findRolesByEd25519SignerPk(dappSessionKeypair.address)[0];
+
+if (!sessionRole || !sessionRole.isSessionBased())
+  throw new Error('Role not found for authority');
+
+// Create and sign a transfer using session authority
+const transferIx: IInstruction = {
+  programAddress: SYSTEM_PROGRAM_ADDRESS,
+  accounts: [
+    { address: swigAddress, role: AccountRole.WRITABLE_SIGNER },
+    { address: dappTreasury.address, role: AccountRole.WRITABLE },
+  ],
+  data: new Uint8Array(
+    getTransferSolInstructionDataEncoder().encode({
+      amount: BigInt(0.1 * LAMPORTS_PER_SOL),
+    })
+  ),
+};
+
+const signTransfer = await getSignInstructions(
+  swig,
+  sessionRole.id,
+  [transferIx],
+  false,
+  { payer: dappSessionKeypair.address },
+);
+
+await sendTransaction(connection, signTransfer, dappSessionKeypair);
+```
+</Tab>
+</Tabs>
 
 ## Secp256k1 Sessions (EVM Compatible)
 
 For EVM compatibility, you can create sessions with Secp256k1 keys:
 
+<Tabs>
+<Tab title="Classic">
 ```typescript
+import { Wallet } from '@ethereumjs/wallet';
+import {
+  createSecp256k1SessionAuthorityInfo,
+  getSigningFnForSecp256k1PrivateKey,
+  getCreateSwigInstruction,
+  getCreateSessionInstructions,
+} from '@swig-wallet/classic';
+
 // Setup with Ethereum wallet
 const userWallet = Wallet.generate();
 
 // Create Swig with Secp256k1 session support
-const createSwigInstruction = Swig.create({
+const createSwigInstruction = await getCreateSwigInstruction({
   authorityInfo: createSecp256k1SessionAuthorityInfo(
     userWallet.getPublicKey(),
     100n,
@@ -86,38 +232,111 @@ const createSwigInstruction = Swig.create({
 });
 
 // Create a session
-const newSessionInstruction = await createSessionInstruction(
-  rootRole,
-  userRootKeypair.publicKey,
+const currentSlot = await connection.getSlot('confirmed');
+const signingFn = getSigningFnForSecp256k1PrivateKey(
+  userWallet.getPrivateKeyString(),
+);
+
+const sessionInstructions = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
   dappSessionKeypair.publicKey,
   50n,
-  {
-    currentSlot,
-    signingFn: getSigningFnForSecp256k1PrivateKey(
-      userWallet.getPrivateKeyString(),
-    ),
+  { 
+    payer: userRootKeypair.publicKey,
+    currentSlot: BigInt(currentSlot),
+    signingFn,
   },
 );
 ```
+</Tab>
+<Tab title="Kit">
+```typescript
+import { Wallet } from '@ethereumjs/wallet';
+import {
+  createSecp256k1SessionAuthorityInfo,
+  getSigningFnForSecp256k1PrivateKey,
+  getCreateSwigInstruction,
+  getCreateSessionInstructions,
+} from '@swig-wallet/kit';
+
+// Setup with Ethereum wallet
+const userWallet = Wallet.generate();
+
+// Create Swig with Secp256k1 session support
+const authorityInfo = createSecp256k1SessionAuthorityInfo(
+  userWallet.getPublicKey(),
+  100n, // Max session duration
+);
+
+const createSwigInstruction = await getCreateSwigInstruction({
+  authorityInfo,
+  id,
+  payer: userRootKeypair.address,
+  actions: rootActions,
+});
+
+// Create a session
+const currentSlot = await connection.rpc.getSlot().send();
+const signingFn = getSigningFnForSecp256k1PrivateKey(userWallet.getPrivateKey());
+
+const sessionInstructions = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.address,
+  50n, // Session duration in slots
+  { 
+    payer: userRootKeypair.address,
+    currentSlot,
+    signingFn,
+  },
+);
+```
+</Tab>
+</Tabs>
 
 ## Revoking Sessions
 
 You can revoke a session by creating a new session with an all-zero session key:
 
+<Tabs>
+<Tab title="Classic">
 ```typescript
+import { getCreateSessionInstructions } from '@swig-wallet/classic';
+
 // Create a zero key to revoke the session
 const zeroKey = new Uint8Array(32).fill(0);
 
 // Create revocation instruction
-const revokeSessionIx = await createSessionInstruction(
-  rootRole,
-  userRootKeypair.publicKey,
+const revokeSessionIx = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
   zeroKey,
   1n, // Duration doesn't matter for revocation
 );
 
 await sendTransaction(connection, revokeSessionIx, userRootKeypair);
 ```
+</Tab>
+<Tab title="Kit">
+```typescript
+import { getCreateSessionInstructions } from '@swig-wallet/kit';
+
+// Create a zero key to revoke the session
+const zeroKey = new Uint8Array(32).fill(0);
+
+// Create revocation instruction
+const revokeSessionIx = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  zeroKey,
+  1n, // Duration doesn't matter for revocation
+);
+
+await sendTransaction(connection, revokeSessionIx, userRootKeypair);
+```
+</Tab>
+</Tabs>
 
 ## Key Aspects of Sessions
 
@@ -133,12 +352,12 @@ Sessions in Swig have several important characteristics:
 
 These examples can be run in different environments:
 
-- **Local Validator**: Use `transfer-local-session.ts`
-  - Requires running a local Solana validator
+- **Local Validator**: Use the examples with 'local' in the filename
+  - Requires running a local Solana validator with `bun start-validator`
   - Real blockchain environment
   - Good for final testing
 
-- **LiteSVM**: Use `transfer-svm-session.ts` or `transfer-svm-secp-session.ts`
+- **LiteSVM**: Use examples with `svm` in the filename
   - No validator required
   - Instant transaction confirmation
   - Perfect for rapid development
@@ -148,5 +367,32 @@ These examples can be run in different environments:
   - Change connection URL to `https://api.devnet.solana.com`
   - Real network environment
   - Free to use with airdropped SOL
+
+<Tabs>
+<Tab title="Classic">
+```typescript
+// Local validator
+const connection = new Connection('http://localhost:8899', 'confirmed');
+
+// Devnet
+const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+```
+</Tab>
+<Tab title="Kit">
+```typescript
+// Local validator
+const connection = {
+  rpc: createSolanaRpc('http://localhost:8899'),
+  rpcSubscriptions: createSolanaRpcSubscriptions('ws://localhost:8900'),
+};
+
+// Devnet
+const connection = {
+  rpc: createSolanaRpc('https://api.devnet.solana.com'),
+  rpcSubscriptions: createSolanaRpcSubscriptions('wss://api.devnet.solana.com'),
+};
+```
+</Tab>
+</Tabs>
 
 LiteSVM is recommended for initial development as it provides the fastest feedback loop. Move to local validator or devnet for more thorough testing.
