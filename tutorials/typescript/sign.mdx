@@ -3,7 +3,7 @@ title: "3. Signing with Swig"
 description: '"I came. I saw. I signed it with Swig." - Julius Caesar, probably'
 ---
 
-Now that we have our Swig account set up with proper authorities from the previous tutorials, let's explore how to sign transactions. If you haven't completed the previous tutorials, please go back and complete them first as we'll be building on those concepts.
+Now that we have our Swig account set up with proper authorities from the previous tutorials, const's explore how to sign transactions. If you haven't completed the previous tutorials, please go back and complete them first as we'll be building on those concepts.
 
 Create a new file called `tutorial-3.ts` in your `examples/classic/transfer/tutorial` directory for the `classic` version or `examples/kit/transfer/tutorial` for `kit`:
 
@@ -146,11 +146,11 @@ async function displayTokenBalance(
     chalk.cyan(rootUser.publicKey.toBase58()),
   );
 
-  let airdrop = await connection.requestAirdrop(
+  const airdrop = await connection.requestAirdrop(
     rootUser.publicKey,
     100 * LAMPORTS_PER_SOL,
   );
-  let blockhash = await connection.getLatestBlockhash();
+  const blockhash = await connection.getLatestBlockhash();
   await connection.confirmTransaction({
     signature: airdrop,
     blockhash: blockhash.blockhash,
@@ -300,7 +300,7 @@ async function displayTokenBalance(
       skipPreflight: true,
     });
     console.error(chalk.red("✗ Second transfer unexpectedly succeeded!"));
-  } catch (error) {
+  } catch {
     console.log(
       chalk.green("✓ Second transfer failed as expected:"),
       "Authority has no remaining token allowance",

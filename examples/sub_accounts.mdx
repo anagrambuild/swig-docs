@@ -3,33 +3,340 @@ title: 'Sub Accounts in Swig'
 description: '\"Its sub accounts all the way down\" - Ancient Swig Proverb'
 ---
 
-# Sub Accounts (Preview)
+This guide explains how to work with sub accounts in Swig, which allow authorities to create and manage dedicated sub account addresses with specific permissions. Sub accounts are perfect for use cases like portfolio management where you want to delegate complex operations without giving control over all assets.
 
-<Note>
-Sub account support in the TypeScript SDK is currently under development. However, full support is available in the Rust SDK. This guide provides an overview of the feature and its core concepts.
-</Note>
+You can find complete working examples in the Swig repository:
+- [Classic Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-subaccount.ts)
+- [Kit Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/transfer-local-subaccount.ts)
 
 ## What are Sub Accounts?
 
-Sub accounts in Swig allow an authority to create and manage a single sub account address and perform any actions on behalf of that sub account. This is a super high level of permission so use with care. It works for usecases like portfolio management, where you want to allow an unlimited complexity of actions on behalf of a single address, but you dont want to give the authority control over all the assets of the swig. The root authority can always pull funds SOL and tokens from the sub account back to the main Swig wallet. 
-A great example of this is Breeze, anagrams onchain yield optimizer. Allows breeze to optimize the yield of a users portfolio without giving them control over their whole swig. 
+Sub accounts in Swig allow an authority to create and manage a single sub account address and perform any actions on behalf of that sub account. This is a super high level of permission so use with care. It works for use cases like portfolio management, where you want to allow an unlimited complexity of actions on behalf of a single address, but you don't want to give the authority control over all the assets of the swig. The root authority can always pull funds (SOL and tokens) from the sub account back to the main Swig wallet.
+
+A great example of this is Breeze, Anagram's onchain yield optimizer. Breeze can optimize the yield of a user's portfolio without giving them control over their whole swig.
 
 ## How Sub Accounts Work
 
-To work with sub accounts, there are two key requirements:
+To work with sub accounts, there are several key steps:
 
 1. **Sub Account Permission**: The authority must have the sub account permission to create the sub account. This permission is set when creating or modifying a role.
+2. **Create Sub Account**: Once the authority has the permission, they can create a sub account using the `getCreateSubAccountInstructions`.
+3. **Sub Account Sign**: Once created, sub accounts can perform on-chain actions using the `getSignInstructions` with the `isSubAccount` parameter set to `true`.
 
-2. **Sub Account Sign**: Once created, sub accounts can perform on-chain actions using the `sub_account_sign` instruction.
+## Creating a Sub Account Authority
 
+First, you need to add an authority with sub account permissions:
 
-You can find working examples in our [test suite](https://github.com/anagrambuild/swig-wallet/blob/main/program/tests/sub_account_test.rs#L33).
+<Tabs>
+<Tab title="Classic">
+```typescript
+import {
+  Keypair,
+  LAMPORTS_PER_SOL,
+} from '@solana/web3.js';
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  findSwigPda,
+  getAddAuthorityInstructions,
+  getCreateSwigInstruction,
+  fetchSwig,
+} from '@swig-wallet/classic';
 
-## Coming Soon to TypeScript
+// Create authorities
+const rootAuthority = Keypair.generate();
+const subAccountAuthority = Keypair.generate();
 
-We're actively working on bringing full sub account support to our TypeScript SDK. The implementation will include:
+// Create Swig with root authority
+const id = Uint8Array.from(Array(32).fill(2));
+const swigAddress = findSwigPda(id);
 
-- Easy-to-use APIs for sub account creation and management
-- TypeScript-native permission management
-- Event handling for sub account activities
-- Comprehensive documentation and examples
+const createSwigIx = await getCreateSwigInstruction({
+  payer: rootAuthority.publicKey,
+  actions: Actions.set().all().get(),
+  authorityInfo: createEd25519AuthorityInfo(rootAuthority.publicKey),
+  id,
+});
+
+// Add sub account authority with sub account permissions
+const swig = await fetchSwig(connection, swigAddress);
+const rootRole = swig.roles[0];
+
+const addAuthorityIx = await getAddAuthorityInstructions(
+  swig,
+  rootRole.id,
+  createEd25519AuthorityInfo(subAccountAuthority.publicKey),
+  Actions.set().subAccount().get(),
+);
+```
+</Tab>
+<Tab title="Kit">
+```typescript
+import {
+  generateKeyPairSigner,
+  lamports,
+} from '@solana/kit';
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  findSwigPda,
+  getAddAuthorityInstructions,
+  getCreateSwigInstruction,
+  fetchSwig,
+} from '@swig-wallet/kit';
+
+// Create authorities
+const rootAuthority = await generateKeyPairSigner();
+const subAccountAuthority = await generateKeyPairSigner();
+
+// Create Swig with root authority
+const id = randomBytes(32);
+const swigAddress = await findSwigPda(id);
+
+const createSwigIx = await getCreateSwigInstruction({
+  payer: rootAuthority.address,
+  actions: Actions.set().all().get(),
+  authorityInfo: createEd25519AuthorityInfo(rootAuthority.address),
+  id,
+});
+
+// Add sub account authority with sub account permissions
+const swig = await fetchSwig(connection.rpc, swigAddress);
+const rootRole = swig.roles[0];
+
+const addAuthorityIx = await getAddAuthorityInstructions(
+  swig,
+  rootRole.id,
+  createEd25519AuthorityInfo(subAccountAuthority.address),
+  Actions.set().subAccount().get(),
+);
+```
+</Tab>
+</Tabs>
+
+## Creating a Sub Account
+
+Once you have an authority with sub account permissions, you can create the sub account:
+
+<Tabs>
+<Tab title="Classic">
+```typescript
+import {
+  findSwigSubAccountPda,
+  getCreateSubAccountInstructions,
+} from '@swig-wallet/classic';
+
+// Refetch swig to get updated roles
+await swig.refetch();
+const subAccountAuthRole = swig.roles[1];
+
+// Create sub account
+const createSubAccountIx = await getCreateSubAccountInstructions(
+  swig,
+  subAccountAuthRole.id,
+);
+
+await sendTransaction(connection, createSubAccountIx, subAccountAuthority);
+
+// Get the sub account address
+const subAccountAddress = findSwigSubAccountPda(
+  subAccountAuthRole.swigId,
+  subAccountAuthRole.id,
+);
+```
+</Tab>
+<Tab title="Kit">
+```typescript
+import {
+  findSwigSubAccountPda,
+  getCreateSubAccountInstructions,
+} from '@swig-wallet/kit';
+
+// Refetch swig to get updated roles
+await swig.refetch();
+const subAccountAuthRole = swig.roles[1];
+
+// Create sub account
+const createSubAccountIx = await getCreateSubAccountInstructions(
+  swig,
+  subAccountAuthRole.id,
+);
+
+await sendTransaction(connection, createSubAccountIx, subAccountAuthority);
+
+// Get the sub account address
+const subAccountAddress = await findSwigSubAccountPda(
+  subAccountAuthRole.swigId,
+  subAccountAuthRole.id,
+);
+```
+</Tab>
+</Tabs>
+
+## Using Sub Accounts
+
+Once created, you can use the sub account to perform transactions:
+
+<Tabs>
+<Tab title="Classic">
+```typescript
+import {
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+} from '@solana/web3.js';
+import {
+  getSignInstructions,
+} from '@swig-wallet/classic';
+
+// Fund the sub account
+await connection.requestAirdrop(subAccountAddress, LAMPORTS_PER_SOL);
+
+// Create a transfer from the sub account
+const recipient = Keypair.generate().publicKey;
+
+const transfer = SystemProgram.transfer({
+  fromPubkey: subAccountAddress,
+  toPubkey: recipient,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
+
+// Sign with sub account (note: isSubAccount = true)
+const signIx = await getSignInstructions(
+  swig,
+  subAccountAuthRole.id,
+  [transfer],
+  true, // isSubAccount flag
+);
+
+await sendTransaction(connection, signIx, subAccountAuthority);
+```
+</Tab>
+<Tab title="Kit">
+```typescript
+import {
+  getTransferSolInstructionDataEncoder,
+  SYSTEM_PROGRAM_ADDRESS,
+} from '@solana-program/system';
+import {
+  AccountRole,
+  generateKeyPairSigner,
+  lamports,
+} from '@solana/kit';
+import {
+  getSignInstructions,
+} from '@swig-wallet/kit';
+
+// Fund the sub account
+await connection.rpc
+  .requestAirdrop(subAccountAddress, lamports(BigInt(LAMPORTS_PER_SOL)))
+  .send();
+
+// Create a transfer from the sub account
+const recipient = (await generateKeyPairSigner()).address;
+
+const transfer = {
+  programAddress: SYSTEM_PROGRAM_ADDRESS,
+  accounts: [
+    {
+      address: subAccountAddress,
+      role: AccountRole.WRITABLE_SIGNER,
+    },
+    {
+      address: recipient,
+      role: AccountRole.WRITABLE,
+    },
+  ],
+  data: new Uint8Array(
+    getTransferSolInstructionDataEncoder().encode({
+      amount: 0.1 * LAMPORTS_PER_SOL,
+    }),
+  ),
+};
+
+// Sign with sub account (note: isSubAccount = true)
+const signIx = await getSignInstructions(
+  swig,
+  subAccountAuthRole.id,
+  [transfer],
+  true, // isSubAccount flag
+);
+
+await sendTransaction(connection, signIx, subAccountAuthority);
+```
+</Tab>
+</Tabs>
+
+## Key Features of Sub Accounts
+
+Sub accounts in Swig have several important characteristics:
+
+- **Dedicated Address**: Each sub account has its own unique address derived from the Swig ID and role ID
+- **Isolated Operations**: Sub accounts can perform complex operations without affecting the main Swig balance
+- **Root Authority Control**: The root authority can always reclaim funds from sub accounts
+- **Permission-Based**: Only authorities with sub account permissions can create and manage sub accounts
+- **Unlimited Actions**: Sub accounts can perform any on-chain action within their permission scope
+
+## Testing Environment Options
+
+These examples can be run in different environments:
+
+- **Local Validator**: Use the examples above
+  - Requires running a local Solana validator with `bun start-validator`
+  - Real blockchain environment
+  - Good for final testing
+
+- **LiteSVM**: For rapid development and testing
+  - No validator required
+  - Instant transaction confirmation
+  - Perfect for rapid development
+  - Simulates the Solana runtime
+
+- **Devnet**: All examples work with devnet
+  - Change connection URL to `https://api.devnet.solana.com`
+  - Real network environment
+  - Free to use with airdropped SOL
+
+<Tabs>
+<Tab title="Classic">
+```typescript
+// Local validator
+const connection = new Connection('http://localhost:8899', 'confirmed');
+
+// Devnet
+const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
+```
+</Tab>
+<Tab title="Kit">
+```typescript
+// Local validator
+const connection = {
+  rpc: createSolanaRpc('http://localhost:8899'),
+  rpcSubscriptions: createSolanaRpcSubscriptions('ws://localhost:8900'),
+};
+
+// Devnet
+const connection = {
+  rpc: createSolanaRpc('https://api.devnet.solana.com'),
+  rpcSubscriptions: createSolanaRpcSubscriptions('wss://api.devnet.solana.com'),
+};
+```
+</Tab>
+</Tabs>
+
+## Use Cases
+
+Sub accounts are perfect for:
+
+- **Portfolio Management**: Allow complex DeFi operations without full wallet access
+- **Yield Optimization**: Automated strategies with isolated risk
+- **Multi-Strategy Trading**: Separate accounts for different trading strategies
+- **Delegation**: Give specific permissions for particular use cases
+
+## Additional Resources
+
+You can find more working examples in our repositories:
+
+- **Rust Examples**: [Swig test suite](https://github.com/anagrambuild/swig-wallet/blob/main/program/tests/sub_account_test.rs#L33)
+- **Classic TypeScript**: [transfer-svm-subaccount.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-subaccount.ts)
+- **Kit TypeScript**: [transfer-local-subaccount.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/transfer-local-subaccount.ts)
+- **All Examples**: [Swig TypeScript examples](https://github.com/anagrambuild/swig-ts/tree/main/examples)

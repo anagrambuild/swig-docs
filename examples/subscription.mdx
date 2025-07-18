@@ -7,7 +7,10 @@ description: "\"Please like and most importantly, subscribe\" - Swig Content Inf
 
 SWIG's token limit feature provides a powerful way to implement subscription-based services on Solana. This guide demonstrates how to create a subscription service that charges users monthly using SWIG's token limit capabilities.
 
-You can find the complete example code in the [swig-ts/examples/subscriptions.ts](https://github.com/anagrambuild/swig-ts/tree/main/examples/classic/transfer/subscription-svm.ts) file.
+You can find the complete example code here:
+- **Classic SDK**: [subscription-svm.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/subscription-svm.ts) (uses LiteSVM for testing)
+- **Kit SDK**: [local-subscription.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/local-subscription.ts) (uses local validator)
+
 <Tip>
 Examples with svm in the file name use LiteSVM for testing. Those without svm in the file name use a local validator. Which you can run with the bun start-validator command.
 </Tip>
@@ -46,22 +49,46 @@ The example demonstrates:
 
 Here's a key snippet showing how to set up the subscription authority:
 
-```typescript
-let subscriptionActions = Actions.set()
-  .tokenLimit({
-    mint: usdcMint,
-    amount: BigInt(10_000_000), // $10 with 6 decimals
-    blocks: 216000, // ~1 month at 400ms per block
-  })
-  .get();
+<Tabs>
+  <Tab title="Classic">
+    ```typescript
+    // Set subscription service authority with 0.1 SOL monthly limit
+    // 400ms per block, so ~216000 blocks per month
+    const subscriptionActions = Actions.set()
+      .solRecurringLimit({
+        recurringAmount: BigInt(0.1 * LAMPORTS_PER_SOL), // 0.1 SOL
+        window: BigInt(216000),
+      })
+      .get();
 
-let addSubscriptionAuthorityIx = await addAuthorityInstruction(
-  rootRole,
-  rootKeypair.publicKey,
-  createEd25519AuthorityInfo(subscriptionServiceKeypair.publicKey),
-  subscriptionActions,
-);
-```
+    const addSubscriptionAuthorityIx = await getAddAuthorityInstructions(
+      swig,
+      rootRole.id,
+      createEd25519AuthorityInfo(subscriptionServiceKeypair.publicKey),
+      subscriptionActions,
+      { payer: rootKeypair.publicKey },
+    );
+    ```
+  </Tab>
+  <Tab title="Kit">
+    ```typescript
+    // Set subscription service authority with 0.1 SOL recurring limit
+    const recurringActions = Actions.set()
+      .solRecurringLimit({
+        recurringAmount: BigInt(0.1 * LAMPORTS_PER_SOL),
+        window: BigInt(20), // block-based window
+      })
+      .get();
+
+    const addAuthorityIx = await getAddAuthorityInstructions(
+      swig,
+      rootRole.id,
+      createEd25519AuthorityInfo(subscription.address),
+      recurringActions,
+    );
+    ```
+  </Tab>
+</Tabs>
 
 ## Use Cases
 

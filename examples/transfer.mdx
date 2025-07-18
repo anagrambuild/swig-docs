@@ -4,7 +4,7 @@ description: '\"Give and it will be given to you\" - Ancient Green Manuscripts'
 ---
 
 This guide walks through different ways to perform transfers using Swig, progressing from basic to more advanced patterns.
-You can find all example code in the [swig-ts/examples/classic/transfer](https://github.com/swig-wallet/swig/tree/main/swig-ts/examples/classic/transfer) directory.
+You can find all example code in the [swig-ts/examples/classic/transfer](https://github.com/anagrambuild/swig-ts/tree/main/examples/classic/transfer) directory or for kit refer to this directory [swig-ts/examples/kit/transfer](https://github.com/anagrambuild/swig-ts/tree/main/examples/kit/transfer).
 
 <Tip>Examples with svm in the file name use LiteSVM for testing. Those without svm in the file name use a local validator. Which you can run with the `bun start-validator` command.</Tip>
 
@@ -12,185 +12,546 @@ You can find all example code in the [swig-ts/examples/classic/transfer](https:/
 
 The simplest way to use Swig is with standard Ed25519 keypairs. Here are the key parts:
 
-```typescript
+<Tabs>
+  <Tab title="Classic">
+```ts
 // Key Setup - Using standard Solana keypairs
 const userRootKeypair = Keypair.generate();
-const signer = Keypair.generate();
+const dappAuthorityKeypair = Keypair.generate();
 
 // Create a new Swig account with root authority
 const rootActions = Actions.set().all().get();
-const createSwigInstruction = Swig.create({
-  // 👇 Using Ed25519 authority
+const createSwigInstruction = await getCreateSwigInstruction({
+  payer: userRootKeypair.publicKey,
   authorityInfo: createEd25519AuthorityInfo(userRootKeypair.publicKey),
   id,
-  payer: userRootKeypair.publicKey,
   actions: rootActions,
 });
 
-// Transfer SOL using Ed25519 signing
+// Add a new authority with a spending limit
+const dappActions = Actions.set().solLimit({ amount: BigInt(0.1 * LAMPORTS_PER_SOL) }).get();
+const addAuthorityInstructions = await getAddAuthorityInstructions(
+  swig,
+  rootRole.id,
+  createEd25519AuthorityInfo(dappAuthorityKeypair.publicKey),
+  dappActions,
+);
+
+// Transfer SOL with Swig authority
+const transferIx = SystemProgram.transfer({
+  fromPubkey: swigAddress,
+  toPubkey: dappAuthorityKeypair.publicKey,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
+
+const signedInstructions = await getSignInstructions(
+  swig,
+  dappRole.id,
+  [transferIx]
+);
+
+await sendTransaction(connection, signedInstructions, dappAuthorityKeypair);
+```
+  </Tab>
+  <Tab title="Kit">
+```ts
+// Key Setup - Using @solana/kit KeyPairSigner
+const userRoot = await generateKeyPairSigner();
+const dappAuthority = await generateKeyPairSigner();
+
+// Create Swig with Ed25519 authority
+const rootActions = Actions.set().all().get();
+const createSwigInstruction = await getCreateSwigInstruction({
+  payer: userRoot.address,
+  authorityInfo: createEd25519AuthorityInfo(userRoot.address),
+  id,
+  actions: rootActions,
+});
+
+// Add a dapp authority with spending limit
+const dappActions = Actions.set().solLimit({ amount: BigInt(0.1 * LAMPORTS_PER_SOL) }).get();
+const addAuthorityInstructions = await getAddAuthorityInstructions(
+  swig,
+  rootRole.id,
+  createEd25519AuthorityInfo(dappAuthority.address),
+  dappActions,
+);
+
+// Transfer SOL
+const transferInstruction = getSolTransferInstruction({
+  fromAddress: swigAddress,
+  toAddress: dappAuthority.address,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
+
+const signedInstructions = await getSignInstructions(
+  swig,
+  dappRole.id,
+  [transferInstruction],
+);
+
+await sendTransaction(connection, signedInstructions, dappAuthority);
+```
+
+  </Tab>
+</Tabs>
+
+You can find the complete example in `transfer-local.ts` and `transfer-svm.ts` for local and LiteSVM environments respectively.
+
+---
+
+## Using Secp256k1 Keys (EVM Compatible)
+
+For EVM compatibility, Swig supports Secp256k1 keys. Note the key differences from the Ed25519 example:
+
+<Tabs>
+  <Tab title="Classic">
+
+```ts
+// Key Setup - Using Ethereum wallet
+const userWallet = Wallet.generate(); // 👈 EVM wallet instead of Solana Keypair
+
+// Connect to network and create payers
+const connection = new Connection('http://localhost:8899', 'confirmed');
+const payer = Keypair.generate();
+await connection.requestAirdrop(payer.publicKey, LAMPORTS_PER_SOL);
+const signer = Keypair.generate();
+await connection.requestAirdrop(signer.publicKey, LAMPORTS_PER_SOL);
+
+// Find Swig PDA by ID
+const id = Uint8Array.from(Array(32).fill(1)); // use any 32-byte identifier
+const swigAddress = findSwigPda(id);
+
+// Create Swig with Secp256k1 authority
+const rootActions = Actions.set().all().get();
+const createSwigInstruction = await getCreateSwigInstruction({
+  authorityInfo: createSecp256k1AuthorityInfo(userWallet.getPublicKey()),
+  id,
+  payer: payer.publicKey,
+  actions: rootActions,
+});
+
+// Prepare transfer
 const transfer = SystemProgram.transfer({
   fromPubkey: swigAddress,
   toPubkey: dappTreasury,
   lamports: 0.1 * LAMPORTS_PER_SOL,
 });
 
-const signedTransfer = await signInstruction(
-  rootRole,
-  signer.publicKey,
+// Sign using the Secp256k1 private key
+const signingFn = getSigningFnForSecp256k1PrivateKey(
+  userWallet.getPrivateKey(),
+);
+const slot = await connection.getSlot('finalized');
+
+const signedTransfer = await getSignInstructions(
+  swig,
+  rootRole.id,
   [transfer],
+  false,
   {
     currentSlot: BigInt(slot),
-    // 👇 Ed25519 signing function
-    signingFn: ed25519SigningFn,
+    signingFn,
+    payer: signer.publicKey,
   },
 );
 ```
+  </Tab>
+  <Tab title="Kit">
 
-You can find the complete example in `transfer-local.ts` and `transfer-svm.ts` for local and LiteSVM environments respectively.
-
-## Using Secp256k1 Keys (EVM Compatible)
-
-For EVM compatibility, Swig supports Secp256k1 keys. Note the key differences from the Ed25519 example:
-
-```typescript
+```ts
 // Key Setup - Using Ethereum wallet
-const userWallet = Wallet.generate(); // 👈 EVM wallet instead of Solana Keypair
+const userWallet = Wallet.generate(); // 👈 EVM wallet instead of Solana keypair
+
+// RPC Setup
+const rpc = createSolanaRpc('http://localhost:8899');
+const rpcSubscriptions = createSolanaRpcSubscriptions('ws://localhost:8900');
+const connection = { rpc, rpcSubscriptions };
+
+// Solana accounts for fees and transactions
+const payer = await generateKeyPairSigner();
+const signer = await generateKeyPairSigner();
+const dappTreasury = await generateKeyPairSigner();
+
+// Find Swig PDA by ID
+const id = Uint8Array.from(Array(32).fill(1));
+const swigAddress = await findSwigPda(id);
 
 // Create Swig with Secp256k1 authority
-const createSwigInstruction = Swig.create({
-  // 👇 Using Secp256k1 authority instead of Ed25519
+const rootActions = Actions.set().all().get();
+const createSwigIx = await getCreateSwigInstruction({
   authorityInfo: createSecp256k1AuthorityInfo(userWallet.getPublicKey()),
   id,
-  payer: payer.publicKey, // Still needs a Solana account for fees
+  payer: payer.address,
   actions: rootActions,
 });
 
-// Sign using the Secp256k1 private key
-const signingFn = getSigningFnForSecp256k1PrivateKey(
-  userWallet.getPrivateKey(), // 👈 Different signing function
-);
+// Prepare transfer instruction
+const transfer = {
+  programAddress: SYSTEM_PROGRAM_ADDRESS,
+  accounts: [
+    {
+      address: swigAddress,
+      role: AccountRole.WRITABLE_SIGNER,
+    },
+    {
+      address: dappTreasury.address,
+      role: AccountRole.WRITABLE,
+    },
+  ],
+  data: new Uint8Array(
+    getTransferSolInstructionDataEncoder().encode({
+      amount: 100_000_000, // 0.1 SOL
+    }),
+  ),
+};
 
-// Transfer remains the same, but uses Secp256k1 signing
-const signedTransfer = await signInstruction(
-  rootRole,
-  signer.publicKey,
-  [transfer],
-  {
-    currentSlot: BigInt(slot),
-    signingFn, // 👈 Using Secp256k1 signing function
-  },
-);
+// Sign using Secp256k1 private key
+const currentSlot = await rpc.getSlot().send();
+const signingFn = getSigningFnForSecp256k1PrivateKey(userWallet.getPrivateKey());
+
+const signIx = await getSignInstructions(swig, rootRole.id, [transfer], false, {
+  payer: signer.address,
+  currentSlot,
+  signingFn,
+});
 ```
+  </Tab>
+</Tabs>
 
 Check out `transfer-local-secp.ts` and `transfer-svm-secp.ts` for complete examples.
 
+---
+
 ## Using Viem for Ethereum Wallet Integration
 
-For a more complete Ethereum wallet integration using Viem, here are the key differences:
+For a more complete Ethereum wallet integration using Viem:
 
-```typescript
-// Key Setup - Using Viem account
+```ts
+// Using Viem account
 const privateKeyAccount = privateKeyToAccount(userWallet.getPrivateKeyString());
 
-// Create Swig remains similar to Secp256k1 example
-const createSwigInstruction = Swig.create({
+const swigAddress = findSwigPda(id);
+const rootActions = Actions.set().all().get();
+
+const createSwigInstruction = await getCreateSwigInstruction({
   authorityInfo: createSecp256k1AuthorityInfo(privateKeyAccount.publicKey),
   id,
   payer: transactionPayer.publicKey,
   actions: rootActions,
 });
 
-// Sign transactions using Viem
-const signTransfer = await signInstruction(
-  rootRole,
-  transactionPayer.publicKey,
-  [transfer],
-  {
-    currentSlot: svm.getClock().slot,
-    signingFn: viemSign, // 👈 Using Viem signing function
-  },
-);
+sendSVMTransaction(svm, [createSwigInstruction], transactionPayer);
+
+let swig = fetchSwig(svm, swigAddress);
+svm.airdrop(swigAddress, BigInt(LAMPORTS_PER_SOL));
+
+let rootRole = swig.findRolesBySecp256k1SignerAddress(privateKeyAccount.address)[0];
+if (!rootRole) throw new Error('Role not found for authority');
+
+const viemSign: SigningFn = async (message: Uint8Array) => {
+  const sig = await privateKeyAccount.sign({ hash: keccak256(message) });
+  return { signature: hexToBytes(sig) };
+};
+
+const transfer = SystemProgram.transfer({
+  fromPubkey: swigAddress,
+  toPubkey: dappTreasury,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
+
+let signTransfer = await getSignInstructions(swig, rootRole.id, [transfer], false, {
+  currentSlot: svm.getClock().slot,
+  signingFn: viemSign,
+  payer: transactionPayer.publicKey,
+});
+
+sendSVMTransaction(svm, signTransfer, transactionPayer);
+
+const viemSignWithPrefix: SigningFn = async (message: Uint8Array) => {
+  const prefix = getEvmPersonalSignPrefix(message.length);
+  const prefixedMessage = new Uint8Array(prefix.length + message.length);
+
+  prefixedMessage.set(prefix);
+  prefixedMessage.set(message, prefix.length);
+
+  const sig = await privateKeyAccount.sign({ hash: keccak256(prefixedMessage) });
+  return { signature: hexToBytes(sig), prefix };
+};
+
+signTransfer = await getSignInstructions(swig, rootRole.id, [transfer], false, {
+  currentSlot: svm.getClock().slot,
+  signingFn: viemSignWithPrefix,
+  payer: transactionPayer.publicKey,
+});
+
+sendSVMTransaction(svm, signTransfer, transactionPayer);
+
+const viemSignMessage: SigningFn = async (message: Uint8Array) => {
+  const sig = await privateKeyAccount.signMessage({ message: { raw: message } });
+  return {
+    signature: hexToBytes(sig),
+    prefix: getEvmPersonalSignPrefix(message.length),
+  };
+};
+
+signTransfer = await getSignInstructions(swig, rootRole.id, [transfer], false, {
+  currentSlot: svm.getClock().slot,
+  signingFn: viemSignMessage,
+  payer: transactionPayer.publicKey,
+});
+
+sendSVMTransaction(svm, signTransfer, transactionPayer);
 ```
 
-The complete example is available in `transfer-svm-viem.ts`.
+See `transfer-svm-viem.ts` for the full working code.
+
+---
 
 ## Using Sessions for Enhanced Security
 
-Sessions allow you to delegate limited authority for a specific duration. You can create sessions with any authority type:
+Sessions allow limited, temporary authority:
 
 ### Ed25519 Sessions
 
-```typescript
-// Create an Ed25519 session
-const sessionAuthority = Keypair.generate();
-const sessionDuration = 100n; // slots
+<Tabs>
+  <Tab title="Classic">
+```ts
+// Key Setup
+const userRootKeypair = Keypair.generate();
+const dappSessionKeypair = Keypair.generate();
 
-const addSessionInstruction = await addAuthorityInstruction(
-  rootRole,
-  signer.publicKey,
-  {
-    currentSlot: BigInt(slot),
-    signingFn: ed25519SigningFn,
-    // 👇 Ed25519 session authority
-    authorityInfo: createEd25519AuthorityInfo(sessionAuthority.publicKey),
-    actions: sessionActions,
-    duration: sessionDuration,
-  },
+// Create Swig with Session Authority
+const createSwigIx = await getCreateSwigInstruction({
+  id,
+  authorityInfo: createEd25519SessionAuthorityInfo(
+    userRootKeypair.publicKey,
+    100n, // session duration in slots
+  ),
+  actions: rootActions,
+  payer: userRootKeypair.publicKey,
+});
+
+// Create Session for dApp
+const createSessionIx = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.publicKey,
+  50n, // session duration
+);
+
+// Find and use session role
+const sessionRole = swig.findRoleBySessionKey(dappSessionKeypair.publicKey);
+if (!sessionRole || !sessionRole.isSessionBased()) {
+  throw new Error('Invalid session role');
+}
+
+// Sign with session key
+const signedTransfer = await getSignInstructions(
+  swig,
+  sessionRole.id,
+  [transfer],
+  false,
+  { payer: dappSessionKeypair.publicKey },
 );
 ```
+  </Tab>
+  <Tab title="Kit">
+```ts
+// Key Setup
+const userRootKeypair = await generateKeyPairSigner();
+const dappSessionKeypair = await generateKeyPairSigner();
+
+// Create Swig with Session Authority
+const createSwigIx = await getCreateSwigInstruction({
+  id,
+  authorityInfo: createEd25519SessionAuthorityInfo(
+    userRootKeypair.address,
+    100n, // session duration in slots
+  ),
+  actions: rootActions,
+  payer: userRootKeypair.address,
+});
+
+// Create Session for dApp
+const createSessionIx = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.address,
+  50n, // session duration
+);
+
+// Find and use session role
+const sessionRole = swig.findRolesByEd25519SignerPk(dappSessionKeypair.address)[0];
+if (!sessionRole || !sessionRole.isSessionBased()) {
+  throw new Error('Invalid session role');
+}
+
+// Sign with session key
+const signedTransferIx = await getSignInstructions(
+  swig,
+  sessionRole.id,
+  [transferIx],
+  false,
+  { payer: dappSessionKeypair.address },
+);
+```
+  </Tab>
+</Tabs>
 
 ### Secp256k1 Sessions
 
-```typescript
-// Create a Secp256k1 session
-const sessionWallet = Wallet.generate();
-const sessionDuration = 100n; // slots
+<Tabs>
+  <Tab title="Classic">
+```ts
+// Key Setup - EVM wallet with session capability
+const userWallet = Wallet.generate();
+const userRootKeypair = Keypair.generate();
+const dappSessionKeypair = Keypair.generate();
 
-const addSessionInstruction = await addAuthorityInstruction(
-  rootRole,
-  signer.publicKey,
+// Create Swig with Secp256k1 Session Authority
+const createSwigInstruction = await getCreateSwigInstruction({
+  authorityInfo: createSecp256k1SessionAuthorityInfo(
+    userWallet.getPublicKey(),
+    100n, // max session duration in slots
+  ),
+  id,
+  payer: userRootKeypair.publicKey,
+  actions: rootActions,
+});
+
+// Create Session with EVM signing
+const signingFn = getSigningFnForSecp256k1PrivateKey(
+  userWallet.getPrivateKeyString(),
+);
+const currentSlot = await connection.getSlot('confirmed');
+
+const sessionInstructions = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.publicKey,
+  50n, // session duration
   {
-    currentSlot: BigInt(slot),
-    signingFn: secp256k1SigningFn,
-    // 👇 Secp256k1 session authority
-    authorityInfo: createSecp256k1AuthorityInfo(sessionWallet.getPublicKey()),
-    actions: sessionActions,
-    duration: sessionDuration,
+    currentSlot: BigInt(currentSlot),
+    signingFn,
+    payer: userRootKeypair.publicKey,
+  },
+);
+
+// Find and use session role
+const sessionRole = swig.findRoleBySessionKey(dappSessionKeypair.publicKey);
+if (!sessionRole) throw new Error('Session role not found');
+
+// Sign with session key
+const signTransfer = await getSignInstructions(
+  swig,
+  sessionRole.id,
+  [transferIx],
+  false,
+  {
+    currentSlot: BigInt(currentSlot),
+    signingFn,
+    payer: dappSessionKeypair.publicKey,
   },
 );
 ```
+  </Tab>
+  <Tab title="Kit">
+```ts
+// Key Setup - EVM wallet with session capability
+const userWallet = Wallet.generate();
+const userRootKeypair = await generateKeyPairSigner();
+const dappSessionKeypair = await generateKeyPairSigner();
 
-Key aspects of sessions:
+// Create Swig with Secp256k1 Session Authority
+const authorityInfo = createSecp256k1SessionAuthorityInfo(
+  userWallet.getPublicKey(),
+  100n, // max session duration in slots
+);
+
+const createSwigInstruction = await getCreateSwigInstruction({
+  authorityInfo,
+  id,
+  payer: userRootKeypair.address,
+  actions: rootActions,
+});
+
+// Create Session with EVM signing
+const signingFn = getSigningFnForSecp256k1PrivateKey(userWallet.getPrivateKey());
+const currentSlot = await rpc.getSlot().send();
+
+const sessionInstructions = await getCreateSessionInstructions(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.address,
+  50n, // session duration
+  { 
+    payer: userRootKeypair.address,
+    currentSlot,
+    signingFn,
+  },
+);
+
+// Find and use session role
+const sessionRole = swig.findRoleBySessionKey(dappSessionKeypair.address);
+if (!sessionRole) throw new Error('Session role not found');
+
+// Sign with session key
+const signTransfer = await getSignInstructions(
+  swig,
+  sessionRole.id,
+  [transferIx],
+  false,
+  {
+    payer: dappSessionKeypair.address,
+    currentSlot,
+    signingFn,
+  },
+);
+```
+  </Tab>
+</Tabs>
+
+---
+
+## Key aspects of sessions:
+
 - Can be created with any supported authority type (Ed25519, Secp256k1)
 - Limited duration specified in slots
-- Restricted set of actions (defined by `sessionActions`)
+- Restricted set of actions (defined by sessionActions)
 - Perfect for dApp integrations where temporary access is needed
 
-You can find complete session examples in:
+You can find complete session examples in (we have just mentioned a few you can find all of them labelled a specific way but it will contain the word "sessions" in the file name):
+
 - `transfer-local-session.ts` (Ed25519)
 - `transfer-svm-session.ts` (Ed25519)
 - `transfer-svm-secp-session.ts` (Secp256k1)
 
-For more detailed information about sessions, check out the [Creating Sessions Guide](../guides/sessions).
+For more detailed information about sessions, check out the [Creating Sessions Guide](/examples/sessions).
+
+---
 
 ## Testing Environment Options
 
 These examples can be run in different environments:
 
-- **Local Validator**: Use the `transfer-local-*` examples
-  - Requires running a local Solana validator
-  - Real blockchain environment
-  - Good for final testing
+**Local Validator**: Use the `transfer-local-*` examples
 
-- **LiteSVM**: Use the `transfer-svm-*` examples
-  - No validator required
-  - Instant transaction confirmation
-  - Perfect for rapid development
-  - Simulates the Solana runtime
+- Requires running a local Solana validator
+- Real blockchain environment
+- Good for final testing
 
-- **Devnet**: All examples work with devnet
-  - Change connection URL to `https://api.devnet.solana.com`
-  - Real network environment
-  - Free to use with airdropped SOL
+**LiteSVM**: Use the `transfer-svm-*` examples
+
+- No validator required
+- Instant transaction confirmation
+- Perfect for rapid development
+- Simulates the Solana runtime
+
+**Devnet**: All examples work with devnet
+
+- Change connection URL to `https://api.devnet.solana.com`
+- Real network environment
+- Free to use with airdropped SOL
 
 LiteSVM is recommended for initial development as it provides the fastest feedback loop. Move to local validator or devnet for more thorough testing.

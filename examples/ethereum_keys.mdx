@@ -15,38 +15,67 @@ Currently, Swig uses the compressed public key format for authentication (not th
 
 The recommended approach for Ethereum wallet integration uses the Viem library. Here's a complete example showing different signing methods:
 
+<Tabs>
+<Tab title="Classic (SVM)">
+
 ```typescript
 import { Wallet } from '@ethereumjs/wallet';
-import { privateKeyToAccount } from 'viem/accounts';
-import { hexToBytes, keccak256 } from 'viem';
 import {
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+  TransactionInstruction,
+} from '@solana/web3.js';
+import {
+  Actions,
   createSecp256k1AuthorityInfo,
-  signInstruction,
+  findSwigPda,
+  getCreateSwigInstruction,
+  getEvmPersonalSignPrefix,
+  getSignInstructions,
   Swig,
+  SWIG_PROGRAM_ADDRESS,
+  type SigningFn,
 } from '@swig-wallet/classic';
+import { hexToBytes, keccak256 } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
 
 // Create an Ethereum wallet account
 const userWallet = Wallet.generate();
 const privateKeyAccount = privateKeyToAccount(userWallet.getPrivateKeyString());
 
+const transactionPayer = Keypair.generate();
+const dappTreasury = Keypair.generate().publicKey;
+const id = Uint8Array.from(Array(32).fill(0));
+const swigAddress = findSwigPda(id);
+const rootActions = Actions.set().all().get();
+
 // Create Swig with secp256k1 authority
-const createSwigInstruction = Swig.create({
+const createSwigInstruction = await getCreateSwigInstruction({
   authorityInfo: createSecp256k1AuthorityInfo(privateKeyAccount.publicKey),
   id,
   payer: transactionPayer.publicKey,
   actions: rootActions,
 });
 
+// Fetch Swig and find role
+let swig = fetchSwig(svm, swigAddress);
+let rootRole = swig.findRolesBySecp256k1SignerAddress(
+  privateKeyAccount.address,
+)[0];
+
 // Different signing methods available:
 
-// 1. Standard eth_sign
-const viemSign = async (message: Uint8Array) => {
+// 1. Direct keccak256 hash signing (raw message bytes)
+const viemSign: SigningFn = async (message: Uint8Array) => {
   const sig = await privateKeyAccount.sign({ hash: keccak256(message) });
   return { signature: hexToBytes(sig) };
 };
 
-// 2. eth_sign with personal_sign prefix
-const viemSignWithPrefix = async (message: Uint8Array) => {
+// 2. Manual Ethereum personal sign prefix
+const viemSignWithPrefix: SigningFn = async (message: Uint8Array) => {
   const prefix = getEvmPersonalSignPrefix(message.length);
   const prefixedMessage = new Uint8Array(prefix.length + message.length);
 
@@ -60,8 +89,8 @@ const viemSignWithPrefix = async (message: Uint8Array) => {
   return { signature: hexToBytes(sig), prefix };
 };
 
-// 3. personal_sign
-const viemSignMessage = async (message: Uint8Array) => {
+// 3. Viem signMessage method (automatically adds Ethereum personal sign prefix)
+const viemSignMessage: SigningFn = async (message: Uint8Array) => {
   const sig = await privateKeyAccount.signMessage({ 
     message: { raw: message } 
   });
@@ -72,65 +101,253 @@ const viemSignMessage = async (message: Uint8Array) => {
   };
 };
 
-// Sign a transaction using any of the signing methods
-const signedTransfer = await signInstruction(
-  rootRole,
-  transactionPayer.publicKey,
+// Create and sign a transfer transaction
+const transfer = SystemProgram.transfer({
+  fromPubkey: swigAddress,
+  toPubkey: dappTreasury,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
+
+const signTransfer = await getSignInstructions(
+  swig,
+  rootRole.id,
   [transfer],
+  false,
   {
     currentSlot: svm.getClock().slot,
     signingFn: viemSign, // or viemSignWithPrefix, or viemSignMessage
+    payer: transactionPayer.publicKey,
   },
 );
 ```
+
+</Tab>
+<Tab title="Kit (Local)">
+
+```typescript
+import {
+  createSolanaRpc,
+  createSolanaRpcSubscriptions,
+  generateKeyPairSigner,
+  sendAndConfirmTransactionFactory,
+  getSignatureFromTransaction,
+  createTransactionMessage,
+  setTransactionMessageFeePayerSigner,
+  setTransactionMessageLifetimeUsingBlockhash,
+  appendTransactionMessageInstructions,
+  signTransactionMessageWithSigners,
+  lamports,
+  pipe,
+  AccountRole,
+  type IInstructionWithData,
+  type KeyPairSigner,
+  type ReadonlyUint8Array,
+} from '@solana/kit';
+
+import {
+  Actions,
+  createSecp256k1AuthorityInfo,
+  findSwigPda,
+  fetchSwig,
+  getCreateSwigInstruction,
+  getEvmPersonalSignPrefix,
+  getSignInstructions,
+  type SigningFn,
+} from '@swig-wallet/kit';
+
+import {
+  getTransferSolInstructionDataEncoder,
+  SYSTEM_PROGRAM_ADDRESS,
+} from '@solana-program/system';
+
+import { Wallet } from '@ethereumjs/wallet';
+import { privateKeyToAccount } from 'viem/accounts';
+import { keccak256, hexToBytes } from 'viem';
+
+// Set up Solana localnet RPC
+const rpc = createSolanaRpc('http://localhost:8899');
+const rpcSubscriptions = createSolanaRpcSubscriptions('ws://localhost:8900');
+const connection = { rpc, rpcSubscriptions };
+
+// Generate EVM wallet
+const userWallet = Wallet.generate();
+const evmAccount = privateKeyToAccount(userWallet.getPrivateKeyString());
+
+// Generate localnet payers
+const payer = await generateKeyPairSigner();
+const dappTreasury = await generateKeyPairSigner();
+
+// Swig ID and address
+const swigId = Uint8Array.from(Array(32).fill(1));
+const swigAddress = await findSwigPda(swigId);
+
+// Create Swig with secp256k1 authority
+const rootActions = Actions.set().all().get();
+const createSwigIx = await getCreateSwigInstruction({
+  authorityInfo: createSecp256k1AuthorityInfo(evmAccount.publicKey),
+  id: swigId,
+  payer: payer.address,
+  actions: rootActions,
+});
+
+// Fetch Swig account and role
+let swig = await fetchSwig(rpc, swigAddress);
+let rootRole = swig.findRolesBySecp256k1SignerAddress(evmAccount.address)[0];
+
+// Different signing methods available:
+
+// 1. Direct keccak256 hash signing (raw message bytes)
+const viemSign: SigningFn = async (message) => {
+  const sig = await evmAccount.sign({ hash: keccak256(message) });
+  return { signature: hexToBytes(sig) };
+};
+
+// 2. Manual Ethereum personal sign prefix
+const viemSignWithPrefix: SigningFn = async (message) => {
+  const prefix = getEvmPersonalSignPrefix(message.length);
+  const prefixedMessage = new Uint8Array(prefix.length + message.length);
+  prefixedMessage.set(prefix);
+  prefixedMessage.set(message, prefix.length);
+  const sig = await evmAccount.sign({ hash: keccak256(prefixedMessage) });
+  return { signature: hexToBytes(sig), prefix };
+};
+
+// 3. Viem signMessage method (automatically adds Ethereum personal sign prefix)
+const viemSignMessage: SigningFn = async (message) => {
+  const sig = await evmAccount.signMessage({ message: { raw: message } });
+  return {
+    signature: hexToBytes(sig),
+    prefix: getEvmPersonalSignPrefix(message.length),
+  };
+};
+
+// Prepare transfer instruction (0.1 SOL)
+const transferIx = {
+  programAddress: SYSTEM_PROGRAM_ADDRESS,
+  accounts: [
+    { address: swigAddress, role: AccountRole.WRITABLE_SIGNER },
+    { address: dappTreasury.address, role: AccountRole.WRITABLE },
+  ],
+  data: new Uint8Array(
+    getTransferSolInstructionDataEncoder().encode({
+      amount: lamports(100_000_000n), // 0.1 SOL
+    }),
+  ),
+};
+
+// Sign and send transfer
+const currentSlot = await rpc.getSlot().send();
+const signedIxs = await getSignInstructions(swig, rootRole.id, [transferIx], false, {
+  payer: payer.address,
+  currentSlot,
+  signingFn: viemSign, // or viemSignWithPrefix, or viemSignMessage
+});
+```
+
+</Tab>
+</Tabs>
 
 ### Session-Based Authorization
 
 For enhanced security and better UX, you can use session-based authorization with secp256k1 keys:
 
+<Tabs>
+<Tab title="Classic">
+
 ```typescript
 import {
   createSecp256k1SessionAuthorityInfo,
-  createSessionInstruction,
+  getCreateSessionInstruction,
+  getCreateSwigInstruction,
 } from '@swig-wallet/classic';
 
 // Create a session-based Swig
-const createSwigInstruction = Swig.create({
+const createSwigInstruction = await getCreateSwigInstruction({
   authorityInfo: createSecp256k1SessionAuthorityInfo(
-    userWallet.getPublicKey(),
+    privateKeyAccount.publicKey,
     100n, // session duration in slots
   ),
   id,
-  payer: userRootKeypair.publicKey,
+  payer: transactionPayer.publicKey,
   actions: rootActions,
 });
 
 // Create a new session
-const newSessionInstruction = await createSessionInstruction(
-  rootRole,
-  userRootKeypair.publicKey,
+const newSessionInstruction = await getCreateSessionInstruction(
+  swig,
+  rootRole.id,
   dappSessionKeypair.publicKey,
   50n, // session duration
-  { currentSlot, signingFn }
+  {
+    currentSlot: svm.getClock().slot,
+    signingFn: viemSign,
+    payer: transactionPayer.publicKey,
+  }
 );
 ```
+
+</Tab>
+<Tab title="Kit">
+
+```typescript
+import {
+  createSecp256k1SessionAuthorityInfo,
+  getCreateSessionInstruction,
+  getCreateSwigInstruction,
+} from '@swig-wallet/kit';
+
+// Create a session-based Swig
+const createSwigInstruction = await getCreateSwigInstruction({
+  authorityInfo: createSecp256k1SessionAuthorityInfo(
+    evmAccount.publicKey,
+    100n, // session duration in slots
+  ),
+  id: swigId,
+  payer: payer.address,
+  actions: rootActions,
+});
+
+// Create a new session
+const newSessionInstruction = await getCreateSessionInstruction(
+  swig,
+  rootRole.id,
+  dappSessionKeypair.address,
+  50n, // session duration
+  {
+    currentSlot: await rpc.getSlot().send(),
+    signingFn: viemSign,
+    payer: payer.address,
+  }
+);
+```
+
+</Tab>
+</Tabs>
 
 ## Best Practices
 
 1. **Wallet Integration**
-   - Use the Viem example as your primary reference for Ethereum wallet integration
-   - Choose the appropriate signing method based on your wallet implementation
-   - Always verify the signing method (eth_sign vs personal_sign) matches your wallet's capabilities
+   - Use the Viem examples as your primary reference for Ethereum wallet integration
+   - Choose the appropriate signing method based on your wallet implementation:
+     - **Direct keccak256**: Signs raw message bytes directly
+     - **Manual prefix**: Adds `\x19Ethereum Signed Message:\n{length}` prefix manually
+     - **Viem signMessage**: Automatically adds Ethereum personal sign prefix
+   - Test all three signing methods for maximum wallet compatibility
 
-2. **Security Considerations**
+2. **API Differences**
+   - **Classic**: Uses `getCreateSwigInstruction()`, `getSignInstructions()`, and `fetchSwig()` from SVM context
+   - **Kit**: Uses similar functions but with Solana Kit's RPC and address types
+   - Both support the same signing methods and authority types
+
+3. **Security Considerations**
    - Use session-based authorities for dApp integrations to limit exposure
    - Keep session durations appropriate for your use case
    - Remember that while using Ethereum keys, you still need a Solana account for transaction fees
 
-3. **Implementation Tips**
+4. **Implementation Tips**
    - Use the provided helper functions like `createSecp256k1AuthorityInfo`
    - Implement proper error handling for signing operations
-   - Consider implementing all three signing methods for maximum wallet compatibility
+   - Use `findRolesBySecp256k1SignerAddress()` to locate roles by Ethereum address
 
 ## Future Developments
 
@@ -139,9 +356,14 @@ The upcoming `EvmAddress` authority type will allow using the standard Ethereum 
 ## Additional Resources
 
 For complete working examples, check out these files in the [swig-ts](https://github.com/anagrambuild/swig-ts) repository:
-- [`examples/classic/transfer/transfer-svm-viem.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-viem.ts) - Viem integration example
+
+**Classic Examples:**
+- [`examples/classic/transfer/transfer-svm-viem.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-viem.ts) - Viem integration with SVM
 - [`examples/classic/transfer/transfer-svm-secp-session.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-secp-session.ts) - Session-based authorization
 - [`examples/classic/transfer/transfer-svm-secp.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-secp.ts) - Basic secp256k1 usage
+
+**Kit Examples:**
+- [`examples/kit/transfer/transfer-local-viem.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/transfer-local-viem.ts) - Viem integration with Kit on localnet
 - [`examples/classic/transfer/transfer-local-secp.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-local-secp.ts) - Local testing example
 
 You can also explore the full examples directory in the [swig-ts repository](https://github.com/anagrambuild/swig-ts/tree/main/examples) for more implementation patterns and use cases.
