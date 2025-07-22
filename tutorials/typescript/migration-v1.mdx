@@ -91,8 +91,39 @@ const tx = await createSwig(
 
 ```typescript
 const rootAuthorityInfo = createEd25519AuthorityInfo(user.publicKey);
-const rootActions = Actions.set().manageAuthority().get();
+```
 
+## Swig Class Changes
+
+The Swig class has been significantly refactored. All static methods have been removed and replaced with standalone functions.
+
+### Static Method Removal
+
+#### Before (Beta)
+
+```typescript
+// Creating a Swig
+const createSwigIx = Swig.create({
+  payer: user.publicKey,
+  id,
+  actions: rootActions,
+  authorityInfo: rootAuthorityInfo,
+});
+
+// Fetching a Swig
+const swig = await Swig.fetch(connection, swigAddress);
+
+// Fetching with null handling
+const swig = await Swig.fetchNullable(connection, swigAddress);
+
+// Creating from raw data
+const swig = Swig.fromRawAccountData(swigAddress, accountData);
+```
+
+#### After (v1.0)
+
+```typescript
+// Creating a Swig
 const createSwigIx = await getCreateSwigInstruction({
   payer: user.publicKey,
   id,
@@ -100,78 +131,59 @@ const createSwigIx = await getCreateSwigInstruction({
   authorityInfo: rootAuthorityInfo,
 });
 
-const transaction = new Transaction().add(createSwigIx);
-const signature = await sendAndConfirmTransaction(connection, transaction, [
-  user,
-]);
+// Fetching a Swig
+const swig = await fetchSwig(connection, swigAddress);
+
+// Fetching with null handling (use try/catch)
+try {
+  const swig = await fetchSwig(connection, swigAddress);
+} catch (error) {
+  // Handle case where Swig doesn't exist
+  const swig = null;
+}
+
+// Creating from raw data (equivalent functionality in @swig-wallet/lib)
+// Check the lib package documentation for raw data handling
 ```
 
-### Adding Authorities
+### Instance Method Changes
 
-#### Before (Beta)
+The Swig instance methods remain largely the same, but some may have changed from synchronous to asynchronous:
 
 ```typescript
-const addAuthorityIx = await addAuthorityInstruction(
-  rootRole,
-  rootUser.publicKey,
-  createEd25519AuthorityInfo(newAuthority.publicKey),
-  actions,
-);
-
-const transaction = new Transaction().add(addAuthorityIx);
+// These methods are still available on Swig instances
+const role = swig.findRoleById(roleId);
+const roles = swig.findRolesByEd25519SignerPk(publicKey);
+const roles = swig.findRolesBySecp256k1SignerAddress(address);
 ```
 
-#### After (v1.0)
+## New Sub-Account Functions
+
+The v1.0 release introduces several new sub-account management functions:
 
 ```typescript
-const addAuthorityInstructions = await getAddAuthorityInstructions(
+// Create sub-account
+const createSubAccountInstructions = await getCreateSubAccountInstructions(
   swig,
-  rootRole.id,
-  createEd25519AuthorityInfo(newAuthority.publicKey),
-  actions,
+  roleId,
+  options
 );
 
-const transaction = new Transaction().add(...addAuthorityInstructions);
-```
-
-### Signing Instructions
-
-#### Before (Beta)
-
-```typescript
-const signedTransfer = await signInstruction(
-  tokenRole,
-  tokenAuthority.publicKey,
-  [transferIx],
-);
-
-const transaction = new Transaction().add(signedTransfer);
-```
-
-#### After (v1.0)
-
-```typescript
-const signedTransferInstructions = await getSignInstructions(
+// Toggle sub-account enabled/disabled
+const toggleSubAccountInstructions = await getToggleSubAccountInstructions(
   swig,
-  tokenRole.id,
-  [transferIx],
+  roleId,
+  enabled, // boolean
+  options
 );
 
-const transaction = new Transaction().add(...signedTransferInstructions);
-```
-
-### PDA Derivation
-
-#### Before (Beta)
-
-```typescript
-const [swigAddress] = findSwigPda(id);
-```
-
-#### After (v1.0)
-
-```typescript
-const swigAddress = findSwigPda(id);
+// Withdraw from sub-account
+const withdrawInstructions = await getWithdrawFromSubAccountSubAccountInstructions(
+  swig,
+  roleId,
+  withdrawArgs,
+  options
+);
 ```
 
 ## Authority Creation Changes
@@ -190,11 +202,52 @@ const rootAuthorityInfo = createEd25519AuthorityInfo(user.publicKey);
 
 ## Import Changes
 
+The v1.0 release represents a complete restructuring of the package exports. Most functionality has been moved to `@swig-wallet/lib` and re-exported through the classic package.
+
+### Package Structure Changes
+
+#### Before (Beta) - Direct Module Exports
+
+```typescript
+// Beta exported many modules directly
+export * from '@swig-wallet/coder';
+export * from './actions';
+export * from './authority';      // ❌ REMOVED
+export * from './consts';
+export * from './instructions';
+export * from './role';          // ❌ REMOVED
+export * from './rpc';           // ❌ REMOVED
+export * from './swig';          // ❌ REMOVED
+export * from './utils';         // ❌ REMOVED
+export * from './wallet';        // ❌ REMOVED
+```
+
+#### After (v1.0) - Lib-Based Exports
+
+```typescript
+// v1.0 exports primarily from lib with thin wrapper
+export * from '@swig-wallet/lib';  // ✅ Most functionality here
+export * from './accounts';
+export * from './consts';
+export * from './instructions';    // ✅ New wrapper functions
+```
+
+### Removed Direct Imports
+
+These modules are no longer directly exported from `@swig-wallet/classic`:
+
+- **Authority classes**: `Ed25519Authority`, `Secp256k1Authority`, etc.
+- **Role utilities**: Direct role manipulation functions
+- **RPC helpers**: Connection and RPC utilities  
+- **Swig class**: Static methods removed, instance available via lib
+- **Utils**: Utility functions moved to lib
+- **Wallet**: Wallet-related functionality moved to lib
+
 ### Core Classes
 
 - `Actions` class is now imported from `@swig-wallet/lib` (re-exported by `@swig-wallet/classic`)
 - `Swig` class is now imported from `@swig-wallet/lib` (re-exported by `@swig-wallet/classic`)
-- Authority classes have been replaced with info creation functions
+- Authority classes have been completely replaced with info creation functions
 
 ### Function Naming
 
@@ -202,6 +255,10 @@ const rootAuthorityInfo = createEd25519AuthorityInfo(user.publicKey);
 - `addAuthorityInstruction()` → `getAddAuthorityInstructions()`
 - `signInstruction()` → `getSignInstructions()`
 - `removeAuthorityInstruction()` → `getRemoveAuthorityInstructions()`
+- `createSessionInstruction()` → `getCreateSessionInstructions()`
+- `createSubAccountInstruction()` → `getCreateSubAccountInstructions()`
+- `toggleSubAccountInstruction()` → `getToggleSubAccountInstructions()`
+- `withdrawFromSubAccountInstruction()` → `getWithdrawFromSubAccountSubAccountInstructions()`
 
 ## Dependency Updates
 
@@ -248,7 +305,12 @@ npm uninstall @solana/spl-token
 - [ ] Update authority creation from classes to info functions
 - [ ] Update PDA derivation calls
 - [ ] Replace `Ed25519Authority.fromPublicKey()` with `createEd25519AuthorityInfo()`
+- [ ] Replace `createSessionInstruction()` with `getCreateSessionInstructions()`
+- [ ] Replace sub-account functions: `createSubAccountInstruction()`, `toggleSubAccountInstruction()`, `withdrawFromSubAccountInstruction()`
+- [ ] Replace Swig static methods: `Swig.create()`, `Swig.fetch()`, `Swig.fetchNullable()`
+- [ ] Update function parameters from `(role, payer, ...)` to `(swig, roleId, ...)`
 - [ ] Update transaction building to spread instruction arrays
+- [ ] Remove direct imports of removed modules (authority, role, rpc, utils, wallet)
 - [ ] Test all functionality with the new API
 - [ ] Update error handling for new function signatures
 
@@ -279,6 +341,28 @@ const swig = await fetchSwig(connection, swigAddress);
 const role = swig.findRolesByEd25519SignerPk(publicKey)[0];
 ```
 
+### Issue: Function parameter signatures changed
+
+**Solution**: Update function calls to use new parameter structure:
+
+```typescript
+// Before - functions took Role objects and payer PublicKey
+const ix = await addAuthorityInstruction(
+  rootRole,
+  rootKeypair.publicKey,
+  authorityInfo,
+  actions
+);
+
+// After - functions take Swig instance and role ID
+const instructions = await getAddAuthorityInstructions(
+  swig,
+  rootRole.id,
+  authorityInfo,
+  actions
+);
+```
+
 ### Issue: Import errors for removed classes
 
 **Solution**: Replace with new function-based API:
@@ -291,6 +375,40 @@ const auth = Ed25519Authority.fromPublicKey(pk);
 // After
 import { createEd25519AuthorityInfo } from "@swig-wallet/classic";
 const authInfo = createEd25519AuthorityInfo(pk);
+```
+
+### Issue: Swig static methods no longer available
+
+**Solution**: Use the new standalone functions:
+
+```typescript
+// Before
+const createIx = Swig.create(args);
+const swig = await Swig.fetch(connection, address);
+const swig = await Swig.fetchNullable(connection, address);
+
+// After
+const createIx = await getCreateSwigInstruction(args);
+const swig = await fetchSwig(connection, address);
+// For nullable fetch, use try/catch
+try {
+  const swig = await fetchSwig(connection, address);
+} catch {
+  const swig = null;
+}
+```
+
+### Issue: Sub-account functions not found
+
+**Solution**: Use the new instruction array functions:
+
+```typescript
+// Before
+const ix = await createSubAccountInstruction(role, payer, options);
+
+// After
+const instructions = await getCreateSubAccountInstructions(swig, roleId, options);
+const transaction = new Transaction().add(...instructions);
 ```
 
 ## Getting Help
