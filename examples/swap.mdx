@@ -28,6 +28,7 @@ The example already includes all necessary dependencies:
 - `@jup-ag/api` for Jupiter API integration
 - `@swig-wallet/classic` for Swig wallet functionality
 - `@solana/web3.js` for Solana interactions
+- `@solana/spl-token` for token account management
 - `chalk` for colorful console output
 
 ## Understanding the Code
@@ -38,6 +39,41 @@ The example demonstrates several key concepts:
 2. Managing token accounts (ATAs)
 3. Using Jupiter's API for quotes and swap instructions
 4. Properly separating and signing instructions
+5. Using utility functions for common operations
+
+### Utility Functions
+
+The example includes several helper functions to simplify common operations:
+
+```typescript
+// Helper function to send transactions
+async function sendTransaction(
+  connection: Connection,
+  instructions: TransactionInstruction[],
+  payer: Keypair,
+): Promise<string> {
+  const tx = new Transaction().add(...instructions);
+  tx.feePayer = payer.publicKey;
+  tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+  tx.sign(payer);
+  const sig = await connection.sendRawTransaction(tx.serialize());
+  await connection.confirmTransaction(sig);
+  return sig;
+}
+
+// Helper function to convert Jupiter instructions
+function toTransactionInstruction(instruction: any): TransactionInstruction {
+  return new TransactionInstruction({
+    programId: new PublicKey(instruction.programId),
+    keys: instruction.accounts.map((k: any) => ({
+      pubkey: new PublicKey(k.pubkey),
+      isSigner: k.isSigner,
+      isWritable: k.isWritable,
+    })),
+    data: Buffer.from(instruction.data, 'base64'),
+  });
+}
+```
 
 Let's break down the main components:
 
@@ -52,37 +88,42 @@ Before swapping, we need to ensure the Swig account has the necessary token acco
 
 ```typescript
 // Check if Swig has USDC ATA
-const swigUsdcAta = await getAssociatedTokenAddress(usdcMint, swigAddress, true);
-let createAtaIx: TransactionInstruction | null = null;
-
+const swigUsdcAta = await getAssociatedTokenAddress(
+  usdcMint,
+  swigAddress,
+  true,
+);
 try {
   await getAccount(connection, swigUsdcAta);
-  console.log("✓ USDC token account exists");
-} catch (error) {
-  console.log("⚠️  Creating USDC token account for Swig...");
-  createAtaIx = createAssociatedTokenAccountInstruction(
+  console.log(
+    chalk.green('✓ USDC ATA exists:'),
+    chalk.cyan(swigUsdcAta.toBase58()),
+  );
+} catch {
+  const createAtaIx = createAssociatedTokenAccountInstruction(
     rootUser.publicKey,
     swigUsdcAta,
     swigAddress,
-    usdcMint
+    usdcMint,
   );
-  // Create ATA in a separate transaction
-  const createAtaTx = new Transaction().add(createAtaIx);
-  await sendAndConfirmTransaction(connection, createAtaTx, [rootUser]);
+  await sendTransaction(connection, [createAtaIx], rootUser);
+  console.log(
+    chalk.green('✓ Created USDC ATA:'),
+    chalk.cyan(swigUsdcAta.toBase58()),
+  );
 }
 ```
 
 ### 2. Getting Jupiter Quote
 
 ```typescript
-const jupiterQuoteApi = createJupiterApiClient();
-
-const quoteResponse = await jupiterQuoteApi.quoteGet({
-  inputMint: "So11111111111111111111111111111111111111112", // SOL
-  outputMint: usdcMint.toBase58(), // USDC
-  amount: transferAmount,
-  slippageBps: 50, // 0.5%
-  maxAccounts: 64, // Important: Account for Swig's overhead
+const jupiter = createJupiterApiClient();
+const quote = await jupiter.quoteGet({
+  inputMint: wrappedSolMint.toBase58(),
+  outputMint: usdcMint.toBase58(),
+  amount: Math.floor(transferAmount),
+  slippageBps: 50,
+  maxAccounts: 64,
 });
 ```
 
@@ -91,50 +132,71 @@ const quoteResponse = await jupiterQuoteApi.quoteGet({
 The most critical part is properly separating and handling instructions:
 
 ```typescript
-// Outer instructions (not signed by Swig)
-const outerInstructions: TransactionInstruction[] = [
-  ComputeBudgetProgram.setComputeUnitLimit({
-    units: 150_000,
-  }),
-  ComputeBudgetProgram.setComputeUnitPrice({
-    microLamports: 50,
-  }),
+const swapInstructionsRes = await jupiter.swapInstructionsPost({
+  swapRequest: {
+    quoteResponse: quote,
+    userPublicKey: swigAddress.toBase58(),
+    wrapAndUnwrapSol: true,
+    useSharedAccounts: true,
+  },
+});
+
+const swapInstructions: TransactionInstruction[] = [
+  ...(swapInstructionsRes.setupInstructions || []).map(
+    toTransactionInstruction,
+  ),
+  toTransactionInstruction(swapInstructionsRes.swapInstruction),
 ];
 
-// Instructions that need Swig signatures
-const swigInstructions: TransactionInstruction[] = [
-  ...(swapInstructions.setupInstructions || []).map(toTransactionInstruction),
-  toTransactionInstruction(swapInstructions.swapInstruction),
-];
-
-// Sign each instruction individually
-const signIxs = await Promise.all(
-  swigInstructions.map(async (instruction) => {
-    return await signInstruction(
-      rootRole,
-      rootUser.publicKey,
-      [instruction]
-    );
-  })
+// Sign instructions with Swig
+const rootRole = swig.findRolesByEd25519SignerPk(rootUser.publicKey)[0];
+const signIxs = await getSignInstructions(
+  swig,
+  rootRole.id,
+  swapInstructions,
 );
 ```
 
 ### 4. Creating and Sending the Transaction
 
 ```typescript
+const lookupTables = await Promise.all(
+  swapInstructionsRes.addressLookupTableAddresses.map(async (addr) => {
+    const res = await connection.getAddressLookupTable(new PublicKey(addr));
+    return res.value!;
+  }),
+);
+
+const { blockhash, lastValidBlockHeight } =
+  await connection.getLatestBlockhash();
+const outerIxs = [
+  ComputeBudgetProgram.setComputeUnitLimit({ units: 150_000 }),
+  ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 50 }),
+];
+
 const messageV0 = new TransactionMessage({
   payerKey: rootUser.publicKey,
   recentBlockhash: blockhash,
-  instructions: [...outerInstructions, ...signIxs],
-}).compileToV0Message(addressLookupTableAccounts);
+  instructions: [...outerIxs, ...signIxs],
+}).compileToV0Message(lookupTables);
 
-const transaction = new VersionedTransaction(messageV0);
-transaction.sign([rootUser]);
+const tx = new VersionedTransaction(messageV0);
+tx.sign([rootUser]);
 
-const signature = await connection.sendTransaction(transaction, {
+const signature = await connection.sendTransaction(tx, {
   skipPreflight: true,
-  preflightCommitment: 'confirmed'
+  preflightCommitment: 'confirmed',
 });
+
+const result = await connection.confirmTransaction({
+  signature,
+  blockhash,
+  lastValidBlockHeight,
+});
+
+if (result.value.err) {
+  throw new Error(`Transaction failed: ${JSON.stringify(result.value.err)}`);
+}
 ```
 
 ## Important Considerations
@@ -149,7 +211,7 @@ const signature = await connection.sendTransaction(transaction, {
 
 3. **Transaction Structure**:
    - Properly separate outer instructions from Swig-signed instructions
-   - Sign each Swig instruction individually
+   - Use `getSignInstructions` to sign all Swig instructions at once
    - Use versioned transactions with address lookup tables
 
 4. **Error Handling**:
