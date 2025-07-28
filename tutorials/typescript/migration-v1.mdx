@@ -115,9 +115,6 @@ const swig = await Swig.fetch(connection, swigAddress);
 
 // Fetching with null handling
 const swig = await Swig.fetchNullable(connection, swigAddress);
-
-// Creating from raw data
-const swig = Swig.fromRawAccountData(swigAddress, accountData);
 ```
 
 #### After (v1.0)
@@ -134,16 +131,8 @@ const createSwigIx = await getCreateSwigInstruction({
 // Fetching a Swig
 const swig = await fetchSwig(connection, swigAddress);
 
-// Fetching with null handling (use try/catch)
-try {
-  const swig = await fetchSwig(connection, swigAddress);
-} catch (error) {
-  // Handle case where Swig doesn't exist
-  const swig = null;
-}
-
-// Creating from raw data (equivalent functionality in @swig-wallet/lib)
-// Check the lib package documentation for raw data handling
+// Fetching with null handling
+const swig = await fetchNullableSwig(connection, swigAddress);
 ```
 
 ### Instance Method Changes
