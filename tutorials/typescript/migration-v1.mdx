@@ -317,19 +317,6 @@ transaction.add(instruction);
 transaction.add(...instructions);
 ```
 
-### Issue: Authority class methods no longer available
-
-**Solution**: Use the Swig instance methods instead:
-
-```typescript
-// Before
-const role = authority.findRole();
-
-// After
-const swig = await fetchSwig(connection, swigAddress);
-const role = swig.findRolesByEd25519SignerPk(publicKey)[0];
-```
-
 ### Issue: Function parameter signatures changed
 
 **Solution**: Update function calls to use new parameter structure:
@@ -379,12 +366,8 @@ const swig = await Swig.fetchNullable(connection, address);
 // After
 const createIx = await getCreateSwigInstruction(args);
 const swig = await fetchSwig(connection, address);
-// For nullable fetch, use try/catch
-try {
-  const swig = await fetchSwig(connection, address);
-} catch {
-  const swig = null;
-}
+// For nullable fetch
+const swig = await fetchNullableSwig(connection, swigAddress);
 ```
 
 ### Issue: Sub-account functions not found
