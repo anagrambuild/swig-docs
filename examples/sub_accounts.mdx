@@ -22,14 +22,89 @@ To work with sub accounts, there are two key requirements:
 
 2. **Sub Account Sign**: Once created, sub accounts can perform on-chain actions using the `sub_account_sign` instruction.
 
+## Enhanced Withdrawal Safety
 
-You can find working examples in our [test suite](https://github.com/anagrambuild/swig-wallet/blob/main/program/tests/sub_account_test.rs#L33).
+The TypeScript SDK now includes enhanced safety controls for withdrawing SOL from sub-accounts:
 
-## Coming Soon to TypeScript
+### Rent-Exempt Validation
+By default, withdrawals are prevented if they would drop the sub-account below the rent-exempt minimum (1,224,960 lamports). This protects against accidentally making sub-accounts unviable.
 
-We're actively working on bringing full sub account support to our TypeScript SDK. The implementation will include:
+### Explicit Override
+You can explicitly allow withdrawals below the rent-exempt minimum when needed by setting `allowBelowRentExempt: true`.
 
-- Easy-to-use APIs for sub account creation and management
-- TypeScript-native permission management
-- Event handling for sub account activities
-- Comprehensive documentation and examples
+### Balance Validation
+When using safety controls, you must provide the current balance for proper validation.
+
+## TypeScript SDK Examples
+
+### Basic Sub-Account Creation
+
+```typescript
+import { getCreateSubAccountInstructions } from '@swig-wallet/classic';
+
+const createSubAccountIx = await getCreateSubAccountInstructions(
+  swig,
+  roleId
+);
+```
+
+### Safe SOL Withdrawal
+
+```typescript
+import { getWithdrawFromSubAccountInstructions } from '@swig-wallet/classic';
+
+// Safe withdrawal with rent-exempt validation
+const safeWithdrawIx = await getWithdrawFromSubAccountInstructions(
+  swig,
+  roleId,
+  {
+    amount: 1000000n, // 0.001 SOL
+    currentBalance: 2000000n,
+    allowBelowRentExempt: false // Default behavior
+  }
+);
+```
+
+### Explicit Override for Below Rent-Exempt
+
+```typescript
+// Allow withdrawal below rent-exempt minimum
+const overrideWithdrawIx = await getWithdrawFromSubAccountInstructions(
+  swig,
+  roleId,
+  {
+    amount: 1000000n,
+    currentBalance: 2000000n,
+    allowBelowRentExempt: true // Explicitly allow below rent-exempt
+  }
+);
+```
+
+### Token Withdrawal
+
+```typescript
+// Token withdrawals work as before
+const tokenWithdrawIx = await getWithdrawFromSubAccountInstructions(
+  swig,
+  roleId,
+  {
+    amount: 1000000n,
+    mint: tokenMint,
+    tokenProgram: TOKEN_PROGRAM_ID
+  }
+);
+```
+
+## Working Examples
+
+You can find working examples in our [test suite](https://github.com/anagrambuild/swig-wallet/blob/main/program/tests/sub_account_test.rs#L33) and in the TypeScript SDK examples:
+
+- **Classic SDK**: `examples/classic/transfer/withdraw-sol-subaccount.ts`
+- **Kit SDK**: `examples/kit/transfer/withdraw-sol-subaccount.ts`
+
+These examples demonstrate:
+- Creating sub-accounts
+- Safe withdrawals with validation
+- Prevention of unsafe withdrawals
+- Explicit override functionality
+- Simple withdrawals without additional parameters
