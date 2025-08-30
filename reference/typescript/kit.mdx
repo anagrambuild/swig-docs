@@ -157,7 +157,8 @@ const signedInstructions = await getSignInstructions(swig, roleId, [
 - `getCreateSessionInstructions(swig, roleId, sessionKey, duration?, options?)` - Create session
 - `getCreateSubAccountInstructions(swig, roleId, options?)` - Create sub-account
 - `getToggleSubAccountInstructions(swig, roleId, enabled, options?)` - Toggle sub-account
-- `getWithdrawFromSubAccountInstructions(swig, roleId, withdrawArgs, options?)` - Withdraw from sub-account with enhanced safety controls
+- `getWithdrawFromSubAccountInstructions(swig, roleId, withdrawArgs, options?)` - Withdraw SOL from sub-account
+- `getWithdrawFromSubAccountSubAccountInstructionsChecked(swig, roleId, withdrawArgs, options?)` - Withdraw SOL from sub-account with safety validation
 
 ## Migration from Classic
 

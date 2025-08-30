@@ -48,28 +48,61 @@ const createSubAccountIx = await getCreateSubAccountInstructions(
 );
 ```
 
-### Safe SOL Withdrawal
+### Basic SOL Withdrawal
 
 ```typescript
 import { getWithdrawFromSubAccountInstructions } from '@swig-wallet/classic';
 
+// Basic withdrawal (no safety validation)
+const basicWithdrawIx = await getWithdrawFromSubAccountInstructions(
+  swig,
+  roleId,
+  {
+    amount: 1000000n // 0.001 SOL
+  }
+);
+```
+
+### Safe SOL Withdrawal with Validation
+
+#### Classic SDK
+```typescript
+import { getWithdrawFromSubAccountInstructionsChecked } from '@swig-wallet/classic';
+
 // Safe withdrawal with rent-exempt validation
-const safeWithdrawIx = await getWithdrawFromSubAccountInstructions(
+const safeWithdrawIx = await getWithdrawFromSubAccountInstructionsChecked(
   swig,
   roleId,
   {
     amount: 1000000n, // 0.001 SOL
     currentBalance: 2000000n,
-    allowBelowRentExempt: false // Default behavior
+    allowBelowRentExempt: false // Default behavior - protects rent exemption
+  }
+);
+```
+
+#### Kit SDK
+```typescript
+import { getWithdrawFromSubAccountSubAccountInstructionsChecked } from '@swig-wallet/kit';
+
+// Safe withdrawal with rent-exempt validation
+const safeWithdrawIx = await getWithdrawFromSubAccountSubAccountInstructionsChecked(
+  swig,
+  roleId,
+  {
+    amount: 1000000n, // 0.001 SOL
+    currentBalance: 2000000n,
+    allowBelowRentExempt: false // Default behavior - protects rent exemption
   }
 );
 ```
 
 ### Explicit Override for Below Rent-Exempt
 
+#### Classic SDK
 ```typescript
 // Allow withdrawal below rent-exempt minimum
-const overrideWithdrawIx = await getWithdrawFromSubAccountInstructions(
+const overrideWithdrawIx = await getWithdrawFromSubAccountInstructionsChecked(
   swig,
   roleId,
   {
@@ -80,17 +113,16 @@ const overrideWithdrawIx = await getWithdrawFromSubAccountInstructions(
 );
 ```
 
-### Token Withdrawal
-
+#### Kit SDK
 ```typescript
-// Token withdrawals work as before
-const tokenWithdrawIx = await getWithdrawFromSubAccountInstructions(
+// Allow withdrawal below rent-exempt minimum
+const overrideWithdrawIx = await getWithdrawFromSubAccountSubAccountInstructionsChecked(
   swig,
   roleId,
   {
     amount: 1000000n,
-    mint: tokenMint,
-    tokenProgram: TOKEN_PROGRAM_ID
+    currentBalance: 2000000n,
+    allowBelowRentExempt: true // Explicitly allow below rent-exempt
   }
 );
 ```
@@ -104,7 +136,7 @@ You can find working examples in our [test suite](https://github.com/anagrambuil
 
 These examples demonstrate:
 - Creating sub-accounts
-- Safe withdrawals with validation
-- Prevention of unsafe withdrawals
-- Explicit override functionality
-- Simple withdrawals without additional parameters
+- Basic SOL withdrawals (no validation)
+- Safe SOL withdrawals with rent-exempt validation
+- Prevention of unsafe withdrawals that would drop below rent exemption
+- Explicit override functionality for allowing below rent-exempt withdrawals
