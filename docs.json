@@ -72,8 +72,15 @@
             ]
           },
           {
+            "group": "Passkeys",
+            "pages": [
+              "examples/passkeys"
+            ]
+          },
+          {
             "group": "Advanced",
             "pages": [
+              "examples/secp256r1_authority",
               "examples/sessions",
               "examples/sub_accounts"
             ]

@@ -24,14 +24,151 @@ Secp256r1 for SWIG Wallet:
 
 **Signature Odometer:** Each authority tracks a counter to prevent replay attacks.
 
-### How to Use Secp256r1 Authority (Rust Walkthrough)
+### How to Use Secp256r1 Authority
 
-The walkthrough covers:
+The walkthrough covers both Rust and TypeScript implementations:
 
 1.  Key Generation
 2.  Authority Management
 3.  Transaction Signing & Replay Protection
 4.  Session Authorities
+
+## TypeScript Implementation
+
+### Key Generation & Basic Usage
+
+Here's a complete TypeScript example using secp256r1 keys with Swig Wallet:
+
+```typescript
+import { p256 } from '@noble/curves/nist';
+import { Keypair, SystemProgram, Transaction } from '@solana/web3.js';
+import { LiteSVM } from 'litesvm';
+import {
+  createSecp256r1AuthorityInfo,
+  getSigningFnForSecp256r1PrivateKey,
+  findSwigPda,
+  getCreateSwigInstruction,
+  getSignInstructions,
+  Swig,
+  Actions,
+} from '@swig-wallet/classic';
+
+async function setupSecp256r1Transfer() {
+  // 1. Initialize test environment
+  const svm = new LiteSVM();
+  
+  // 2. Generate secp256r1 keypair
+  const userWallet = p256.keygen();
+  const publicKey = p256.getPublicKey(userWallet.secretKey, true); // compressed
+  
+  // 3. Generate Solana keypair for paying fees
+  const userKeypair = Keypair.generate();
+  const recipientKeypair = Keypair.generate();
+  
+  // Fund the payer
+  svm.airdrop(userKeypair.publicKey, 1000000000); // 1 SOL
+  
+  // 4. Create Swig authority info
+  const authorityInfo = createSecp256r1AuthorityInfo(publicKey);
+  
+  // 5. Find Swig PDA
+  const swigId = new Uint8Array(32);
+  const [swigAddress] = findSwigPda(swigId);
+  
+  // 6. Create Swig account
+  const createSwigInstruction = await getCreateSwigInstruction({
+    authorityInfo,
+    id: swigId,
+    payer: userKeypair.publicKey,
+    actions: Actions.set().all().get(),
+  });
+  
+  // Send creation transaction
+  const createTx = new Transaction().add(createSwigInstruction);
+  svm.sendTransaction(createTx, [userKeypair]);
+  
+  // 7. Create signing function
+  const signingFn = getSigningFnForSecp256r1PrivateKey(userWallet.secretKey);
+  
+  // 8. Load the created Swig
+  const swig = await Swig.fromAccountAddress(svm, swigAddress);
+  
+  // 9. Create transfer instruction
+  const transferInstruction = SystemProgram.transfer({
+    fromPubkey: swigAddress,
+    toPubkey: recipientKeypair.publicKey,
+    lamports: 1000000, // 0.001 SOL
+  });
+  
+  // 10. Sign the transfer using secp256r1
+  const signedInstructions = await getSignInstructions(
+    swig,
+    0, // role ID
+    [transferInstruction],
+    false,
+    {
+      currentSlot: svm.getClock().slot,
+      signingFn,
+      payer: userKeypair.publicKey,
+    }
+  );
+  
+  // 11. Execute the signed transaction
+  const signedTx = new Transaction().add(...signedInstructions);
+  const result = svm.sendTransaction(signedTx, [userKeypair]);
+  
+  console.log('Transfer completed:', result);
+  
+  return {
+    swigAddress,
+    userWallet,
+    signingFn,
+    swig
+  };
+}
+```
+
+### WebAuthn Passkey Integration
+
+For browser-based applications, you can integrate WebAuthn passkeys:
+
+```typescript
+import { PasskeyManager } from './helpers/passkey';
+import {
+  createSecp256r1AuthorityInfo,
+  getSecp256r1WebAuthnSigningFn,
+} from '@swig-wallet/classic';
+
+async function setupPasskeyAuth() {
+  // Check WebAuthn support
+  if (!PasskeyManager.isSupported()) {
+    throw new Error('WebAuthn not supported in this browser');
+  }
+  
+  // Create or retrieve passkey
+  let credential = PasskeyManager.getStoredCredential();
+  if (!credential) {
+    credential = await PasskeyManager.createPasskey('user@example.com');
+  }
+  
+  // Create authority info from passkey
+  const authorityInfo = createSecp256r1AuthorityInfo(credential.publicKey);
+  
+  // Create WebAuthn signing function
+  const signingFn = getSecp256r1WebAuthnSigningFn({
+    allowCredentials: [{
+      id: credential.rawId,
+      type: 'public-key',
+    }],
+    timeout: 60000,
+    userVerification: 'preferred',
+  });
+  
+  return { authorityInfo, signingFn };
+}
+```
+
+## Rust Implementation
 
 #### A. Key Generation:
 
@@ -289,4 +426,34 @@ fn test_secp256r1_session_authority_odometer() {
     assert_eq!(auth.max_session_age, 100);
     assert_eq!(auth.signature_odometer, 0, "Initial odometer should be 0");
 }
+```
+
+## Live Examples
+
+Explore these working implementations to see secp256r1 authorities in action:
+
+<Card title="TypeScript secp256r1 Transfer" icon="code" href="https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-r1.ts">
+  Complete TypeScript example demonstrating secp256r1 key generation, Swig creation, and transfer operations using LiteSVM
+</Card>
+
+<Card title="Passkey Helper Functions" icon="fingerprint" href="https://github.com/anagrambuild/swig-ts/blob/main/examples/secp-ui/src/helpers/passkey.ts">
+  TypeScript helper functions for WebAuthn passkey integration with secp256r1 authorities
+</Card>
+
+<Card title="Interactive Passkey UI" icon="window" href="https://github.com/anagrambuild/swig-ts/tree/main/examples/secp-ui">
+  Complete UI example showing how to build user-facing passkey authentication with secp256r1
+</Card>
+
+## Key Differences: TypeScript vs Rust
+
+| Aspect | TypeScript | Rust |
+|--------|------------|------|
+| **Key Generation** | Uses `@noble/curves/nist` p256 | Uses OpenSSL EcKey with X9_62_PRIME256V1 |
+| **Public Key Format** | Auto-compressed via `p256.getPublicKey(key, true)` | Manual compression via `PointConversionForm::COMPRESSED` |
+| **Signing Function** | `getSigningFnForSecp256r1PrivateKey()` | Custom closure with `sign_message()` |
+| **WebAuthn Support** | Built-in passkey integration | Requires external WebAuthn library |
+| **Testing Environment** | LiteSVM for lightweight testing | SwigTestContext with full SVM |
+| **Use Cases** | Client-side apps, browsers, passkeys | Server-side, CLI tools, testing |
+
+Both implementations provide the same cryptographic security and are fully compatible with the Swig protocol. Choose based on your deployment environment and integration needs.
 ```
