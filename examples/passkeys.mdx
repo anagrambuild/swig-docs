@@ -1,0 +1,510 @@
+---
+title: "Passkey Integration"
+description: "Integrate WebAuthn passkeys with Swig Wallet for secure, passwordless authentication on Solana"
+---
+
+# Passkey Integration with Swig Wallet
+
+This documentation covers how to integrate WebAuthn passkeys with Swig Wallet for secure, passwordless authentication on Solana.
+
+## Reference Implementations
+
+This guide references two key examples from the Swig TypeScript SDK:
+
+- **[secp256r1 Transfer Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-r1.ts)** - Complete implementation using secp256r1 keys for transfers with LiteSVM testing
+- **[Interactive Passkey UI](https://github.com/anagrambuild/swig-ts/tree/main/examples/secp-ui)** - Full UI demonstration with passkey helper functions and user authentication flows. Key files:
+  - [`passkey.ts`](https://github.com/anagrambuild/swig-ts/blob/main/examples/secp-ui/src/helpers/passkey.ts) - Core PasskeyManager implementation
+  - [`passkey.tsx`](https://github.com/anagrambuild/swig-ts/blob/main/examples/secp-ui/src/hooks/passkey.tsx) - React hooks for passkey integration
+
+## Overview
+
+Swig Wallet supports WebAuthn passkeys through the secp256r1 elliptic curve, enabling users to authenticate using biometrics, security keys, or platform authenticators without requiring passwords or seed phrases.
+
+## Key Components
+
+### PasskeyManager Class
+
+The `PasskeyManager` class provides a complete interface for creating, storing, and using passkeys:
+
+```typescript
+import { PasskeyManager } from './helpers/passkey';
+import { signWithSecp256r1Webauthn } from '@swig-wallet/classic';
+```
+
+Below is a compact, `PasskeyManager` implementation (create, sign, and stored credential helpers):
+
+```typescript
+import {
+  signWithSecp256r1Webauthn,
+  type SigningResult,
+} from '@swig-wallet/classic';
+
+export interface PasskeyCredential {
+  id: string;
+  publicKey: Uint8Array;
+  rawId: ArrayBuffer;
+}
+
+export class PasskeyManager {
+  private static readonly STORAGE_KEY = 'swig-passkey-credential';
+
+  /**
+   * Create a new passkey credential for authentication
+   */
+  static createPasskey = async(
+    username: string = 'swig-user',
+  ): Promise<PasskeyCredential> => {
+    if (!window.navigator.credentials) {
+      throw new Error('WebAuthn not supported in this browser');
+    }
+
+    const challenge = crypto.getRandomValues(new Uint8Array(32));
+
+    const publicKeyCredentialCreationOptions: PublicKeyCredentialCreationOptions =
+      {
+        challenge,
+        rp: {
+          name: 'Swig Wallet',
+          id: window.location.hostname,
+        },
+        user: {
+          id: crypto.getRandomValues(new Uint8Array(64)),
+          name: username,
+          displayName: username,
+        },
+        pubKeyCredParams: [
+          {
+            alg: -7, // ES256 (secp256r1 with SHA-256)
+            type: 'public-key',
+          },
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: 'platform',
+          userVerification: 'preferred',
+          requireResidentKey: false,
+        },
+        timeout: 60000,
+        attestation: 'direct',
+      };
+
+    const credential = (await navigator.credentials.create({
+      publicKey: publicKeyCredentialCreationOptions,
+    })) as PublicKeyCredential | null;
+
+    if (!credential || !credential.response) {
+      throw new Error('Failed to create passkey credential');
+    }
+
+    // Extract the public key from the attestation
+    const response = credential.response as AuthenticatorAttestationResponse;
+
+    const publicKey = this.spkiToCompressedPublicKey(response.getPublicKey()!);
+
+    const passkeyCredential: PasskeyCredential = {
+      id: credential.id,
+      publicKey,
+      rawId: credential.rawId,
+    };
+
+    // Store the credential for future use
+    this.storeCredential(passkeyCredential);
+
+    return passkeyCredential;
+  }
+
+  /**
+   * Sign a message using the stored passkey
+   */
+  static signWithPasskey = async(
+    messageHash: Uint8Array,
+  ): Promise<SigningResult> => {
+    const credential = this.getStoredCredential();
+    if (!credential) {
+      throw new Error('No passkey credential found. Please create one first.');
+    }
+
+    return signWithSecp256r1Webauthn({
+      challenge: messageHash,
+      allowCredentials: [
+        {
+          id: credential.rawId,
+          type: 'public-key',
+        },
+      ],
+      timeout: 60000,
+      userVerification: 'preferred',
+    });
+  }
+
+  static getStoredCredential = (): PasskeyCredential | null => {
+    // Implementation details...
+  }
+
+  private static storeCredential = (credential: PasskeyCredential): void => {
+    // Implementation details...
+  }
+
+  static clearStoredCredential = (): void => {
+    // Implementation details...
+  }
+
+  static isSupported = (): boolean => {
+    // Implementation details...
+  }
+
+  // ... additional helper methods
+}
+```
+
+### Core Features
+
+- **Passkey Creation**: Generate new WebAuthn credentials
+- **Secure Storage**: Store credentials in browser localStorage  
+- **Message Signing**: Sign transactions using passkeys
+- **Browser Support Detection**: Check WebAuthn compatibility
+
+## Usage Guide
+
+### 1. Check Browser Support
+
+Before implementing passkeys, verify browser support:
+
+```typescript
+if (PasskeyManager.isSupported()) {
+  console.log('✅ WebAuthn is supported');
+} else {
+  console.log('❌ WebAuthn not supported');
+}
+```
+
+### 2. Create a Passkey
+
+Create a new passkey credential for a user:
+
+```typescript
+try {
+  const credential = await PasskeyManager.createPasskey('user@example.com');
+  console.log('Passkey created:', credential.id);
+  console.log('Public key:', credential.publicKey);
+} catch (error) {
+  console.error('Failed to create passkey:', error);
+}
+```
+
+The `createPasskey` method:
+- Uses ES256 algorithm (secp256r1 with SHA-256)
+- Requires platform authenticator (built-in biometrics)
+- Sets 60-second timeout
+- Automatically stores the credential
+
+### 3. Sign Messages with Passkeys
+
+Use the stored passkey to sign transaction messages:
+
+```typescript
+const messageHash = new Uint8Array(32); // Your message hash
+
+try {
+  const signingResult = await PasskeyManager.signWithPasskey(messageHash);
+  console.log('Signature:', signingResult.signature);
+  console.log('WebAuthn message:', signingResult.message);
+  console.log('Prefix data:', signingResult.prefix);
+} catch (error) {
+  console.error('Failed to sign:', error);
+}
+```
+
+### 4. Retrieve Stored Credentials
+
+Access previously created passkey credentials:
+
+```typescript
+const storedCredential = PasskeyManager.getStoredCredential();
+if (storedCredential) {
+  console.log('Found stored passkey:', storedCredential.id);
+} else {
+  console.log('No passkey found');
+}
+```
+
+### 5. Clear Stored Credentials
+
+Remove passkey data from storage:
+
+```typescript
+PasskeyManager.clearStoredCredential();
+console.log('Passkey cleared');
+```
+
+## Advanced Integration
+
+### Custom Signing Function
+
+Create a reusable signing function for your application:
+
+```typescript
+import { getSecp256r1WebAuthnSigningFn } from '@swig-wallet/lib';
+
+const credential = PasskeyManager.getStoredCredential();
+if (credential) {
+  const signingFn = getSecp256r1WebAuthnSigningFn({
+    allowCredentials: [
+      {
+        id: credential.rawId,
+        type: 'public-key',
+      },
+    ],
+    timeout: 60000,
+    userVerification: 'preferred',
+  });
+  
+  // Use signingFn with Swig instructions
+}
+```
+
+### Direct WebAuthn Integration
+
+For advanced use cases, use the low-level WebAuthn functions:
+
+```typescript
+import { signWithSecp256r1Webauthn } from '@swig-wallet/classic';
+
+const signingResult = await signWithSecp256r1Webauthn({
+  challenge: messageHash,
+  allowCredentials: [
+    {
+      id: credentialId,
+      type: 'public-key',
+    },
+  ],
+  timeout: 60000,
+  userVerification: 'preferred',
+});
+```
+
+### Raw secp256r1 Keys (Testing & Development)
+
+For testing without WebAuthn or when you need direct cryptographic control, use raw secp256r1 private keys:
+
+```typescript
+import { p256 } from '@noble/curves/nist';
+import {
+  createSecp256r1AuthorityInfo,
+  getSigningFnForSecp256r1PrivateKey,
+  getCreateSwigInstruction,
+  Actions,
+} from '@swig-wallet/classic';
+
+// Generate raw secp256r1 keypair
+const userWallet = p256.keygen();
+const publicKey = p256.getPublicKey(userWallet.secretKey, true); // compressed
+
+// Create Swig authority with raw public key
+const authorityInfo = createSecp256r1AuthorityInfo(publicKey);
+
+// Create signing function with raw private key
+const signingFn = getSigningFnForSecp256r1PrivateKey(userWallet.secretKey);
+
+// Use with Swig instructions
+const createSwigInstruction = await getCreateSwigInstruction({
+  authorityInfo,
+  id: new Uint8Array(32),
+  payer: payerPublicKey,
+  actions: Actions.set().all().get(),
+});
+
+// Sign transactions using raw key
+const signedInstructions = await getSignInstructions(
+  swig,
+  roleId,
+  [transferInstruction],
+  false,
+  {
+    currentSlot: BigInt(currentSlot),
+    signingFn,
+    payer: payerPublicKey,
+  },
+);
+```
+
+**When to use raw secp256r1 keys:**
+- Testing and development environments
+- Server-side applications  
+- When WebAuthn is not available
+- Automated scripts and tooling
+- Non-browser environments
+
+<Warning>
+**Security Note:** Raw private keys should never be used in production client applications. Always prefer WebAuthn passkeys for user-facing authentication.
+</Warning>
+
+## Technical Details
+
+### Public Key Format
+
+Passkeys use compressed secp256r1 public keys (33 bytes):
+- 1 byte prefix (0x02 or 0x03)
+- 32 bytes X-coordinate
+
+The `PasskeyManager` automatically converts SPKI format to compressed format.
+
+### Signature Format
+
+WebAuthn signatures are:
+- Raw 64-byte format (not DER encoded)  
+- Normalized S values (canonical signatures)
+- Generated from `hash(authenticatorData + SHA256(clientDataJSON))`
+
+### Authentication Data
+
+The WebAuthn prefix includes:
+- Authentication type identifier
+- Authenticator data
+- Client data field order
+- Huffman-compressed origin URL
+- Additional WebAuthn metadata
+
+## Security Considerations
+
+### Best Practices
+
+1. **Verify Origin**: Passkeys are bound to your domain origin
+2. **Timeout Handling**: Set appropriate timeouts for user experience
+3. **Error Handling**: Gracefully handle user cancellation
+4. **Fallback Options**: Provide alternative auth methods
+5. **Secure Storage**: Credentials in localStorage are domain-isolated
+
+### Browser Requirements
+
+- Chrome 67+ / Safari 14+ / Firefox 60+
+- HTTPS required (except localhost)
+- Platform authenticator support varies by device
+
+## Example Implementation
+
+### WebAuthn Passkey Example
+
+Here's a complete example integrating passkeys with Swig Wallet:
+
+```typescript
+import { PasskeyManager } from './helpers/passkey';
+import {
+  createSecp256r1AuthorityInfo,
+  getCreateSwigInstruction,
+  Actions,
+} from '@swig-wallet/classic';
+
+async function setupSwigWithPasskey() {
+  // Check support
+  if (!PasskeyManager.isSupported()) {
+    throw new Error('WebAuthn not supported');
+  }
+
+  // Create or retrieve passkey
+  let credential = PasskeyManager.getStoredCredential();
+  if (!credential) {
+    credential = await PasskeyManager.createPasskey();
+  }
+
+  // Create Swig authority with passkey
+  const authorityInfo = createSecp256r1AuthorityInfo(credential.publicKey);
+
+  // Create Swig instruction
+  const createSwigInstruction = await getCreateSwigInstruction({
+    authorityInfo,
+    id: new Uint8Array(32), // Your unique ID
+    payer: payerPublicKey,
+    actions: Actions.set().all().get(),
+  });
+
+  // Sign and send transaction...
+}
+```
+
+### Raw secp256r1 Key Example (LiteSVM Testing)
+
+For testing with LiteSVM or other development scenarios:
+
+```typescript
+import { p256 } from '@noble/curves/nist';
+import { LiteSVM } from 'litesvm';
+import {
+  createSecp256r1AuthorityInfo,
+  getSigningFnForSecp256r1PrivateKey,
+  findSwigPda,
+  getCreateSwigInstruction,
+  getSignInstructions,
+  Swig,
+  Actions,
+} from '@swig-wallet/classic';
+
+// Initialize SVM and generate keys
+const svm = new LiteSVM();
+const userWallet = p256.keygen();
+const userKeypair = Keypair.generate();
+
+// Setup Swig with secp256r1 authority
+const swigAddress = findSwigPda(new Uint8Array(32));
+const createInstruction = await getCreateSwigInstruction({
+  authorityInfo: createSecp256r1AuthorityInfo(userWallet.publicKey),
+  id: new Uint8Array(32),
+  payer: userKeypair.publicKey,
+  actions: Actions.set().all().get(),
+});
+
+// Create signing function
+const signingFn = getSigningFnForSecp256r1PrivateKey(userWallet.secretKey);
+
+// Send transactions
+svm.sendTransaction(new Transaction().add(createInstruction));
+
+// Use for signing other instructions
+const signedTransfer = await getSignInstructions(
+  swig,
+  roleId,
+  [
+    SystemProgram.transfer({
+      /* ... */
+    }),
+  ],
+  false,
+  {
+    currentSlot: svm.getClock().slot,
+    signingFn,
+    payer: userKeypair.publicKey,
+  },
+);
+```
+
+## Examples
+
+Check out these working implementations:
+
+<Card title="secp256r1 Transfer Example" icon="code" href="https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-r1.ts">
+  Complete example using secp256r1 keys for transfers with LiteSVM testing
+</Card>
+
+<Card title="Passkey UI Example" icon="window" href="https://github.com/anagrambuild/swig-ts/tree/main/examples/secp-ui">
+  Interactive UI demonstrating passkey integration with helper functions
+</Card>
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"WebAuthn not supported"**: Browser lacks WebAuthn API
+2. **"No authenticator available"**: Device lacks biometric/security key
+3. **"User cancelled"**: User declined authentication prompt
+4. **"Invalid domain"**: Origin mismatch or non-HTTPS context
+
+### Debug Tips
+
+- Test on multiple devices and browsers
+- Check browser console for detailed WebAuthn errors  
+- Verify HTTPS in production environments
+- Test with different authenticator types
+
+## Resources
+
+- [Swig secp256r1 Authority Documentation](secp256r1_authority)
+- [Swig Passkey UI Example](https://github.com/anagrambuild/swig-ts/tree/main/examples/secp-ui) - Interactive UI implementation with passkey helpers
