@@ -1,0 +1,636 @@
+# Swig Actions Documentation
+
+This document provides comprehensive documentation for all available Swig Actions, including their inputs, outputs, and usage examples.
+
+## Overview
+
+Swig Actions define permissions and spending limits for authorities in the Swig wallet system. Actions are composed using a builder pattern starting with `Actions.set()` and ending with `.get()`.
+
+```typescript
+const actions = Actions.set()
+  .tokenDestinationLimit({
+    mint: mintKeypair.publicKey,
+    amount: tokenLimitAmount,
+    destination: recipientAta,
+  })
+  .get();
+```
+
+## Action Categories
+
+### 1. Root/Management Actions
+
+#### `all()`
+
+Grants unlimited permissions for all operations.
+
+**Inputs:** None  
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const rootActions = Actions.set().all().get();
+```
+
+**Permissions Granted:**
+- Unlimited SOL and token spending
+- Access to all programs
+- Authority management
+- All other operations
+
+---
+
+#### `manageAuthority()`
+
+Grants permission to manage authorities (add/remove authorities).
+
+**Inputs:** None  
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const manageActions = Actions.set().manageAuthority().get();
+```
+
+**Permissions Granted:**
+- Add new authorities
+- Remove existing authorities
+
+---
+
+#### `allButManageAuthority()`
+
+Grants all permissions except authority management.
+
+**Inputs:** None  
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const limitedRootActions = Actions.set().allButManageAuthority().get();
+```
+
+**Permissions Granted:**
+- Unlimited SOL and token spending
+- Access to all programs
+- All operations except authority management
+
+---
+
+### 2. Program Actions
+
+#### `programLimit(payload)`
+
+Grants permission to interact with a specific program.
+
+**Inputs:**
+- `payload.programId: SolPublicKeyData` - The program ID to allow access to
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const programActions = Actions.set()
+  .programLimit({ programId: 'SystemProgram11111111111111111111111111111' })
+  .get();
+```
+
+**Permissions Granted:**
+- Execute transactions with the specified program
+
+---
+
+#### `programAll()`
+
+Grants permission to interact with all programs.
+
+**Inputs:** None  
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const allProgramActions = Actions.set().programAll().get();
+```
+
+**Permissions Granted:**
+- Execute transactions with any program
+
+---
+
+#### `programCurated()`
+
+Grants permission to interact with curated/whitelisted programs.
+
+**Inputs:** None  
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const curatedActions = Actions.set().programCurated().get();
+```
+
+**Permissions Granted:**
+- Execute transactions with approved/curated programs
+
+---
+
+#### `programScopeBasic(payload)`
+
+Basic program scope with specific target account.
+
+**Inputs:**
+- `payload.programId: SolPublicKeyData` - Program ID
+- `payload.targetAccount: SolPublicKeyData` - Target account within the program
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const basicScopeActions = Actions.set()
+  .programScopeBasic({
+    programId: 'TokenProgramId',
+    targetAccount: 'TokenAccountAddress',
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Access to specific program with targeted account interactions
+
+---
+
+#### `programScopeLimit(payload)`
+
+Program scope with spending limits.
+
+**Inputs:**
+- `payload.programId: SolPublicKeyData` - Program ID
+- `payload.targetAccount: SolPublicKeyData` - Target account
+- `payload.amount: bigint` - Maximum spendable amount
+- `payload.numericType: NumericType` - Numeric type (U8, U32, U64, U128)
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+import { NumericType } from '@swig-wallet/coder';
+
+const limitedScopeActions = Actions.set()
+  .programScopeLimit({
+    programId: 'TokenProgramId',
+    targetAccount: 'TokenAccountAddress',
+    amount: 1000n,
+    numericType: NumericType.U64,
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Limited access to specific program with amount restrictions
+
+---
+
+#### `programScopeRecurringLimit(payload)`
+
+Program scope with recurring spending limits.
+
+**Inputs:**
+- `payload.programId: SolPublicKeyData` - Program ID
+- `payload.targetAccount: SolPublicKeyData` - Target account
+- `payload.amount: bigint` - Recurring amount limit
+- `payload.window: bigint` - Time window in slots for limit reset
+- `payload.numericType: NumericType` - Numeric type (U8, U32, U64, U128)
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const recurringLimitActions = Actions.set()
+  .programScopeRecurringLimit({
+    programId: 'TokenProgramId',
+    targetAccount: 'TokenAccountAddress',
+    amount: 1000n,
+    window: 1000n, // slots
+    numericType: NumericType.U64,
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Recurring limited access to specific program
+
+---
+
+### 3. SOL Spending Actions
+
+#### `solLimit(payload)`
+
+One-time SOL spending limit.
+
+**Inputs:**
+- `payload.amount: bigint` - Maximum SOL amount to spend (in lamports)
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const solActions = Actions.set()
+  .solLimit({ amount: 1000000000n }) // 1 SOL in lamports
+  .get();
+```
+
+**Permissions Granted:**
+- Spend up to the specified amount of SOL once
+
+---
+
+#### `solRecurringLimit(payload)`
+
+Recurring SOL spending limit.
+
+**Inputs:**
+- `payload.recurringAmount: bigint` - SOL amount per window (in lamports)
+- `payload.window: bigint` - Time window in slots until reset
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const recurringActions = Actions.set()
+  .solRecurringLimit({
+    recurringAmount: 500000000n, // 0.5 SOL per window
+    window: 100000n, // slots
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Spend up to the specified amount of SOL per time window
+
+---
+
+#### `solDestinationLimit(payload)`
+
+One-time SOL spending to a specific destination.
+
+**Inputs:**
+- `payload.amount: bigint` - SOL amount (in lamports)
+- `payload.destination: SolPublicKeyData` - Destination public key
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const destinationActions = Actions.set()
+  .solDestinationLimit({
+    amount: 2000000000n, // 2 SOL
+    destination: 'RecipientPublicKey',
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Send up to the specified SOL amount to the specified destination once
+
+---
+
+#### `solRecurringDestinationLimit(payload)`
+
+Recurring SOL spending to a specific destination.
+
+**Inputs:**
+- `payload.recurringAmount: bigint` - SOL amount per window (in lamports)
+- `payload.window: bigint` - Time window in slots until reset
+- `payload.destination: SolPublicKeyData` - Destination public key
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const recurringDestActions = Actions.set()
+  .solRecurringDestinationLimit({
+    recurringAmount: 1000000000n, // 1 SOL per window
+    window: 86400n, // slots (approximately 1 day)
+    destination: 'RecipientPublicKey',
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Send up to the specified SOL amount to the destination per time window
+
+---
+
+### 4. Token Spending Actions
+
+#### `tokenLimit(payload)`
+
+One-time token spending limit.
+
+**Inputs:**
+- `payload.mint: SolPublicKeyData` - Token mint public key
+- `payload.amount: bigint` - Maximum token amount to spend
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const tokenActions = Actions.set()
+  .tokenLimit({
+    mint: 'USDCMintPublicKey',
+    amount: 1000000n, // 1 USDC (6 decimals)
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Spend up to the specified amount of the token once
+
+---
+
+#### `tokenRecurringLimit(payload)`
+
+Recurring token spending limit.
+
+**Inputs:**
+- `payload.mint: SolPublicKeyData` - Token mint public key
+- `payload.recurringAmount: bigint` - Token amount per window
+- `payload.window: bigint` - Time window in slots until reset
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const recurringTokenActions = Actions.set()
+  .tokenRecurringLimit({
+    mint: 'USDCMintPublicKey',
+    recurringAmount: 500000n, // 0.5 USDC per window
+    window: 50000n, // slots
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Spend up to the specified token amount per time window
+
+---
+
+#### `tokenDestinationLimit(payload)`
+
+One-time token spending to a specific destination.
+
+**Inputs:**
+- `payload.mint: SolPublicKeyData` - Token mint public key
+- `payload.amount: bigint` - Token amount
+- `payload.destination: SolPublicKeyData` - Destination public key
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const tokenDestActions = Actions.set()
+  .tokenDestinationLimit({
+    mint: 'USDCMintPublicKey',
+    amount: 2000000n, // 2 USDC
+    destination: 'RecipientTokenAccount',
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Send up to the specified token amount to the destination once
+
+---
+
+#### `tokenRecurringDestinationLimit(payload)`
+
+Recurring token spending to a specific destination.
+
+**Inputs:**
+- `payload.mint: SolPublicKeyData` - Token mint public key
+- `payload.recurringAmount: bigint` - Token amount per window
+- `payload.window: bigint` - Time window in slots until reset
+- `payload.destination: SolPublicKeyData` - Destination public key
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const recurringTokenDestActions = Actions.set()
+  .tokenRecurringDestinationLimit({
+    mint: 'USDCMintPublicKey',
+    recurringAmount: 1000000n, // 1 USDC per window
+    window: 86400n, // slots
+    destination: 'RecipientTokenAccount',
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Send up to the specified token amount to the destination per time window
+
+---
+
+### 5. Staking Actions
+
+#### `stakeAll()`
+
+Unlimited staking permissions.
+
+**Inputs:** None  
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const stakeActions = Actions.set().stakeAll().get();
+```
+
+**Permissions Granted:**
+- Unlimited staking operations
+
+---
+
+#### `stakeLimit(payload)`
+
+One-time staking limit.
+
+**Inputs:**
+- `payload.amount: bigint` - Maximum stake amount
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const stakeLimitActions = Actions.set()
+  .stakeLimit({ amount: 5000000000n }) // 5 SOL
+  .get();
+```
+
+**Permissions Granted:**
+- Stake up to the specified amount once
+
+---
+
+#### `stakeRecurringLimit(payload)`
+
+Recurring staking limit.
+
+**Inputs:**
+- `payload.recurringAmount: bigint` - Stake amount per window
+- `payload.window: bigint` - Time window in slots until reset
+
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const recurringStakeActions = Actions.set()
+  .stakeRecurringLimit({
+    recurringAmount: 1000000000n, // 1 SOL per window
+    window: 100000n, // slots
+  })
+  .get();
+```
+
+**Permissions Granted:**
+- Stake up to the specified amount per time window
+
+---
+
+### 6. Account Management Actions
+
+#### `subAccount()`
+
+Grants permission to control a subaccount.
+
+**Inputs:** None  
+**Output:** `Actions` instance
+
+**Usage:**
+```typescript
+const subAccountActions = Actions.set().subAccount().get();
+```
+
+**Permissions Granted:**
+- Control and manage subaccount operations
+
+---
+
+## Action Types Reference
+
+### `SolPublicKeyData`
+
+A Solana public key in various formats:
+- String (base58)
+- Uint8Array (32 bytes)
+- PublicKey object
+
+### `NumericType`
+
+Enum defining numeric types:
+```typescript
+enum NumericType {
+  U8, // 8-bit unsigned integer
+  U32, // 32-bit unsigned integer
+  U64, // 64-bit unsigned integer
+  U128, // 128-bit unsigned integer
+}
+```
+
+## Combining Actions
+
+Actions can be chained together to create complex permission sets:
+
+```typescript
+const complexActions = Actions.set()
+  .programAll() // Allow all programs
+  .solLimit({ amount: 1000000000n }) // 1 SOL spending limit
+  .tokenLimit({
+    // Token spending limit
+    mint: 'USDCMintPublicKey',
+    amount: 1000000n,
+  })
+  .tokenDestinationLimit({
+    // Specific destination limit
+    mint: 'USDTMintPublicKey',
+    amount: 500000n,
+    destination: 'RecipientAccount',
+  })
+  .get();
+```
+
+## Return Value: Actions Object
+
+The `.get()` method returns an `Actions` object with the following methods:
+
+### Query Methods
+
+- `count: number` - Number of actions
+- `bytes(): Uint8Array` - Serialized action bytes
+- `isRoot(): boolean` - Check if root action present
+- `canManageAuthority(): boolean` - Check authority management permission
+- `canUseProgram(programId): boolean` - Check program access permission
+- `hasProgramAction(): boolean` - Check if any program action exists
+
+### SOL Spending Methods
+
+- `canSpendSol(amount?): boolean` - Check SOL spending permission
+- `canSpendSolMax(): boolean` - Check unlimited SOL spending
+- `solSpendLimit(): bigint | null` - Get SOL spending limit (null = unlimited)
+- `solSpend(): SpendController` - Get SOL spend controller
+
+### Token Spending Methods
+
+- `canSpendToken(mint, amount?): boolean` - Check token spending permission
+- `canSpendTokenMax(mint): boolean` - Check unlimited token spending
+- `tokenSpendLimit(mint): bigint | null` - Get token spending limit
+- `tokenSpend(mint): SpendController` - Get token spend controller
+
+## Usage Examples
+
+### Simple Token Limit
+
+```typescript
+const actions = Actions.set()
+  .tokenLimit({
+    mint: mintKeypair.publicKey,
+    amount: 1000000n,
+  })
+  .get();
+
+// Check if can spend 500000 tokens
+if (actions.canSpendToken(mintKeypair.publicKey, 500000n)) {
+  console.log('Can spend tokens');
+}
+```
+
+### Program + Destination Limits
+
+```typescript
+const actions = Actions.set()
+  .programAll()
+  .solDestinationLimit({
+    destination: recipientAddress,
+    amount: 500000000n, // 0.5 SOL
+  })
+  .get();
+
+console.log('Actions count:', actions.count); // 2
+console.log('Can use programs:', actions.hasProgramAction()); // true
+console.log('Can spend SOL:', actions.canSpendSol()); // true
+```
+
+### Recurring Subscription Pattern
+
+```typescript
+const subscriptionActions = Actions.set()
+  .tokenRecurringDestinationLimit({
+    mint: usdcMint,
+    recurringAmount: 10000000n, // 10 USDC per month
+    window: 2160000n, // ~30 days in slots
+    destination: serviceProvider,
+  })
+  .programLimit({ programId: tokenProgramId })
+  .get();
+```
+
+This comprehensive documentation covers all available Swig Actions with their inputs, outputs, and practical usage examples.
