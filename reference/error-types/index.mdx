@@ -123,11 +123,66 @@ For the complete source code and latest updates, see the [Swig Wallet repository
         { code: "8 (0x8)", name: "Cpi", desc: "Error during cross-program invocation", category: "Program" },
         { code: "9 (0x9)", name: "InvalidSeedSwigAccount", desc: "Invalid seed used for Swig account derivation", category: "Program" },
         { code: "10 (0xA)", name: "MissingInstructions", desc: "Required instructions are missing", category: "Program" },
+        { code: "11 (0xB)", name: "InvalidAuthorityPayload", desc: "Invalid authority payload format", category: "Program" },
+        { code: "12 (0xC)", name: "InvalidAuthorityNotFoundByRoleId", desc: "Authority not found for given role ID", category: "Program" },
+        { code: "13 (0xD)", name: "InvalidAuthorityMustHaveAtLeastOneAction", desc: "Authority must have at least one action", category: "Program" },
+        { code: "14 (0xE)", name: "InstructionExecutionError", desc: "Error during instruction execution", category: "Program" },
+        { code: "15 (0xF)", name: "SerializationError", desc: "Error during data serialization", category: "Program" },
+        { code: "16 (0x10)", name: "InvalidSwigSignInstructionDataTooShort", desc: "Sign instruction data is too short", category: "Program" },
+        { code: "17 (0x11)", name: "InvalidSwigRemoveAuthorityInstructionDataTooShort", desc: "Remove authority instruction data is too short", category: "Program" },
+        { code: "18 (0x12)", name: "InvalidSwigAddAuthorityInstructionDataTooShort", desc: "Add authority instruction data is too short", category: "Program" },
+        { code: "19 (0x13)", name: "InvalidSwigUpdateAuthorityInstructionDataTooShort", desc: "Update authority instruction data is too short", category: "Program" },
+        { code: "20 (0x14)", name: "InvalidSwigCreateInstructionDataTooShort", desc: "Create instruction data is too short", category: "Program" },
+        { code: "21 (0x15)", name: "InvalidSwigCreateSessionInstructionDataTooShort", desc: "Create session instruction data is too short", category: "Program" },
+        { code: "22 (0x16)", name: "InvalidAccountsLength", desc: "Invalid number of accounts provided", category: "Program" },
+        { code: "23 (0x17)", name: "InvalidAccountsSwigMustBeFirst", desc: "Swig account must be the first account in the list", category: "Program" },
+        { code: "24 (0x18)", name: "InvalidSystemProgram", desc: "Invalid system program account", category: "Program" },
+        { code: "25 (0x19)", name: "DuplicateAuthority", desc: "Authority already exists", category: "Program" },
+        { code: "26 (0x1A)", name: "InvalidOperation", desc: "Invalid operation attempted", category: "Program" },
+        { code: "27 (0x1B)", name: "InvalidAlignment", desc: "Data alignment error", category: "Program" },
+        { code: "28 (0x1C)", name: "InvalidSeedSubAccount", desc: "Invalid seed used for sub-account derivation", category: "Program" },
+        { code: "29 (0x1D)", name: "InsufficientFunds", desc: "Insufficient funds for operation", category: "Program" },
+        { code: "30 (0x1E)", name: "OwnerMismatchTokenAccount", desc: "Token account owner mismatch", category: "Program" },
+        { code: "31 (0x1F)", name: "PermissionDenied", desc: "Permission denied for operation", category: "Program" },
+        { code: "32 (0x20)", name: "InvalidSignature", desc: "Invalid signature provided", category: "Program" },
+        { code: "33 (0x21)", name: "InvalidInstructionDataTooShort", desc: "Instruction data is too short", category: "Program" },
+        { code: "34 (0x22)", name: "OwnerMismatchSubAccount", desc: "Sub-account owner mismatch", category: "Program" },
+        { code: "35 (0x23)", name: "SubAccountAlreadyExists", desc: "Sub-account already exists", category: "Program" },
+        { code: "36 (0x24)", name: "AuthorityCannotCreateSubAccount", desc: "Authority cannot create sub-account", category: "Program" },
+        { code: "37 (0x25)", name: "InvalidSwigSubAccountDiscriminator", desc: "Invalid discriminator in sub-account data", category: "Program" },
+        { code: "38 (0x26)", name: "InvalidSwigSubAccountDisabled", desc: "Sub-account is disabled", category: "Program" },
+        { code: "39 (0x27)", name: "InvalidSwigSubAccountSwigIdMismatch", desc: "Sub-account Swig ID mismatch", category: "Program" },
+        { code: "40 (0x28)", name: "InvalidSwigSubAccountRoleIdMismatch", desc: "Sub-account role ID mismatch", category: "Program" },
+        { code: "41 (0x29)", name: "InvalidSwigTokenAccountOwner", desc: "Invalid token account owner", category: "Program" },
+        { code: "42 (0x2A)", name: "InvalidProgramScopeBalanceFields", desc: "Invalid program scope balance field configuration", category: "Program" },
+        { code: "43 (0x2B)", name: "AccountDataModifiedUnexpectedly", desc: "Account data was modified in unexpected ways during instruction execution", category: "Program" },
+        { code: "44 (0x2C)", name: "PermissionDeniedCannotUpdateRootAuthority", desc: "Cannot update root authority (ID 0)", category: "Program" },
         
         // Instruction Errors
         { code: "2000 (0x7D0)", name: "MissingInstructions", desc: "No instructions found in the instruction data", category: "Instruction" },
         { code: "2001 (0x7D1)", name: "MissingAccountInfo", desc: "Required account info not found at specified index", category: "Instruction" },
-        { code: "2002 (0x7D2)", name: "MissingData", desc: "Instruction data is incomplete or invalid", category: "Instruction" }
+        { code: "2002 (0x7D2)", name: "MissingData", desc: "Instruction data is incomplete or invalid", category: "Instruction" },
+        
+        // SDK Errors
+        { code: "N/A", name: "InvalidAuthorityType", desc: "Indicates that an invalid authority type was provided", category: "SDK" },
+        { code: "N/A", name: "Base58DecodeError", desc: "Error occurred during base58 decoding", category: "SDK" },
+        { code: "N/A", name: "ProgramError", desc: "Solana program error", category: "SDK" },
+        { code: "N/A", name: "InterfaceError", desc: "General interface error with description", category: "SDK" },
+        { code: "N/A", name: "ClientError", desc: "RPC client error", category: "SDK" },
+        { code: "N/A", name: "InvalidSwigData", desc: "Invalid swig data", category: "SDK" },
+        { code: "N/A", name: "AuthorityNotFound", desc: "Authority not found", category: "SDK" },
+        { code: "N/A", name: "InvalidSwigAccountDiscriminator", desc: "Invalid swig account discriminator", category: "SDK" },
+        { code: "N/A", name: "MessageCompilationError", desc: "Error occurred during message compilation", category: "SDK" },
+        { code: "N/A", name: "InvalidSecp256k1", desc: "Invalid secp256k1 signature", category: "SDK" },
+        { code: "N/A", name: "TransactionError", desc: "Transaction error", category: "SDK" },
+        { code: "N/A", name: "CurrentSlotNotSet", desc: "Current slot not set", category: "SDK" },
+        { code: "N/A", name: "SwigDataNotFound", desc: "Swig data not found", category: "SDK" },
+        { code: "N/A", name: "TransactionFailed", desc: "Transaction failed", category: "SDK" },
+        { code: "N/A", name: "TransactionCreationFailed", desc: "Transaction creation failed", category: "SDK" },
+        { code: "N/A", name: "TransactionCompilationFailed", desc: "Transaction compilation failed", category: "SDK" },
+        { code: "N/A", name: "TransactionFailedWithLogs", desc: "Transaction failed with logs", category: "SDK" },
+        { code: "N/A", name: "InvalidProgramScope", desc: "Invalid program scope", category: "SDK" },
+        { code: "N/A", name: "CounterNotSet", desc: "Counter not set", category: "SDK" }
       ];
       
       const matches = errors.filter(error => 
@@ -142,7 +197,7 @@ For the complete source code and latest updates, see the [Swig Wallet repository
       } else {
         resultsDiv.innerHTML = matches.slice(0, 10).map(error => `
           <div style="padding: 10px; border-bottom: 1px solid ${theme.border}; cursor: pointer; transition: background-color 0.2s;" 
-               onclick="this.parentElement.style.display='none'"
+               onclick="scrollToError('${error.code.replace(/'/g, "\\'")}', '${error.name.replace(/'/g, "\\'")}'); this.parentElement.style.display='none';"
                onmouseover="this.style.backgroundColor='${theme.hoverBg}'"
                onmouseout="this.style.backgroundColor='transparent'">
             <div style="font-weight: bold; color: ${theme.text};">
@@ -163,6 +218,91 @@ For the complete source code and latest updates, see the [Swig Wallet repository
       }
       
       resultsDiv.style.display = 'block';
+      
+      // Define scroll function if not already defined
+      if (!window.scrollToError) {
+        window.scrollToError = function(code, name) {
+          setTimeout(() => {
+            // Try multiple strategies to find the error in the tables
+            const tables = document.querySelectorAll('table tbody tr');
+            let targetRow = null;
+            
+            for (let row of tables) {
+              const cells = row.querySelectorAll('td');
+              if (cells.length >= 3) {
+                const codeCell = cells[0].textContent.trim();
+                const nameCell = cells[1].textContent.trim();
+                
+                // Match by code or name
+                if (codeCell.includes(code.split(' ')[0]) || // Match just the numeric part
+                    codeCell === code ||
+                    nameCell === name ||
+                    nameCell.includes(name)) {
+                  targetRow = row;
+                  break;
+                }
+              }
+            }
+            
+            if (targetRow) {
+              // Scroll to the row with some offset for better visibility
+              targetRow.scrollIntoView({ 
+                behavior: 'smooth', 
+                block: 'center' 
+              });
+              
+              // Highlight the row temporarily
+              const originalBg = targetRow.style.backgroundColor;
+              targetRow.style.backgroundColor = 'rgba(102, 179, 255, 0.3)';
+              targetRow.style.transition = 'background-color 0.3s ease';
+              
+              setTimeout(() => {
+                targetRow.style.backgroundColor = originalBg;
+              }, 2000);
+            } else {
+              // Fallback: Search for SDK errors and other content by text
+              const walker = document.createTreeWalker(
+                document.body,
+                NodeFilter.SHOW_TEXT,
+                null,
+                false
+              );
+              
+              let node;
+              while (node = walker.nextNode()) {
+                if ((name && node.textContent.includes(name)) || (code && node.textContent.includes(code))) {
+                  let element = node.parentElement;
+                  
+                  // Find the best element to highlight (table row, list item, or paragraph)
+                  while (element && !['TR', 'LI', 'P', 'DIV'].includes(element.tagName)) {
+                    element = element.parentElement;
+                  }
+                  
+                  if (element) {
+                    element.scrollIntoView({ 
+                      behavior: 'smooth', 
+                      block: 'center' 
+                    });
+                    
+                    // Highlight the element
+                    const originalBg = element.style.backgroundColor;
+                    const originalBorder = element.style.border;
+                    element.style.backgroundColor = 'rgba(102, 179, 255, 0.3)';
+                    element.style.border = '2px solid rgba(102, 179, 255, 0.6)';
+                    element.style.transition = 'all 0.3s ease';
+                    
+                    setTimeout(() => {
+                      element.style.backgroundColor = originalBg;
+                      element.style.border = originalBorder;
+                    }, 2000);
+                    break;
+                  }
+                }
+              }
+            }
+          }, 100);
+        };
+      }
     }}
   />
   <div 
