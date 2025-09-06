@@ -4,6 +4,127 @@ This document provides a comprehensive list of all error types used throughout t
 
 For the complete source code and latest updates, see the [Swig Wallet repository](https://github.com/anagrambuild/swig-wallet).
 
+export const ErrorData = {
+  state: [
+    { code: "1000 (0x3E8)", name: "InvalidAccountData", desc: "Account data is invalid or corrupted" },
+    { code: "1001 (0x3E9)", name: "InvalidActionData", desc: "Action data is invalid or malformed" },
+    { code: "1002 (0x3EA)", name: "InvalidAuthorityData", desc: "Authority data is invalid or malformed" },
+    { code: "1003 (0x3EB)", name: "InvalidRoleData", desc: "Role data is invalid or malformed" },
+    { code: "1004 (0x3EC)", name: "InvalidSwigData", desc: "Swig account data is invalid or malformed" },
+    { code: "1005 (0x3ED)", name: "RoleNotFound", desc: "Specified role could not be found" },
+    { code: "1006 (0x3EE)", name: "PermissionLoadError", desc: "Error loading permissions" },
+    { code: "1007 (0x3EF)", name: "InvalidAuthorityMustHaveAtLeastOneAction", desc: "Adding an authority requires at least one action" }
+  ],
+  authentication: [
+    { code: "3000 (0xBB8)", name: "InvalidAuthority", desc: "Invalid authority provided" },
+    { code: "3001 (0xBB9)", name: "InvalidAuthorityPayload", desc: "Invalid authority payload format" },
+    { code: "3002 (0xBBA)", name: "InvalidDataPayload", desc: "Invalid data payload format" },
+    { code: "3003 (0xBBB)", name: "InvalidAuthorityEd25519MissingAuthorityAccount", desc: "Missing Ed25519 authority account" },
+    { code: "3004 (0xBBC)", name: "AuthorityDoesNotSupportSessionBasedAuth", desc: "Authority does not support session-based authentication" },
+    { code: "3005 (0xBBD)", name: "PermissionDenied", desc: "Generic permission denied error" },
+    { code: "3006 (0xBBE)", name: "PermissionDeniedMissingPermission", desc: "Missing required permission" },
+    { code: "3007 (0xBBF)", name: "PermissionDeniedTokenAccountPermissionFailure", desc: "Token account permission check failed" },
+    { code: "3008 (0xBC0)", name: "PermissionDeniedTokenAccountDelegatePresent", desc: "Token account has an active delegate or close authority" },
+    { code: "3009 (0xBC1)", name: "PermissionDeniedTokenAccountNotInitialized", desc: "Token account is not initialized" },
+    { code: "3010 (0xBC2)", name: "PermissionDeniedToManageAuthority", desc: "No permission to manage authority" },
+    { code: "3011 (0xBC3)", name: "PermissionDeniedInsufficientBalance", desc: "Insufficient balance for operation" },
+    { code: "3012 (0xBC4)", name: "PermissionDeniedCannotRemoveRootAuthority", desc: "Cannot remove root authority" },
+    { code: "3013 (0xBC5)", name: "PermissionDeniedCannotUpdateRootAuthority", desc: "Cannot update root authority" },
+    { code: "3014 (0xBC6)", name: "PermissionDeniedSessionExpired", desc: "Session has expired" },
+    { code: "3015 (0xBC7)", name: "PermissionDeniedSecp256k1InvalidSignature", desc: "Invalid Secp256k1 signature" },
+    { code: "3016 (0xBC8)", name: "PermissionDeniedSecp256k1InvalidSignatureAge", desc: "Secp256k1 signature age is invalid" },
+    { code: "3017 (0xBC9)", name: "PermissionDeniedSecp256k1SignatureReused", desc: "Secp256k1 signature has been reused" },
+    { code: "3018 (0xBCA)", name: "PermissionDeniedSecp256k1InvalidHash", desc: "Invalid Secp256k1 hash" },
+    { code: "3019 (0xBCB)", name: "PermissionDeniedSecp256r1SignatureReused", desc: "Secp256r1 signature has been reused" },
+    { code: "3020 (0xBCC)", name: "PermissionDeniedStakeAccountInvalidState", desc: "Stake account is in an invalid state" },
+    { code: "3021 (0xBCD)", name: "InvalidSessionKeyCannotReuseSessionKey", desc: "Cannot reuse session key" },
+    { code: "3022 (0xBCE)", name: "InvalidSessionDuration", desc: "Invalid session duration" },
+    { code: "3023 (0xBCF)", name: "PermissionDeniedTokenAccountAuthorityNotSwig", desc: "Token account authority is not the Swig account" },
+    { code: "3024 (0xBD0)", name: "PermissionDeniedSecp256r1InvalidInstruction", desc: "Invalid Secp256r1 instruction" },
+    { code: "3025 (0xBD1)", name: "PermissionDeniedSecp256r1InvalidPubkey", desc: "Invalid Secp256r1 public key" },
+    { code: "3026 (0xBD2)", name: "PermissionDeniedSecp256r1InvalidMessageHash", desc: "Invalid Secp256r1 message hash" },
+    { code: "3027 (0xBD3)", name: "PermissionDeniedSecp256r1InvalidMessage", desc: "Invalid Secp256r1 message" },
+    { code: "3028 (0xBD4)", name: "PermissionDeniedSecp256r1InvalidAuthenticationKind", desc: "Invalid Secp256r1 authentication kind" },
+    { code: "3029 (0xBD5)", name: "PermissionDeniedSolDestinationLimitExceeded", desc: "SOL destination limit exceeded" },
+    { code: "3030 (0xBD6)", name: "PermissionDeniedSolDestinationRecurringLimitExceeded", desc: "SOL destination recurring limit exceeded" },
+    { code: "3031 (0xBD7)", name: "PermissionDeniedTokenDestinationLimitExceeded", desc: "Token destination limit exceeded" },
+    { code: "3032 (0xBD8)", name: "PermissionDeniedRecurringTokenDestinationLimitExceeded", desc: "Token destination recurring limit exceeded" }
+  ],
+  program: [
+    { code: "0 (0x0)", name: "InvalidSwigAccountDiscriminator", desc: "Invalid discriminator in Swig account data" },
+    { code: "1 (0x1)", name: "OwnerMismatchSwigAccount", desc: "Swig account owner does not match expected value" },
+    { code: "2 (0x2)", name: "AccountNotEmptySwigAccount", desc: "Swig account is not empty when it should be" },
+    { code: "3 (0x3)", name: "NotOnCurveSwigAccount", desc: "Public key in Swig account is not on the curve" },
+    { code: "4 (0x4)", name: "ExpectedSignerSwigAccount", desc: "Expected Swig account to be a signer but it isn't" },
+    { code: "5 (0x5)", name: "StateError", desc: "General state error in program execution" },
+    { code: "6 (0x6)", name: "AccountBorrowFailed", desc: "Failed to borrow account data" },
+    { code: "7 (0x7)", name: "InvalidAuthorityType", desc: "Invalid authority type specified" },
+    { code: "8 (0x8)", name: "Cpi", desc: "Error during cross-program invocation" },
+    { code: "9 (0x9)", name: "InvalidSeedSwigAccount", desc: "Invalid seed used for Swig account derivation" },
+    { code: "10 (0xA)", name: "MissingInstructions", desc: "Required instructions are missing" },
+    { code: "11 (0xB)", name: "InvalidAuthorityPayload", desc: "Invalid authority payload format" },
+    { code: "12 (0xC)", name: "InvalidAuthorityNotFoundByRoleId", desc: "Authority not found for given role ID" },
+    { code: "13 (0xD)", name: "InvalidAuthorityMustHaveAtLeastOneAction", desc: "Authority must have at least one action" },
+    { code: "14 (0xE)", name: "InstructionExecutionError", desc: "Error during instruction execution" },
+    { code: "15 (0xF)", name: "SerializationError", desc: "Error during data serialization" },
+    { code: "16 (0x10)", name: "InvalidSwigSignInstructionDataTooShort", desc: "Sign instruction data is too short" },
+    { code: "17 (0x11)", name: "InvalidSwigRemoveAuthorityInstructionDataTooShort", desc: "Remove authority instruction data is too short" },
+    { code: "18 (0x12)", name: "InvalidSwigAddAuthorityInstructionDataTooShort", desc: "Add authority instruction data is too short" },
+    { code: "19 (0x13)", name: "InvalidSwigUpdateAuthorityInstructionDataTooShort", desc: "Update authority instruction data is too short" },
+    { code: "20 (0x14)", name: "InvalidSwigCreateInstructionDataTooShort", desc: "Create instruction data is too short" },
+    { code: "21 (0x15)", name: "InvalidSwigCreateSessionInstructionDataTooShort", desc: "Create session instruction data is too short" },
+    { code: "22 (0x16)", name: "InvalidAccountsLength", desc: "Invalid number of accounts provided" },
+    { code: "23 (0x17)", name: "InvalidAccountsSwigMustBeFirst", desc: "Swig account must be the first account in the list" },
+    { code: "24 (0x18)", name: "InvalidSystemProgram", desc: "Invalid system program account" },
+    { code: "25 (0x19)", name: "DuplicateAuthority", desc: "Authority already exists" },
+    { code: "26 (0x1A)", name: "InvalidOperation", desc: "Invalid operation attempted" },
+    { code: "27 (0x1B)", name: "InvalidAlignment", desc: "Data alignment error" },
+    { code: "28 (0x1C)", name: "InvalidSeedSubAccount", desc: "Invalid seed used for sub-account derivation" },
+    { code: "29 (0x1D)", name: "InsufficientFunds", desc: "Insufficient funds for operation" },
+    { code: "30 (0x1E)", name: "OwnerMismatchTokenAccount", desc: "Token account owner mismatch" },
+    { code: "31 (0x1F)", name: "PermissionDenied", desc: "Permission denied for operation" },
+    { code: "32 (0x20)", name: "InvalidSignature", desc: "Invalid signature provided" },
+    { code: "33 (0x21)", name: "InvalidInstructionDataTooShort", desc: "Instruction data is too short" },
+    { code: "34 (0x22)", name: "OwnerMismatchSubAccount", desc: "Sub-account owner mismatch" },
+    { code: "35 (0x23)", name: "SubAccountAlreadyExists", desc: "Sub-account already exists" },
+    { code: "36 (0x24)", name: "AuthorityCannotCreateSubAccount", desc: "Authority cannot create sub-account" },
+    { code: "37 (0x25)", name: "InvalidSwigSubAccountDiscriminator", desc: "Invalid discriminator in sub-account data" },
+    { code: "38 (0x26)", name: "InvalidSwigSubAccountDisabled", desc: "Sub-account is disabled" },
+    { code: "39 (0x27)", name: "InvalidSwigSubAccountSwigIdMismatch", desc: "Sub-account Swig ID mismatch" },
+    { code: "40 (0x28)", name: "InvalidSwigSubAccountRoleIdMismatch", desc: "Sub-account role ID mismatch" },
+    { code: "41 (0x29)", name: "InvalidSwigTokenAccountOwner", desc: "Invalid token account owner" },
+    { code: "42 (0x2A)", name: "InvalidProgramScopeBalanceFields", desc: "Invalid program scope balance field configuration" },
+    { code: "43 (0x2B)", name: "AccountDataModifiedUnexpectedly", desc: "Account data was modified in unexpected ways during instruction execution" },
+    { code: "44 (0x2C)", name: "PermissionDeniedCannotUpdateRootAuthority", desc: "Cannot update root authority (ID 0)" }
+  ],
+  instruction: [
+    { code: "2000 (0x7D0)", name: "MissingInstructions", desc: "No instructions found in the instruction data" },
+    { code: "2001 (0x7D1)", name: "MissingAccountInfo", desc: "Required account info not found at specified index" },
+    { code: "2002 (0x7D2)", name: "MissingData", desc: "Instruction data is incomplete or invalid" }
+  ],
+  sdk: [
+    { code: "N/A", name: "InvalidAuthorityType", desc: "Indicates that an invalid authority type was provided" },
+    { code: "N/A", name: "Base58DecodeError", desc: "Error occurred during base58 decoding" },
+    { code: "N/A", name: "ProgramError", desc: "Solana program error" },
+    { code: "N/A", name: "InterfaceError", desc: "General interface error with description" },
+    { code: "N/A", name: "ClientError", desc: "RPC client error" },
+    { code: "N/A", name: "InvalidSwigData", desc: "Invalid swig data" },
+    { code: "N/A", name: "AuthorityNotFound", desc: "Authority not found" },
+    { code: "N/A", name: "InvalidSwigAccountDiscriminator", desc: "Invalid swig account discriminator" },
+    { code: "N/A", name: "MessageCompilationError", desc: "Error occurred during message compilation" },
+    { code: "N/A", name: "InvalidSecp256k1", desc: "Invalid secp256k1 signature" },
+    { code: "N/A", name: "TransactionError", desc: "Transaction error" },
+    { code: "N/A", name: "CurrentSlotNotSet", desc: "Current slot not set" },
+    { code: "N/A", name: "SwigDataNotFound", desc: "Swig data not found" },
+    { code: "N/A", name: "TransactionFailed", desc: "Transaction failed" },
+    { code: "N/A", name: "TransactionCreationFailed", desc: "Transaction creation failed" },
+    { code: "N/A", name: "TransactionCompilationFailed", desc: "Transaction compilation failed" },
+    { code: "N/A", name: "TransactionFailedWithLogs", desc: "Transaction failed with logs" },
+    { code: "N/A", name: "InvalidProgramScope", desc: "Invalid program scope" },
+    { code: "N/A", name: "CounterNotSet", desc: "Counter not set" }
+  ]
+};
+
 ## Search Errors
 
 <div style={{position: "relative", marginBottom: "20px"}}>
@@ -60,129 +181,17 @@ For the complete source code and latest updates, see the [Swig Wallet repository
       // Update results div styling
       Object.assign(resultsDiv.style, {
         backgroundColor: theme.bg,
-        border: `1px solid ${theme.border}`,
+        border: '1px solid ' + theme.border,
         boxShadow: isDark ? '0 4px 6px rgba(0,0,0,0.3)' : '0 4px 6px rgba(0,0,0,0.1)'
       });
       
-      // Error data for searching
+      // Flatten error data for searching
       const errors = [
-        // State Errors
-        { code: "1000 (0x3E8)", name: "InvalidAccountData", desc: "Account data is invalid or corrupted", category: "State" },
-        { code: "1001 (0x3E9)", name: "InvalidActionData", desc: "Action data is invalid or malformed", category: "State" },
-        { code: "1002 (0x3EA)", name: "InvalidAuthorityData", desc: "Authority data is invalid or malformed", category: "State" },
-        { code: "1003 (0x3EB)", name: "InvalidRoleData", desc: "Role data is invalid or malformed", category: "State" },
-        { code: "1004 (0x3EC)", name: "InvalidSwigData", desc: "Swig account data is invalid or malformed", category: "State" },
-        { code: "1005 (0x3ED)", name: "RoleNotFound", desc: "Specified role could not be found", category: "State" },
-        { code: "1006 (0x3EE)", name: "PermissionLoadError", desc: "Error loading permissions", category: "State" },
-        { code: "1007 (0x3EF)", name: "InvalidAuthorityMustHaveAtLeastOneAction", desc: "Adding an authority requires at least one action", category: "State" },
-        
-        // Authentication Errors
-        { code: "3000 (0xBB8)", name: "InvalidAuthority", desc: "Invalid authority provided", category: "Authentication" },
-        { code: "3001 (0xBB9)", name: "InvalidAuthorityPayload", desc: "Invalid authority payload format", category: "Authentication" },
-        { code: "3002 (0xBBA)", name: "InvalidDataPayload", desc: "Invalid data payload format", category: "Authentication" },
-        { code: "3003 (0xBBB)", name: "InvalidAuthorityEd25519MissingAuthorityAccount", desc: "Missing Ed25519 authority account", category: "Authentication" },
-        { code: "3004 (0xBBC)", name: "AuthorityDoesNotSupportSessionBasedAuth", desc: "Authority does not support session-based authentication", category: "Authentication" },
-        { code: "3005 (0xBBD)", name: "PermissionDenied", desc: "Generic permission denied error", category: "Authentication" },
-        { code: "3006 (0xBBE)", name: "PermissionDeniedMissingPermission", desc: "Missing required permission", category: "Authentication" },
-        { code: "3007 (0xBBF)", name: "PermissionDeniedTokenAccountPermissionFailure", desc: "Token account permission check failed", category: "Authentication" },
-        { code: "3008 (0xBC0)", name: "PermissionDeniedTokenAccountDelegatePresent", desc: "Token account has an active delegate or close authority", category: "Authentication" },
-        { code: "3009 (0xBC1)", name: "PermissionDeniedTokenAccountNotInitialized", desc: "Token account is not initialized", category: "Authentication" },
-        { code: "3010 (0xBC2)", name: "PermissionDeniedToManageAuthority", desc: "No permission to manage authority", category: "Authentication" },
-        { code: "3011 (0xBC3)", name: "PermissionDeniedInsufficientBalance", desc: "Insufficient balance for operation", category: "Authentication" },
-        { code: "3012 (0xBC4)", name: "PermissionDeniedCannotRemoveRootAuthority", desc: "Cannot remove root authority", category: "Authentication" },
-        { code: "3013 (0xBC5)", name: "PermissionDeniedCannotUpdateRootAuthority", desc: "Cannot update root authority", category: "Authentication" },
-        { code: "3014 (0xBC6)", name: "PermissionDeniedSessionExpired", desc: "Session has expired", category: "Authentication" },
-        { code: "3015 (0xBC7)", name: "PermissionDeniedSecp256k1InvalidSignature", desc: "Invalid Secp256k1 signature", category: "Authentication" },
-        { code: "3016 (0xBC8)", name: "PermissionDeniedSecp256k1InvalidSignatureAge", desc: "Secp256k1 signature age is invalid", category: "Authentication" },
-        { code: "3017 (0xBC9)", name: "PermissionDeniedSecp256k1SignatureReused", desc: "Secp256k1 signature has been reused", category: "Authentication" },
-        { code: "3018 (0xBCA)", name: "PermissionDeniedSecp256k1InvalidHash", desc: "Invalid Secp256k1 hash", category: "Authentication" },
-        { code: "3019 (0xBCB)", name: "PermissionDeniedSecp256r1SignatureReused", desc: "Secp256r1 signature has been reused", category: "Authentication" },
-        { code: "3020 (0xBCC)", name: "PermissionDeniedStakeAccountInvalidState", desc: "Stake account is in an invalid state", category: "Authentication" },
-        { code: "3021 (0xBCD)", name: "InvalidSessionKeyCannotReuseSessionKey", desc: "Cannot reuse session key", category: "Authentication" },
-        { code: "3022 (0xBCE)", name: "InvalidSessionDuration", desc: "Invalid session duration", category: "Authentication" },
-        { code: "3023 (0xBCF)", name: "PermissionDeniedTokenAccountAuthorityNotSwig", desc: "Token account authority is not the Swig account", category: "Authentication" },
-        { code: "3024 (0xBD0)", name: "PermissionDeniedSecp256r1InvalidInstruction", desc: "Invalid Secp256r1 instruction", category: "Authentication" },
-        { code: "3025 (0xBD1)", name: "PermissionDeniedSecp256r1InvalidPubkey", desc: "Invalid Secp256r1 public key", category: "Authentication" },
-        { code: "3026 (0xBD2)", name: "PermissionDeniedSecp256r1InvalidMessageHash", desc: "Invalid Secp256r1 message hash", category: "Authentication" },
-        { code: "3027 (0xBD3)", name: "PermissionDeniedSecp256r1InvalidMessage", desc: "Invalid Secp256r1 message", category: "Authentication" },
-        { code: "3028 (0xBD4)", name: "PermissionDeniedSecp256r1InvalidAuthenticationKind", desc: "Invalid Secp256r1 authentication kind", category: "Authentication" },
-        { code: "3029 (0xBD5)", name: "PermissionDeniedSolDestinationLimitExceeded", desc: "SOL destination limit exceeded", category: "Authentication" },
-        { code: "3030 (0xBD6)", name: "PermissionDeniedSolDestinationRecurringLimitExceeded", desc: "SOL destination recurring limit exceeded", category: "Authentication" },
-        { code: "3031 (0xBD7)", name: "PermissionDeniedTokenDestinationLimitExceeded", desc: "Token destination limit exceeded", category: "Authentication" },
-        { code: "3032 (0xBD8)", name: "PermissionDeniedRecurringTokenDestinationLimitExceeded", desc: "Token destination recurring limit exceeded", category: "Authentication" },
-        
-        // Program Errors
-        { code: "0 (0x0)", name: "InvalidSwigAccountDiscriminator", desc: "Invalid discriminator in Swig account data", category: "Program" },
-        { code: "1 (0x1)", name: "OwnerMismatchSwigAccount", desc: "Swig account owner does not match expected value", category: "Program" },
-        { code: "2 (0x2)", name: "AccountNotEmptySwigAccount", desc: "Swig account is not empty when it should be", category: "Program" },
-        { code: "3 (0x3)", name: "NotOnCurveSwigAccount", desc: "Public key in Swig account is not on the curve", category: "Program" },
-        { code: "4 (0x4)", name: "ExpectedSignerSwigAccount", desc: "Expected Swig account to be a signer but it isn't", category: "Program" },
-        { code: "5 (0x5)", name: "StateError", desc: "General state error in program execution", category: "Program" },
-        { code: "6 (0x6)", name: "AccountBorrowFailed", desc: "Failed to borrow account data", category: "Program" },
-        { code: "7 (0x7)", name: "InvalidAuthorityType", desc: "Invalid authority type specified", category: "Program" },
-        { code: "8 (0x8)", name: "Cpi", desc: "Error during cross-program invocation", category: "Program" },
-        { code: "9 (0x9)", name: "InvalidSeedSwigAccount", desc: "Invalid seed used for Swig account derivation", category: "Program" },
-        { code: "10 (0xA)", name: "MissingInstructions", desc: "Required instructions are missing", category: "Program" },
-        { code: "11 (0xB)", name: "InvalidAuthorityPayload", desc: "Invalid authority payload format", category: "Program" },
-        { code: "12 (0xC)", name: "InvalidAuthorityNotFoundByRoleId", desc: "Authority not found for given role ID", category: "Program" },
-        { code: "13 (0xD)", name: "InvalidAuthorityMustHaveAtLeastOneAction", desc: "Authority must have at least one action", category: "Program" },
-        { code: "14 (0xE)", name: "InstructionExecutionError", desc: "Error during instruction execution", category: "Program" },
-        { code: "15 (0xF)", name: "SerializationError", desc: "Error during data serialization", category: "Program" },
-        { code: "16 (0x10)", name: "InvalidSwigSignInstructionDataTooShort", desc: "Sign instruction data is too short", category: "Program" },
-        { code: "17 (0x11)", name: "InvalidSwigRemoveAuthorityInstructionDataTooShort", desc: "Remove authority instruction data is too short", category: "Program" },
-        { code: "18 (0x12)", name: "InvalidSwigAddAuthorityInstructionDataTooShort", desc: "Add authority instruction data is too short", category: "Program" },
-        { code: "19 (0x13)", name: "InvalidSwigUpdateAuthorityInstructionDataTooShort", desc: "Update authority instruction data is too short", category: "Program" },
-        { code: "20 (0x14)", name: "InvalidSwigCreateInstructionDataTooShort", desc: "Create instruction data is too short", category: "Program" },
-        { code: "21 (0x15)", name: "InvalidSwigCreateSessionInstructionDataTooShort", desc: "Create session instruction data is too short", category: "Program" },
-        { code: "22 (0x16)", name: "InvalidAccountsLength", desc: "Invalid number of accounts provided", category: "Program" },
-        { code: "23 (0x17)", name: "InvalidAccountsSwigMustBeFirst", desc: "Swig account must be the first account in the list", category: "Program" },
-        { code: "24 (0x18)", name: "InvalidSystemProgram", desc: "Invalid system program account", category: "Program" },
-        { code: "25 (0x19)", name: "DuplicateAuthority", desc: "Authority already exists", category: "Program" },
-        { code: "26 (0x1A)", name: "InvalidOperation", desc: "Invalid operation attempted", category: "Program" },
-        { code: "27 (0x1B)", name: "InvalidAlignment", desc: "Data alignment error", category: "Program" },
-        { code: "28 (0x1C)", name: "InvalidSeedSubAccount", desc: "Invalid seed used for sub-account derivation", category: "Program" },
-        { code: "29 (0x1D)", name: "InsufficientFunds", desc: "Insufficient funds for operation", category: "Program" },
-        { code: "30 (0x1E)", name: "OwnerMismatchTokenAccount", desc: "Token account owner mismatch", category: "Program" },
-        { code: "31 (0x1F)", name: "PermissionDenied", desc: "Permission denied for operation", category: "Program" },
-        { code: "32 (0x20)", name: "InvalidSignature", desc: "Invalid signature provided", category: "Program" },
-        { code: "33 (0x21)", name: "InvalidInstructionDataTooShort", desc: "Instruction data is too short", category: "Program" },
-        { code: "34 (0x22)", name: "OwnerMismatchSubAccount", desc: "Sub-account owner mismatch", category: "Program" },
-        { code: "35 (0x23)", name: "SubAccountAlreadyExists", desc: "Sub-account already exists", category: "Program" },
-        { code: "36 (0x24)", name: "AuthorityCannotCreateSubAccount", desc: "Authority cannot create sub-account", category: "Program" },
-        { code: "37 (0x25)", name: "InvalidSwigSubAccountDiscriminator", desc: "Invalid discriminator in sub-account data", category: "Program" },
-        { code: "38 (0x26)", name: "InvalidSwigSubAccountDisabled", desc: "Sub-account is disabled", category: "Program" },
-        { code: "39 (0x27)", name: "InvalidSwigSubAccountSwigIdMismatch", desc: "Sub-account Swig ID mismatch", category: "Program" },
-        { code: "40 (0x28)", name: "InvalidSwigSubAccountRoleIdMismatch", desc: "Sub-account role ID mismatch", category: "Program" },
-        { code: "41 (0x29)", name: "InvalidSwigTokenAccountOwner", desc: "Invalid token account owner", category: "Program" },
-        { code: "42 (0x2A)", name: "InvalidProgramScopeBalanceFields", desc: "Invalid program scope balance field configuration", category: "Program" },
-        { code: "43 (0x2B)", name: "AccountDataModifiedUnexpectedly", desc: "Account data was modified in unexpected ways during instruction execution", category: "Program" },
-        { code: "44 (0x2C)", name: "PermissionDeniedCannotUpdateRootAuthority", desc: "Cannot update root authority (ID 0)", category: "Program" },
-        
-        // Instruction Errors
-        { code: "2000 (0x7D0)", name: "MissingInstructions", desc: "No instructions found in the instruction data", category: "Instruction" },
-        { code: "2001 (0x7D1)", name: "MissingAccountInfo", desc: "Required account info not found at specified index", category: "Instruction" },
-        { code: "2002 (0x7D2)", name: "MissingData", desc: "Instruction data is incomplete or invalid", category: "Instruction" },
-        
-        // SDK Errors
-        { code: "N/A", name: "InvalidAuthorityType", desc: "Indicates that an invalid authority type was provided", category: "SDK" },
-        { code: "N/A", name: "Base58DecodeError", desc: "Error occurred during base58 decoding", category: "SDK" },
-        { code: "N/A", name: "ProgramError", desc: "Solana program error", category: "SDK" },
-        { code: "N/A", name: "InterfaceError", desc: "General interface error with description", category: "SDK" },
-        { code: "N/A", name: "ClientError", desc: "RPC client error", category: "SDK" },
-        { code: "N/A", name: "InvalidSwigData", desc: "Invalid swig data", category: "SDK" },
-        { code: "N/A", name: "AuthorityNotFound", desc: "Authority not found", category: "SDK" },
-        { code: "N/A", name: "InvalidSwigAccountDiscriminator", desc: "Invalid swig account discriminator", category: "SDK" },
-        { code: "N/A", name: "MessageCompilationError", desc: "Error occurred during message compilation", category: "SDK" },
-        { code: "N/A", name: "InvalidSecp256k1", desc: "Invalid secp256k1 signature", category: "SDK" },
-        { code: "N/A", name: "TransactionError", desc: "Transaction error", category: "SDK" },
-        { code: "N/A", name: "CurrentSlotNotSet", desc: "Current slot not set", category: "SDK" },
-        { code: "N/A", name: "SwigDataNotFound", desc: "Swig data not found", category: "SDK" },
-        { code: "N/A", name: "TransactionFailed", desc: "Transaction failed", category: "SDK" },
-        { code: "N/A", name: "TransactionCreationFailed", desc: "Transaction creation failed", category: "SDK" },
-        { code: "N/A", name: "TransactionCompilationFailed", desc: "Transaction compilation failed", category: "SDK" },
-        { code: "N/A", name: "TransactionFailedWithLogs", desc: "Transaction failed with logs", category: "SDK" },
-        { code: "N/A", name: "InvalidProgramScope", desc: "Invalid program scope", category: "SDK" },
-        { code: "N/A", name: "CounterNotSet", desc: "Counter not set", category: "SDK" }
+        ...ErrorData.state.map(e => ({...e, category: 'State'})),
+        ...ErrorData.authentication.map(e => ({...e, category: 'Authentication'})),
+        ...ErrorData.program.map(e => ({...e, category: 'Program'})),
+        ...ErrorData.instruction.map(e => ({...e, category: 'Instruction'})),
+        ...ErrorData.sdk.map(e => ({...e, category: 'SDK'}))
       ];
       
       const matches = errors.filter(error => 
@@ -193,27 +202,27 @@ For the complete source code and latest updates, see the [Swig Wallet repository
       );
       
       if (matches.length === 0) {
-        resultsDiv.innerHTML = `<div style="padding: 10px; color: ${theme.noResultsColor};">No matching errors found</div>`;
+        resultsDiv.innerHTML = '<div style="padding: 10px; color: ' + theme.noResultsColor + ';">No matching errors found</div>';
       } else {
-        resultsDiv.innerHTML = matches.slice(0, 10).map(error => `
-          <div style="padding: 10px; border-bottom: 1px solid ${theme.border}; cursor: pointer; transition: background-color 0.2s;" 
-               onclick="scrollToError('${error.code.replace(/'/g, "\\'")}', '${error.name.replace(/'/g, "\\'")}'); this.parentElement.style.display='none';"
-               onmouseover="this.style.backgroundColor='${theme.hoverBg}'"
-               onmouseout="this.style.backgroundColor='transparent'">
-            <div style="font-weight: bold; color: ${theme.text};">
-              <span style="color: ${theme.codeColor};">${error.code}</span> - ${error.name}
-            </div>
-            <div style="font-size: 14px; color: ${theme.textSecondary}; margin-top: 4px;">
-              ${error.desc}
-            </div>
-            <div style="font-size: 12px; color: ${theme.textTertiary}; margin-top: 4px;">
-              Category: ${error.category}
-            </div>
-          </div>
-        `).join('');
+        resultsDiv.innerHTML = matches.slice(0, 10).map(error => 
+          '<div style="padding: 10px; border-bottom: 1px solid ' + theme.border + '; cursor: pointer; transition: background-color 0.2s;" ' +
+               'onclick="scrollToError(\'' + error.code.replace(/'/g, "\\'") + '\', \'' + error.name.replace(/'/g, "\\'") + '\'); this.parentElement.style.display=\'none\';" ' +
+               'onmouseover="this.style.backgroundColor=\'' + theme.hoverBg + '\'" ' +
+               'onmouseout="this.style.backgroundColor=\'transparent\'">' +
+            '<div style="font-weight: bold; color: ' + theme.text + ';">' +
+              '<span style="color: ' + theme.codeColor + ';">' + error.code + '</span> - ' + error.name +
+            '</div>' +
+            '<div style="font-size: 14px; color: ' + theme.textSecondary + '; margin-top: 4px;">' +
+              error.desc +
+            '</div>' +
+            '<div style="font-size: 12px; color: ' + theme.textTertiary + '; margin-top: 4px;">' +
+              'Category: ' + error.category +
+            '</div>' +
+          '</div>'
+        ).join('');
         
         if (matches.length > 10) {
-          resultsDiv.innerHTML += `<div style="padding: 10px; color: ${theme.textSecondary}; font-style: italic;">... and ${matches.length - 10} more results</div>`;
+          resultsDiv.innerHTML += '<div style="padding: 10px; color: ' + theme.textSecondary + '; font-style: italic;">... and ' + (matches.length - 10) + ' more results</div>';
         }
       }
       
@@ -223,22 +232,38 @@ For the complete source code and latest updates, see the [Swig Wallet repository
       if (!window.scrollToError) {
         window.scrollToError = function(code, name) {
           setTimeout(() => {
+            console.log('Searching for:', code, name); // Debug log
+            
             // Try multiple strategies to find the error in the tables
             const tables = document.querySelectorAll('table tbody tr');
             let targetRow = null;
             
             for (let row of tables) {
               const cells = row.querySelectorAll('td');
-              if (cells.length >= 3) {
+              if (cells.length >= 2) { // SDK table only has 2 columns
                 const codeCell = cells[0].textContent.trim();
-                const nameCell = cells[1].textContent.trim();
+                const nameCell = cells.length >= 3 ? cells[1].textContent.trim() : cells[0].textContent.trim();
                 
-                // Match by code or name
-                if (codeCell.includes(code.split(' ')[0]) || // Match just the numeric part
-                    codeCell === code ||
-                    nameCell === name ||
-                    nameCell.includes(name)) {
+                console.log('Checking row:', codeCell, nameCell); // Debug log
+                
+                // Match by code or name - handle both 2 and 3 column tables
+                const codeMatch = code && (
+                  codeCell === code || // Exact match first
+                  codeCell.startsWith(code.split(' ')[0] + ' ') || // Match "20 (0x14)" when searching "20"
+                  codeCell.includes('(' + code + ')') || // Match "(0x14)" when searching "0x14"
+                  (code.includes('0x') && codeCell.includes(code)) // Hex code match
+                );
+                
+                const nameMatch = name && (
+                  nameCell === name || // Exact match
+                  (cells.length >= 3 && cells[1].textContent.trim() === name) || // For 3-column tables
+                  // Only allow partial matches for very specific cases
+                  (name.length > 10 && (nameCell.includes(name) || (cells.length >= 3 && cells[1].textContent.trim().includes(name))))
+                );
+                
+                if (codeMatch || nameMatch) {
                   targetRow = row;
+                  console.log('Found target row!'); // Debug log
                   break;
                 }
               }
@@ -260,31 +285,38 @@ For the complete source code and latest updates, see the [Swig Wallet repository
                 targetRow.style.backgroundColor = originalBg;
               }, 2000);
             } else {
-              // Fallback: Search for SDK errors and other content by text
-              const walker = document.createTreeWalker(
-                document.body,
-                NodeFilter.SHOW_TEXT,
-                null,
-                false
-              );
+              console.log('Row not found, trying text search'); // Debug log
               
-              let node;
-              while (node = walker.nextNode()) {
-                if ((name && node.textContent.includes(name)) || (code && node.textContent.includes(code))) {
-                  let element = node.parentElement;
-                  
-                  // Find the best element to highlight (table row, list item, or paragraph)
-                  while (element && !['TR', 'LI', 'P', 'DIV'].includes(element.tagName)) {
-                    element = element.parentElement;
-                  }
-                  
-                  if (element) {
+              // Fallback: Search for errors by text content
+              const allElements = document.querySelectorAll('td, p, li, div');
+              
+              for (let element of allElements) {
+                const text = element.textContent || '';
+                if ((name && text.includes(name)) || (code && text.includes(code))) {
+                  // Find the table row if this is in a table
+                  const row = element.closest('tr');
+                  if (row) {
+                    row.scrollIntoView({ 
+                      behavior: 'smooth', 
+                      block: 'center' 
+                    });
+                    
+                    // Highlight the row
+                    const originalBg = row.style.backgroundColor;
+                    row.style.backgroundColor = 'rgba(102, 179, 255, 0.3)';
+                    row.style.transition = 'background-color 0.3s ease';
+                    
+                    setTimeout(() => {
+                      row.style.backgroundColor = originalBg;
+                    }, 2000);
+                    break;
+                  } else {
+                    // Not in a table, highlight the element itself
                     element.scrollIntoView({ 
                       behavior: 'smooth', 
                       block: 'center' 
                     });
                     
-                    // Highlight the element
                     const originalBg = element.style.backgroundColor;
                     const originalBorder = element.style.border;
                     element.style.backgroundColor = 'rgba(102, 179, 255, 0.3)';
@@ -300,7 +332,7 @@ For the complete source code and latest updates, see the [Swig Wallet repository
                 }
               }
             }
-          }, 100);
+          }, 500); // Increased timeout to ensure tables are rendered
         };
       }
     }}
@@ -335,16 +367,24 @@ Located in: [`state/src/lib.rs:91-108`](https://github.com/anagrambuild/swig-wal
 
 These errors are related to state management operations and data validation.
 
-| Code | Error | Description |
-|------|-------|-------------|
-| 1000 (0x3E8) | `InvalidAccountData` | Account data is invalid or corrupted |
-| 1001 (0x3E9) | `InvalidActionData` | Action data is invalid or malformed |
-| 1002 (0x3EA) | `InvalidAuthorityData` | Authority data is invalid or malformed |
-| 1003 (0x3EB) | `InvalidRoleData` | Role data is invalid or malformed |
-| 1004 (0x3EC) | `InvalidSwigData` | Swig account data is invalid or malformed |
-| 1005 (0x3ED) | `RoleNotFound` | Specified role could not be found |
-| 1006 (0x3EE) | `PermissionLoadError` | Error loading permissions |
-| 1007 (0x3EF) | `InvalidAuthorityMustHaveAtLeastOneAction` | Adding an authority requires at least one action |
+<table>
+  <thead>
+    <tr>
+      <th>Code</th>
+      <th>Error</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {ErrorData.state.map((error, index) => (
+      <tr key={index}>
+        <td>{error.code}</td>
+        <td><code>{error.name}</code></td>
+        <td>{error.desc}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
 
 ## Authentication Errors (`swig_state::SwigAuthenticateError`)
 
@@ -352,41 +392,24 @@ Located in: [`state/src/lib.rs:111-178`](https://github.com/anagrambuild/swig-wa
 
 These errors are related to authentication operations and permission validation.
 
-| Code | Error | Description |
-|------|-------|-------------|
-| 3000 (0xBB8) | `InvalidAuthority` | Invalid authority provided |
-| 3001 (0xBB9) | `InvalidAuthorityPayload` | Invalid authority payload format |
-| 3002 (0xBBA) | `InvalidDataPayload` | Invalid data payload format |
-| 3003 (0xBBB) | `InvalidAuthorityEd25519MissingAuthorityAccount` | Missing Ed25519 authority account |
-| 3004 (0xBBC) | `AuthorityDoesNotSupportSessionBasedAuth` | Authority does not support session-based authentication |
-| 3005 (0xBBD) | `PermissionDenied` | Generic permission denied error |
-| 3006 (0xBBE) | `PermissionDeniedMissingPermission` | Missing required permission |
-| 3007 (0xBBF) | `PermissionDeniedTokenAccountPermissionFailure` | Token account permission check failed |
-| 3008 (0xBC0) | `PermissionDeniedTokenAccountDelegatePresent` | Token account has an active delegate or close authority |
-| 3009 (0xBC1) | `PermissionDeniedTokenAccountNotInitialized` | Token account is not initialized |
-| 3010 (0xBC2) | `PermissionDeniedToManageAuthority` | No permission to manage authority |
-| 3011 (0xBC3) | `PermissionDeniedInsufficientBalance` | Insufficient balance for operation |
-| 3012 (0xBC4) | `PermissionDeniedCannotRemoveRootAuthority` | Cannot remove root authority |
-| 3013 (0xBC5) | `PermissionDeniedCannotUpdateRootAuthority` | Cannot update root authority |
-| 3014 (0xBC6) | `PermissionDeniedSessionExpired` | Session has expired |
-| 3015 (0xBC7) | `PermissionDeniedSecp256k1InvalidSignature` | Invalid Secp256k1 signature |
-| 3016 (0xBC8) | `PermissionDeniedSecp256k1InvalidSignatureAge` | Secp256k1 signature age is invalid |
-| 3017 (0xBC9) | `PermissionDeniedSecp256k1SignatureReused` | Secp256k1 signature has been reused |
-| 3018 (0xBCA) | `PermissionDeniedSecp256k1InvalidHash` | Invalid Secp256k1 hash |
-| 3019 (0xBCB) | `PermissionDeniedSecp256r1SignatureReused` | Secp256r1 signature has been reused |
-| 3020 (0xBCC) | `PermissionDeniedStakeAccountInvalidState` | Stake account is in an invalid state |
-| 3021 (0xBCD) | `InvalidSessionKeyCannotReuseSessionKey` | Cannot reuse session key |
-| 3022 (0xBCE) | `InvalidSessionDuration` | Invalid session duration |
-| 3023 (0xBCF) | `PermissionDeniedTokenAccountAuthorityNotSwig` | Token account authority is not the Swig account |
-| 3024 (0xBD0) | `PermissionDeniedSecp256r1InvalidInstruction` | Invalid Secp256r1 instruction |
-| 3025 (0xBD1) | `PermissionDeniedSecp256r1InvalidPubkey` | Invalid Secp256r1 public key |
-| 3026 (0xBD2) | `PermissionDeniedSecp256r1InvalidMessageHash` | Invalid Secp256r1 message hash |
-| 3027 (0xBD3) | `PermissionDeniedSecp256r1InvalidMessage` | Invalid Secp256r1 message |
-| 3028 (0xBD4) | `PermissionDeniedSecp256r1InvalidAuthenticationKind` | Invalid Secp256r1 authentication kind |
-| 3029 (0xBD5) | `PermissionDeniedSolDestinationLimitExceeded` | SOL destination limit exceeded |
-| 3030 (0xBD6) | `PermissionDeniedSolDestinationRecurringLimitExceeded` | SOL destination recurring limit exceeded |
-| 3031 (0xBD7) | `PermissionDeniedTokenDestinationLimitExceeded` | Token destination limit exceeded |
-| 3032 (0xBD8) | `PermissionDeniedRecurringTokenDestinationLimitExceeded` | Token destination recurring limit exceeded |
+<table>
+  <thead>
+    <tr>
+      <th>Code</th>
+      <th>Error</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {ErrorData.authentication.map((error, index) => (
+      <tr key={index}>
+        <td>{error.code}</td>
+        <td><code>{error.name}</code></td>
+        <td>{error.desc}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
 
 ## Program Errors (`swig_program::SwigError`)
 
@@ -394,53 +417,24 @@ Located in: [`program/src/error.rs:20-115`](https://github.com/anagrambuild/swig
 
 These errors can occur during program execution and are categorized by functionality.
 
-| Code | Error | Description |
-|------|-------|-------------|
-| 0 (0x0) | `InvalidSwigAccountDiscriminator` | Invalid discriminator in Swig account data |
-| 1 (0x1) | `OwnerMismatchSwigAccount` | Swig account owner does not match expected value |
-| 2 (0x2) | `AccountNotEmptySwigAccount` | Swig account is not empty when it should be |
-| 3 (0x3) | `NotOnCurveSwigAccount` | Public key in Swig account is not on the curve |
-| 4 (0x4) | `ExpectedSignerSwigAccount` | Expected Swig account to be a signer but it isn't |
-| 5 (0x5) | `StateError` | General state error in program execution |
-| 6 (0x6) | `AccountBorrowFailed` | Failed to borrow account data |
-| 7 (0x7) | `InvalidAuthorityType` | Invalid authority type specified |
-| 8 (0x8) | `Cpi` | Error during cross-program invocation |
-| 9 (0x9) | `InvalidSeedSwigAccount` | Invalid seed used for Swig account derivation |
-| 10 (0xA) | `MissingInstructions` | Required instructions are missing |
-| 11 (0xB) | `InvalidAuthorityPayload` | Invalid authority payload format |
-| 12 (0xC) | `InvalidAuthorityNotFoundByRoleId` | Authority not found for given role ID |
-| 13 (0xD) | `InvalidAuthorityMustHaveAtLeastOneAction` | Authority must have at least one action |
-| 14 (0xE) | `InstructionExecutionError` | Error during instruction execution |
-| 15 (0xF) | `SerializationError` | Error during data serialization |
-| 16 (0x10) | `InvalidSwigSignInstructionDataTooShort` | Sign instruction data is too short |
-| 17 (0x11) | `InvalidSwigRemoveAuthorityInstructionDataTooShort` | Remove authority instruction data is too short |
-| 18 (0x12) | `InvalidSwigAddAuthorityInstructionDataTooShort` | Add authority instruction data is too short |
-| 19 (0x13) | `InvalidSwigUpdateAuthorityInstructionDataTooShort` | Update authority instruction data is too short |
-| 20 (0x14) | `InvalidSwigCreateInstructionDataTooShort` | Create instruction data is too short |
-| 21 (0x15) | `InvalidSwigCreateSessionInstructionDataTooShort` | Create session instruction data is too short |
-| 22 (0x16) | `InvalidAccountsLength` | Invalid number of accounts provided |
-| 23 (0x17) | `InvalidAccountsSwigMustBeFirst` | Swig account must be the first account in the list |
-| 24 (0x18) | `InvalidSystemProgram` | Invalid system program account |
-| 25 (0x19) | `DuplicateAuthority` | Authority already exists |
-| 26 (0x1A) | `InvalidOperation` | Invalid operation attempted |
-| 27 (0x1B) | `InvalidAlignment` | Data alignment error |
-| 28 (0x1C) | `InvalidSeedSubAccount` | Invalid seed used for sub-account derivation |
-| 29 (0x1D) | `InsufficientFunds` | Insufficient funds for operation |
-| 30 (0x1E) | `OwnerMismatchTokenAccount` | Token account owner mismatch |
-| 31 (0x1F) | `PermissionDenied` | Permission denied for operation |
-| 32 (0x20) | `InvalidSignature` | Invalid signature provided |
-| 33 (0x21) | `InvalidInstructionDataTooShort` | Instruction data is too short |
-| 34 (0x22) | `OwnerMismatchSubAccount` | Sub-account owner mismatch |
-| 35 (0x23) | `SubAccountAlreadyExists` | Sub-account already exists |
-| 36 (0x24) | `AuthorityCannotCreateSubAccount` | Authority cannot create sub-account |
-| 37 (0x25) | `InvalidSwigSubAccountDiscriminator` | Invalid discriminator in sub-account data |
-| 38 (0x26) | `InvalidSwigSubAccountDisabled` | Sub-account is disabled |
-| 39 (0x27) | `InvalidSwigSubAccountSwigIdMismatch` | Sub-account Swig ID mismatch |
-| 40 (0x28) | `InvalidSwigSubAccountRoleIdMismatch` | Sub-account role ID mismatch |
-| 41 (0x29) | `InvalidSwigTokenAccountOwner` | Invalid token account owner |
-| 42 (0x2A) | `InvalidProgramScopeBalanceFields` | Invalid program scope balance field configuration |
-| 43 (0x2B) | `AccountDataModifiedUnexpectedly` | Account data was modified in unexpected ways during instruction execution |
-| 44 (0x2C) | `PermissionDeniedCannotUpdateRootAuthority` | Cannot update root authority (ID 0) |
+<table>
+  <thead>
+    <tr>
+      <th>Code</th>
+      <th>Error</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {ErrorData.program.map((error, index) => (
+      <tr key={index}>
+        <td>{error.code}</td>
+        <td><code>{error.name}</code></td>
+        <td>{error.desc}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
 
 ## Instruction Processing Errors (`swig_instructions::InstructionError`)
 
@@ -448,11 +442,24 @@ Located in: [`instructions/src/lib.rs:25-32`](https://github.com/anagrambuild/sw
 
 These errors can occur during instruction processing and parsing.
 
-| Code | Error | Description |
-|------|-------|-------------|
-| 2000 (0x7D0) | `MissingInstructions` | No instructions found in the instruction data |
-| 2001 (0x7D1) | `MissingAccountInfo` | Required account info not found at specified index |
-| 2002 (0x7D2) | `MissingData` | Instruction data is incomplete or invalid |
+<table>
+  <thead>
+    <tr>
+      <th>Code</th>
+      <th>Error</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {ErrorData.instruction.map((error, index) => (
+      <tr key={index}>
+        <td>{error.code}</td>
+        <td><code>{error.name}</code></td>
+        <td>{error.desc}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
 
 ## SDK Errors (`rust_sdk::SwigError`)
 
@@ -460,27 +467,22 @@ Located in: [`rust-sdk/src/error.rs:4-80`](https://github.com/anagrambuild/swig-
 
 These errors occur in the Rust SDK when interacting with the Swig wallet system.
 
-| Error | Description |
-|-------|-------------|
-| `InvalidAuthorityType` | Indicates that an invalid authority type was provided |
-| `Base58DecodeError` | Error occurred during base58 decoding |
-| `ProgramError` | Solana program error |
-| `InterfaceError` | General interface error with description |
-| `ClientError` | RPC client error |
-| `InvalidSwigData` | Invalid swig data |
-| `AuthorityNotFound` | Authority not found |
-| `InvalidSwigAccountDiscriminator` | Invalid swig account discriminator |
-| `MessageCompilationError` | Error occurred during message compilation |
-| `InvalidSecp256k1` | Invalid secp256k1 signature |
-| `TransactionError` | Transaction error |
-| `CurrentSlotNotSet` | Current slot not set |
-| `SwigDataNotFound` | Swig data not found |
-| `TransactionFailed` | Transaction failed |
-| `TransactionCreationFailed` | Transaction creation failed |
-| `TransactionCompilationFailed` | Transaction compilation failed |
-| `TransactionFailedWithLogs` | Transaction failed with logs |
-| `InvalidProgramScope` | Invalid program scope |
-| `CounterNotSet` | Counter not set |
+<table>
+  <thead>
+    <tr>
+      <th>Error</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    {ErrorData.sdk.map((error, index) => (
+      <tr key={index}>
+        <td><code>{error.name}</code></td>
+        <td>{error.desc}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
 
 ## Common Error Patterns
 
