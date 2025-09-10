@@ -96,12 +96,14 @@
               "reference/index"
             ]
           },
-          {
-            "group": "TypeScript",
-            "pages": [
-              "reference/typescript/index"
-            ]
-          },
+           {
+             "group": "TypeScript",
+             "pages": [
+               "reference/typescript/index",
+               "reference/typescript/kit",
+               "reference/typescript/actions"
+             ]
+           },
           {
             "group": "Rust",
             "pages": [
