@@ -82,7 +82,8 @@
             "pages": [
               "examples/secp256r1_authority",
               "examples/sessions",
-              "examples/sub_accounts"
+              "examples/sub_accounts",
+              "examples/v2_features"
             ]
           }
         ]
