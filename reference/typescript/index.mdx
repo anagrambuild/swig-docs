@@ -83,9 +83,37 @@ The Swig SDK supports both major versions of the Solana Web3.js library:
 - Built for the new Solana Kit architecture
 - Future-ready with enhanced type safety
 
+## V2 Protocol Features
+
+The SDK now supports both v1 and v2 Swig accounts with automatic version detection:
+
+### Automatic Version Detection
+```typescript
+const swig = await fetchSwigAccount(swigAddress);
+const version = swig.accountVersion(); // 'v1' | 'v2'
+const walletAddress = await swig.walletAddress(); // Auto-resolves correct address
+```
+
+### Enhanced Account Structure
+- **V1 Accounts**: Traditional structure with rent exempt lamports
+- **V2 Accounts**: Optimized structure using PDA bump seeds and system-derived wallet addresses
+
+### SignV2 Instruction
+New instruction type optimized for v2 accounts with automatic selection based on account version.
+
+### Program Action Management
+Automatic program permission handling with `ensureProgramAction` for streamlined authority management.
+
 ## Future Development
 
-We are actively working on expanding the SDK's capabilities. Upcoming features include:
+We are actively working on expanding the SDK's capabilities. Recent v2 improvements include:
+
+- ✅ Automatic version detection and handling
+- ✅ Enhanced account structure with PDA-based addressing
+- ✅ SignV2 instruction for improved performance
+- ✅ Automatic program action management
+
+Upcoming features include:
 
 - Enhanced session management
 - Additional authority types
