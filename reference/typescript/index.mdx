@@ -91,7 +91,7 @@ The SDK now supports both v1 and v2 Swig accounts with automatic version detecti
 ```typescript
 const swig = await fetchSwigAccount(swigAddress);
 const version = swig.accountVersion(); // 'v1' | 'v2'
-const walletAddress = await swig.walletAddress(); // Auto-resolves correct address
+const walletAddress = await getSwigWalletAddress(swig); // Auto-resolves correct address
 ```
 
 ### Enhanced Account Structure

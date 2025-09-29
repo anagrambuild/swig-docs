@@ -22,7 +22,7 @@ const version = swig.accountVersion(); // Returns 'v1' | 'v2'
 console.log(`Account version: ${version}`);
 
 // Automatic wallet address resolution
-const walletAddress = await swig.walletAddress();
+const walletAddress = await getSwigWalletAddress(swig);
 // For v1: returns account address directly
 // For v2: returns system program derived address
 ```
@@ -64,7 +64,7 @@ const signInstructions = await getSignInstructions(
   0, // role id
   [
     SystemProgram.transfer({
-      fromPubkey: await swig.walletAddress(), // Auto-resolves correct address
+      fromPubkey: await getSwigWalletAddress(swig), // Auto-resolves correct address
       toPubkey: recipient,
       lamports: BigInt(LAMPORTS_PER_SOL / 2),
     }),
@@ -138,7 +138,7 @@ async function demonstrateV2Features() {
   // Fetch the created account and check version
   const swig = await fetchSwigAccount(connection, swigAddress);
   console.log(`Created account version: ${swig.accountVersion()}`);
-  console.log(`Wallet address: ${(await swig.walletAddress()).toBase58()}`);
+  console.log(`Wallet address: ${(await getSwigWalletAddress(swig)).toBase58()}`);
   
   // Add an authority with automatic program action management
   const addAuthorityInstructions = await getAddAuthorityInstructions(
@@ -164,7 +164,7 @@ async function demonstrateV2Features() {
     0, // role id
     [
       SystemProgram.transfer({
-        fromPubkey: await swig.walletAddress(), // Auto-resolves correct address
+        fromPubkey: await getSwigWalletAddress(swig), // Auto-resolves correct address
         toPubkey: recipientKeypair.publicKey,
         lamports: BigInt(LAMPORTS_PER_SOL / 4),
       }),
@@ -181,7 +181,7 @@ async function demonstrateV2Features() {
   console.log('Transfer completed successfully!');
   
   // Check final balances
-  const walletBalance = await connection.getBalance(await swig.walletAddress());
+  const walletBalance = await connection.getBalance(await getSwigWalletAddress(swig));
   const recipientBalance = await connection.getBalance(recipientKeypair.publicKey);
   
   console.log(`Wallet balance: ${walletBalance / LAMPORTS_PER_SOL} SOL`);
@@ -221,7 +221,7 @@ Best practices for working with both v1 and v2 accounts:
 
 ```typescript
 // Always use walletAddress() instead of direct account access
-const walletAddress = await swig.walletAddress();
+const walletAddress = await getSwigWalletAddress(swig);
 
 // Check version when debugging
 if (swig.accountVersion() === 'v2') {
