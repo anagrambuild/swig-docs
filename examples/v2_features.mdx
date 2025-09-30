@@ -15,7 +15,7 @@ The SDK automatically detects whether a Swig account is v1 or v2:
 import { fetchSwigAccount } from '@swig-wallet/classic';
 
 // Fetch any Swig account
-const swig = await fetchSwigAccount(connection, swigAddress);
+const swig = await fetchSwigAccount(connection, swigAccountAddress);
 
 // Automatic version detection
 const version = swig.accountVersion(); // Returns 'v1' | 'v2'
@@ -35,14 +35,14 @@ V2 accounts use an optimized structure with PDA-based addressing:
 // Version detection logic
 if (swig.accountVersion() === 'v2') {
   // V2 account uses bump seed and PDA-derived wallet address
-  const accountPda = swig.accountAddress(); // The account PDA
-  const systemWallet = await swig.systemAddress(); // System-derived wallet
+  const accountPda = getSwigAccountAddressRaw(swig); // The account PDA
+  const systemWallet = await getSwigSystemAddressRaw(swig); // System-derived wallet
   
   console.log(`Account PDA: ${accountPda.toBase58()}`);
   console.log(`System wallet: ${systemWallet.toBase58()}`);
 } else {
   // V1 account uses direct address
-  const directAddress = swig.accountAddress();
+  const directAddress = getSwigAccountAddressRaw(swig);
   console.log(`Direct address: ${directAddress.toBase58()}`);
 }
 ```
@@ -115,7 +115,7 @@ async function demonstrateV2Features() {
   
   // Create a new Swig account
   const swigId = Keypair.generate().publicKey;
-  const swigAddress = findSwigPda(swigId);
+  const swigAccountAddress = findSwigPda(swigId);
   
   const createInstructions = getCreateSwigInstruction(
     userKeypair.publicKey,
@@ -136,7 +136,7 @@ async function demonstrateV2Features() {
   await connection.sendAndConfirmTransaction(createTx, [userKeypair]);
   
   // Fetch the created account and check version
-  const swig = await fetchSwigAccount(connection, swigAddress);
+  const swig = await fetchSwigAccount(connection, swigAccountAddress);
   console.log(`Created account version: ${swig.accountVersion()}`);
   console.log(`Wallet address: ${(await getSwigWalletAddress(swig)).toBase58()}`);
   
@@ -226,11 +226,11 @@ const walletAddress = await getSwigWalletAddress(swig);
 // Check version when debugging
 if (swig.accountVersion() === 'v2') {
   console.log('Using v2 account with PDA-based addressing');
-  console.log('Account PDA:', swig.accountAddress().toBase58());
-  console.log('System address:', (await swig.systemAddress()).toBase58());
+  console.log('Account PDA:', getSwigAccountAddressRaw(swig).toBase58());
+  console.log('System address:', (await getSwigSystemAddressRaw(swig)).toBase58());
 } else {
   console.log('Using v1 account with direct addressing');
-  console.log('Account address:', swig.accountAddress().toBase58());
+  console.log('Account address:', getSwigAccountAddressRaw(swig).toBase58());
 }
 
 // Let the SDK handle instruction selection automatically
