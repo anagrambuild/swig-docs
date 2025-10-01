@@ -1,0 +1,260 @@
+---
+title: "V2 Protocol Features"
+description: "Examples showcasing Swig SDK v2 protocol improvements and automatic version detection"
+---
+
+# Swig SDK V2 Protocol Features
+
+This guide demonstrates the key features introduced in Swig SDK v2, including automatic version detection, enhanced account structure, and improved instruction handling.
+
+## Automatic Version Detection
+
+The SDK automatically detects whether a Swig account is v1 or v2:
+
+```typescript
+import { fetchSwigAccount } from '@swig-wallet/classic';
+
+// Fetch any Swig account
+const swig = await fetchSwigAccount(connection, swigAccountAddress);
+
+// Automatic version detection
+const version = swig.accountVersion(); // Returns 'v1' | 'v2'
+console.log(`Account version: ${version}`);
+
+// Automatic wallet address resolution
+const walletAddress = await getSwigWalletAddress(swig);
+// For v1: returns account address directly
+// For v2: returns system program derived address
+```
+
+## Enhanced Account Structure
+
+V2 accounts use an optimized structure with PDA-based addressing:
+
+```typescript
+// Version detection logic
+if (swig.accountVersion() === 'v2') {
+  // V2 account uses bump seed and PDA-derived wallet address
+  const accountPda = getSwigAccountAddressRaw(swig); // The account PDA
+  const systemWallet = await getSwigSystemAddressRaw(swig); // System-derived wallet
+  
+  console.log(`Account PDA: ${accountPda.toBase58()}`);
+  console.log(`System wallet: ${systemWallet.toBase58()}`);
+} else {
+  // V1 account uses direct address
+  const directAddress = getSwigAccountAddressRaw(swig);
+  console.log(`Direct address: ${directAddress.toBase58()}`);
+}
+```
+
+## Automatic Instruction Selection
+
+The SDK automatically chooses the correct instruction type based on account version:
+
+```typescript
+import { 
+  getSignInstructions,
+  SystemProgram,
+  LAMPORTS_PER_SOL 
+} from '@swig-wallet/classic';
+
+// This works for both v1 and v2 accounts
+const signInstructions = await getSignInstructions(
+  swig,
+  0, // role id
+  [
+    SystemProgram.transfer({
+      fromPubkey: await getSwigWalletAddress(swig), // Auto-resolves correct address
+      toPubkey: recipient,
+      lamports: BigInt(LAMPORTS_PER_SOL / 2),
+    }),
+  ]
+);
+
+// SDK automatically uses:
+// - signV2 instruction for v2 accounts
+// - sign instruction for v1 accounts
+```
+
+## Complete V2 Example
+
+Here's a complete example demonstrating v2 features:
+
+```typescript
+import {
+  Connection,
+  Keypair,
+  SystemProgram,
+  LAMPORTS_PER_SOL,
+  Transaction,
+} from '@solana/web3.js';
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  fetchSwigAccount,
+  getCreateSwigInstruction,
+  getAddAuthorityInstructions,
+  getSignInstructions,
+  findSwigPda,
+} from '@swig-wallet/classic';
+
+async function demonstrateV2Features() {
+  const connection = new Connection('https://api.devnet.solana.com');
+  
+  // Setup keypairs
+  const userKeypair = Keypair.generate();
+  const authorityKeypair = Keypair.generate();
+  const recipientKeypair = Keypair.generate();
+  
+  // Fund the user account
+  const airdropSignature = await connection.requestAirdrop(
+    userKeypair.publicKey,
+    2 * LAMPORTS_PER_SOL
+  );
+  await connection.confirmTransaction(airdropSignature);
+  
+  // Create a new Swig account
+  const swigId = Keypair.generate().publicKey;
+  const swigAccountAddress = findSwigPda(swigId);
+  
+  const createInstructions = getCreateSwigInstruction(
+    userKeypair.publicKey,
+    swigId,
+    Actions.set().all().get(),
+    createEd25519AuthorityInfo({
+      id: userKeypair.publicKey,
+      signer: userKeypair.publicKey,
+    })
+  );
+  
+  // Create the account
+  const createTx = new Transaction().add(...createInstructions);
+  createTx.feePayer = userKeypair.publicKey;
+  createTx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+  createTx.sign(userKeypair);
+  
+  await connection.sendAndConfirmTransaction(createTx, [userKeypair]);
+  
+  // Fetch the created account and check version
+  const swig = await fetchSwigAccount(connection, swigAccountAddress);
+  console.log(`Created account version: ${swig.accountVersion()}`);
+  console.log(`Wallet address: ${(await getSwigWalletAddress(swig)).toBase58()}`);
+  
+  // Add an authority with automatic program action management
+  const addAuthorityInstructions = await getAddAuthorityInstructions(
+    swig,
+    0, // root role
+    createEd25519AuthorityInfo({
+      id: authorityKeypair.publicKey,
+      signer: authorityKeypair.publicKey,
+    }),
+    Actions.set().manageAuthority().get()
+  );
+  
+  const addAuthorityTx = new Transaction().add(...addAuthorityInstructions);
+  addAuthorityTx.feePayer = userKeypair.publicKey;
+  addAuthorityTx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+  addAuthorityTx.sign(userKeypair);
+  
+  await connection.sendAndConfirmTransaction(addAuthorityTx, [userKeypair]);
+  
+  // Perform a transfer using automatic instruction selection
+  const transferInstructions = await getSignInstructions(
+    swig,
+    0, // role id
+    [
+      SystemProgram.transfer({
+        fromPubkey: await getSwigWalletAddress(swig), // Auto-resolves correct address
+        toPubkey: recipientKeypair.publicKey,
+        lamports: BigInt(LAMPORTS_PER_SOL / 4),
+      }),
+    ]
+  );
+  
+  const transferTx = new Transaction().add(...transferInstructions);
+  transferTx.feePayer = userKeypair.publicKey;
+  transferTx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+  transferTx.sign(userKeypair);
+  
+  await connection.sendAndConfirmTransaction(transferTx, [userKeypair]);
+  
+  console.log('Transfer completed successfully!');
+  
+  // Check final balances
+  const walletBalance = await connection.getBalance(await getSwigWalletAddress(swig));
+  const recipientBalance = await connection.getBalance(recipientKeypair.publicKey);
+  
+  console.log(`Wallet balance: ${walletBalance / LAMPORTS_PER_SOL} SOL`);
+  console.log(`Recipient balance: ${recipientBalance / LAMPORTS_PER_SOL} SOL`);
+}
+
+// Run the example
+demonstrateV2Features().catch(console.error);
+```
+
+## Enhanced Program Action Management
+
+V2 includes automatic program action management:
+
+```typescript
+import { Actions, ensureProgramAction } from '@swig-wallet/lib';
+
+// The SDK automatically ensures proper program actions
+const actions = Actions.set().manageAuthority().get();
+
+// ensureProgramAction is called automatically in instruction builders
+// It adds ProgramAll action if no program permissions exist
+const enhancedActions = ensureProgramAction(actions);
+
+// Use in authority management
+const addAuthorityInstructions = await getAddAuthorityInstructions(
+  swig,
+  roleId,
+  authorityInfo,
+  enhancedActions // Automatically enhanced with program permissions
+);
+```
+
+## Version-Aware Development
+
+Best practices for working with both v1 and v2 accounts:
+
+```typescript
+// Always use walletAddress() instead of direct account access
+const walletAddress = await getSwigWalletAddress(swig);
+
+// Check version when debugging
+if (swig.accountVersion() === 'v2') {
+  console.log('Using v2 account with PDA-based addressing');
+  console.log('Account PDA:', getSwigAccountAddressRaw(swig).toBase58());
+  console.log('System address:', (await getSwigSystemAddressRaw(swig)).toBase58());
+} else {
+  console.log('Using v1 account with direct addressing');
+  console.log('Account address:', getSwigAccountAddressRaw(swig).toBase58());
+}
+
+// Let the SDK handle instruction selection automatically
+const instructions = await getSignInstructions(swig, roleId, innerInstructions);
+// No need to specify instruction version - it's automatic!
+```
+
+## Key Benefits
+
+### Backward Compatibility
+- All existing v1 code works without changes
+- Automatic version detection eliminates manual configuration
+- Same API surface for both account versions
+
+### Performance Improvements
+- V2 accounts use optimized storage structure
+- PDA-based addressing provides better isolation
+- Reduced account size and transaction costs
+
+### Enhanced Developer Experience
+- Automatic instruction selection
+- Built-in program action management
+- Version-aware debugging utilities
+
+---
+
+The v2 protocol improvements provide enhanced performance and developer experience while maintaining full backward compatibility with existing Swig applications.
