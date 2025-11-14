@@ -1,0 +1,326 @@
+---
+title: "Adding Multiple Authorities Efficiently"
+description: '"Why make many transaction when one transaction do trick?" - Kevin Malone, Swig Enthusiast'
+---
+
+This guide explains how to efficiently add multiple authorities to a Swig account in batch operations. This is particularly useful when you need to set up complex permission structures or onboard multiple users at once, saving on transaction fees and improving atomicity.
+
+You can find complete working examples in the Swig repository:
+
+- [Classic Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/multi-add-authorities-svm.ts)
+
+<Tip>
+	This example uses LiteSVM for testing and demonstrates advanced authority
+	management patterns.
+</Tip>
+
+## Why Batch Operations?
+
+When setting up a Swig with multiple authorities, you have two options:
+
+1. **Add authorities one at a time** - Simple but requires multiple transactions
+2. **Batch add authorities** - More efficient, atomic, and cost-effective
+
+## Two Approaches to Batch Adding
+
+Swig provides two methods for batch adding authorities:
+
+1. **During Creation**: Add multiple authorities when creating the Swig using `getCreateSwigInstructionBuilder`
+2. **After Creation**: Add multiple authorities to an existing Swig using `getAddMultipleAuthoritiesInstructionBuilder`
+
+Let's explore both approaches.
+
+---
+
+## Approach 1: Adding Authorities During Swig Creation
+
+When creating a Swig, you can chain `.addAuthority()` calls to add multiple authorities in the creation transaction. This is ideal for initial setup.
+
+### Key Differences from Basic Creation
+
+Instead of `getCreateSwigInstruction`, use **`getCreateSwigInstructionBuilder`** which returns a builder that allows chaining.
+
+```typescript
+import {
+	Keypair,
+	LAMPORTS_PER_SOL,
+	Transaction,
+	sendAndConfirmTransaction,
+} from "@solana/web3.js";
+import {
+	Actions,
+	createEd25519AuthorityInfo,
+	findSwigPda,
+	getCreateSwigInstructionBuilder,
+} from "@swig-wallet/classic";
+
+// Setup
+const connection = new Connection("http://localhost:8899", "confirmed");
+const rootUser = Keypair.generate();
+const spendingAuthority = Keypair.generate();
+const tokenAuthority = Keypair.generate();
+const tokenMint = Keypair.generate().publicKey;
+
+// Airdrop to root user
+await connection.requestAirdrop(rootUser.publicKey, 100 * LAMPORTS_PER_SOL);
+
+// Find Swig PDA
+const id = new Uint8Array(32);
+crypto.getRandomValues(id);
+const swigAddress = findSwigPda(id);
+
+// Create Swig with multiple authorities in one transaction
+const createBuilder = await getCreateSwigInstructionBuilder({
+	payer: rootUser.publicKey,
+	swigAddress,
+	id,
+	actions: Actions.set().manageAuthority().get(), // Root can manage authorities too
+	authorityInfo: createEd25519AuthorityInfo(rootUser.publicKey),
+});
+
+// Chain multiple authority additions
+const instructions = await createBuilder
+	.addAuthority(
+		createEd25519AuthorityInfo(spendingAuthority.publicKey),
+		Actions.set()
+			.solLimit({ amount: BigInt(0.5 * LAMPORTS_PER_SOL) })
+			.get()
+	)
+	.addAuthority(
+		createEd25519AuthorityInfo(tokenAuthority.publicKey),
+		Actions.set()
+			.tokenLimit({ mint: tokenMint, amount: BigInt(1000000) })
+			.get()
+	)
+	.getInstructions();
+
+// Send transaction
+const transaction = new Transaction().add(...instructions);
+const signature = await sendAndConfirmTransaction(connection, transaction, [
+	rootUser,
+]);
+
+console.log("✓ Swig created with 3 authorities");
+console.log("Swig address:", swigAddress.toBase58());
+```
+
+### Key Points
+
+- Use **`getCreateSwigInstructionBuilder`** instead of `getCreateSwigInstruction`
+- Chain `.addAuthority()` calls for each additional authority
+- Call `.getInstructions()` at the end to get all instructions
+- All authorities are added in a **single atomic transaction**
+
+---
+
+## Approach 2: Adding Multiple Authorities to Existing Swig
+
+Sometimes you need to add multiple authorities to an **existing** Swig. For this, use `getAddMultipleAuthoritiesInstructionBuilder`.
+
+This is particularly useful for:
+
+- **Team onboarding** - Adding multiple team members at once
+- **Permission upgrades** - Granting multiple new authorities simultaneously
+- **Dynamic authority management** - Responding to application events
+
+```typescript
+import {
+  Keypair,
+  LAMPORTS_PER_SOL,
+  Transaction,
+  sendAndConfirmTransaction,
+} from '@solana/web3.js';
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  fetchSwig,
+  findSwigPda,
+  getAddMultipleAuthoritiesInstructionBuilder,
+  getCreateSwigInstruction,
+} from '@swig-wallet/classic';
+
+// Setup
+const connection = new Connection('http://localhost:8899', 'confirmed');
+const rootUser = Keypair.generate();
+
+// Airdrop to root user
+const airdrop = await connection.requestAirdrop(rootUser.publicKey, 100 * LAMPORTS_PER_SOL);
+await connection.confirmTransaction(airdrop);
+
+// Create a basic Swig first
+const id = new Uint8Array(32);
+crypto.getRandomValues(id);
+const swigAddress = findSwigPda(id);
+
+const createSwigIx = await getCreateSwigInstruction({
+  payer: rootUser.publicKey,
+  id,
+  actions: Actions.set().all().get(), // Root has all permissions
+  authorityInfo: createEd25519AuthorityInfo(rootUser.publicKey),
+});
+
+const createTx = new Transaction().add(createSwigIx);
+await sendAndConfirmTransaction(connection, createTx, [rootUser]);
+
+console.log('✓ Basic Swig created at:', swigAddress.toBase58());
+
+// Wait for account to be created
+await new Promise((resolve) => setTimeout(resolve, 2000));
+
+// Now add multiple authorities to the existing Swig
+const swig = await fetchSwig(connection, swigAddress);
+const rootRole = swig.findRolesByEd25519SignerPk(rootUser.publicKey)[0];
+
+// Generate new authorities
+const authority1 = Keypair.generate();
+const authority2 = Keypair.generate();
+const authority3 = Keypair.generate();
+
+console.log('Adding 3 new authorities:');
+console.log(' Authority 1:', authority1.publicKey.toBase58());
+console.log(' Authority 2:', authority2.publicKey.toBase58());
+console.log(' Authority 3:', authority3.publicKey.toBase58());
+
+// Build instruction to add multiple authorities
+const addBuilder = await getAddMultipleAuthoritiesInstructionBuilder(
+  swig,
+  rootRole.id,
+  {
+    payer: rootUser.publicKey,
+  },
+);
+
+// Chain authority additions with different permissions
+const instructions = await addBuilder
+  .addAuthority(
+    createEd25519AuthorityInfo(authority1.publicKey),
+    Actions.set().solLimit({ amount: BigInt(0.1 _ LAMPORTS_PER_SOL) }).get(),
+  )
+  .addAuthority(
+    createEd25519AuthorityInfo(authority2.publicKey),
+    Actions.set().solLimit({ amount: BigInt(0.2 _ LAMPORTS_PER_SOL) }).get(),
+  )
+  .addAuthority(
+    createEd25519AuthorityInfo(authority3.publicKey),
+    Actions.set().solLimit({ amount: BigInt(0.3 * LAMPORTS_PER_SOL) }).get(),
+  )
+  .getInstructions();
+
+const addTx = new Transaction().add(...instructions);
+const signature = await sendAndConfirmTransaction(connection, addTx, [rootUser]);
+
+console.log('✓ Added 3 authorities in one transaction');
+console.log('Transaction signature:', signature);
+
+// Verify the additions
+await swig.refetch();
+console.log('Swig now has', swig.roles.length, 'total authorities');
+
+```
+
+### Key Points for `getAddMultipleAuthoritiesInstructionBuilder`
+
+1. **Fetch fresh Swig data** - Always fetch the latest Swig state before adding authorities
+2. **Need proper permissions** - The signing role must have `all` or `manageAuthority` permission
+3. **Chain additions** - Call `.addAuthority()` for each authority you want to add
+4. **All or nothing** - The operation is atomic - all authorities are added or none
+
+---
+
+## Advanced: Multi-Curve Authorities
+
+Swig supports multiple cryptographic curves. You can mix Ed25519, Secp256k1 (Ethereum), and Secp256r1 (Passkeys/WebAuthn) authorities in a single Swig!
+
+```typescript
+import { Wallet } from "@ethereumjs/wallet";
+import { p256 } from "@noble/curves/nist";
+import { Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import {
+	Actions,
+	createEd25519AuthorityInfo,
+	createSecp256k1AuthorityInfo,
+	createSecp256r1AuthorityInfo,
+	findSwigPda,
+	getCreateSwigInstructionBuilder,
+	getSigningFnForSecp256r1PrivateKey,
+} from "@swig-wallet/classic";
+
+// Setup
+const connection = new Connection("http://localhost:8899", "confirmed");
+const payer = Keypair.generate();
+
+// Airdrop to root user
+const airdrop = await connection.requestAirdrop(
+	payer.publicKey,
+	100 * LAMPORTS_PER_SOL
+);
+await connection.confirmTransaction(airdrop);
+
+// Generate different curve types
+const ed25519Authority = Keypair.generate();
+const secp256k1Wallet = Wallet.generate();
+const secp256r1PrivateKey = p256.keygen();
+const secp256r1PublicKey = p256.getPublicKey(secp256r1PrivateKey);
+
+// Create Swig with secp256r1 root
+const id = new Uint8Array(32);
+crypto.getRandomValues(id);
+const swigAddress = findSwigPda(id);
+
+const createBuilder = await getCreateSwigInstructionBuilder({
+	options: {
+		signingFn: getSigningFnForSecp256r1PrivateKey(secp256r1PrivateKey),
+		currentSlot: await connection.getSlot(),
+	},
+	swigAddress,
+	authorityInfo: createSecp256r1AuthorityInfo(secp256r1PublicKey),
+	id,
+	payer: payer.publicKey,
+	actions: Actions.set().all().get(),
+});
+
+// Add authorities with different curves
+const instructions = await createBuilder
+	.addAuthority(
+		createEd25519AuthorityInfo(ed25519Authority.publicKey),
+		Actions.set().manageAuthority().get()
+	)
+	.addAuthority(
+		createSecp256k1AuthorityInfo(secp256k1Wallet.getPublicKey()),
+		Actions.set().all().get()
+	)
+	.getInstructions();
+
+// Send transaction
+const transaction = new Transaction().add(...instructions);
+const signature = await sendAndConfirmTransaction(connection, transaction, [
+	payer,
+]);
+```
+
+---
+
+## When to Use Each Approach
+
+| Scenario                                      | Recommended Method                                                     | Why                              |
+| --------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------- |
+| **Initial Swig setup with known authorities** | Creation-time batching (`getCreateSwigInstructionBuilder`)             | Single transaction, atomic setup |
+| **Adding team members to existing Swig**      | Post-creation batching (`getAddMultipleAuthoritiesInstructionBuilder`) | Efficient for existing Swigs     |
+| **Adding authorities dynamically over time**  | Individual additions (`getAddAuthorityInstructions`)                   | More flexible, simpler API       |
+| **Migrating from another system**             | Post-creation batching                                                 | Onboard multiple users at once   |
+
+## Summary
+
+- **Two batching methods** - Use builders for creation-time or post-creation batching
+- **Atomic operations** - All authorities are added together or none at all
+- **Multi-curve support** - Mix Ed25519, Secp256k1, and Secp256r1 authorities
+
+## Related Examples
+
+- [Transfer Example](./transfer) - Basic Swig usage with single authorities
+- [Sessions Example](./sessions) - Temporary authorities with time limits
+- [Sub Accounts Example](./sub_accounts) - Delegated account management
+
+## Additional Resources
+
+- [Complete multi-authority example](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/multi-add-authorities-svm.ts)
