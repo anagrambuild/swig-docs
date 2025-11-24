@@ -23,6 +23,15 @@ To work with sub accounts, there are several key steps:
 2. **Create Sub Account**: Once the authority has the permission, they can create a sub account using the `getCreateSubAccountInstructions`.
 3. **Sub Account Sign**: Once created, sub accounts can perform on-chain actions using the `getSignInstructions` with the `isSubAccount` parameter set to `true`.
 
+<Warning>
+**Critical Requirement**: Creating a subaccount requires a **two-step process**:
+
+1. **First**: Add a `SubAccount` permission to a new or existing Authority on your Swig wallet
+2. **Second**: Create the actual subaccount, which populates the blank SubAccount action with the subaccount's public key
+
+**Important**: Even if an authority has `All` permission, you **must** explicitly add the `SubAccount` permission with a blank subaccount (`[0; 32]` in Rust with `SubAccount::new_for_create()`, or using `Actions.set().subAccount().get()` in TypeScript) to enable subaccount creation. The `All` permission alone is not sufficient for subaccount creation.
+</Warning>
+
 ## Creating a Sub Account Authority
 
 First, you need to add an authority with sub account permissions:
@@ -112,6 +121,76 @@ const addAuthorityIx = await getAddAuthorityInstructions(
 );
 ```
 </Tab>
+<Tab title="Rust">
+```rust
+use solana_program::pubkey::Pubkey;
+use solana_sdk::{
+    message::{v0, VersionedMessage},
+    signature::Keypair,
+    transaction::VersionedTransaction,
+};
+use swig_sdk::{
+    SwigInstructionBuilder,
+    client_role::Ed25519ClientRole,
+    types::Permission,
+    AuthorityType,
+};
+
+// Create keypairs for authorities
+let root_authority = Keypair::new();
+let sub_account_authority = Keypair::new();
+let fee_payer = Keypair::new();
+
+// Generate a unique Swig wallet ID
+let swig_id = rand::random::<[u8; 32]>();
+
+// Step 1: Create the Swig account with root authority
+let mut root_builder = SwigInstructionBuilder::new(
+    swig_id,
+    Box::new(Ed25519ClientRole::new(root_authority.pubkey())),
+    fee_payer.pubkey(),
+    0, // root role_id
+);
+
+let create_swig_ix = root_builder.build_swig_account()?;
+
+// Send transaction to create Swig account
+// ... (compile message, sign, send transaction)
+
+// Step 2: Add a new authority with SubAccount permission
+// 
+// IMPORTANT: You must include the blank SubAccount permission even if
+// you're also granting All permission. The blank SubAccount action
+// (with sub_account: [0; 32]) is required and will be populated when
+// the subaccount is created.
+let add_authority_ix = root_builder.add_authority_instruction(
+    AuthorityType::Ed25519,
+    &sub_account_authority.pubkey().to_bytes(),
+    vec![
+        Permission::SubAccount {
+            sub_account: [0; 32], // Blank subaccount - will be populated on creation
+        },
+    ],
+    None, // current_slot not required for Ed25519
+)?;
+
+// If you want to grant All permission AND SubAccount permission:
+let add_authority_with_all_ix = root_builder.add_authority_instruction(
+    AuthorityType::Ed25519,
+    &sub_account_authority.pubkey().to_bytes(),
+    vec![
+        Permission::All,
+        Permission::SubAccount {
+            sub_account: [0; 32], // Blank subaccount - REQUIRED even with All
+        },
+    ],
+    None,
+)?;
+
+// Send transaction to add authority
+// ... (compile message, sign with root_authority, send transaction)
+```
+</Tab>
 </Tabs>
 
 ## Creating a Sub Account
@@ -171,7 +250,166 @@ const subAccountAddress = await findSwigSubAccountPda(
 );
 ```
 </Tab>
+<Tab title="Rust">
+```rust
+use solana_program::pubkey::Pubkey;
+use solana_sdk::{
+    message::{v0, VersionedMessage},
+    signature::Keypair,
+    transaction::VersionedTransaction,
+};
+use swig_sdk::{
+    SwigInstructionBuilder,
+    client_role::Ed25519ClientRole,
+};
+use swig_state::swig::sub_account_seeds;
+use swig_interface::program_id;
+
+// Step 1: Get the role ID of the newly added authority
+// In production, you would fetch the Swig account and look up the role ID
+// For this example, we know it will be role_id 1 (first added authority)
+let sub_account_role_id = 1;
+
+// Step 2: Create the subaccount using the sub-account authority
+let mut sub_account_builder = SwigInstructionBuilder::new(
+    swig_id,
+    Box::new(Ed25519ClientRole::new(sub_account_authority.pubkey())),
+    fee_payer.pubkey(),
+    sub_account_role_id,
+);
+
+let create_sub_account_ix = sub_account_builder.create_sub_account(None)?;
+
+// Send transaction to create subaccount
+let recent_blockhash = rpc_client.get_latest_blockhash()?;
+let msg = v0::Message::try_compile(
+    &fee_payer.pubkey(),
+    &[create_sub_account_ix],
+    &[],
+    recent_blockhash,
+)?;
+
+let tx = VersionedTransaction::try_new(
+    VersionedMessage::V0(msg),
+    &[fee_payer, &sub_account_authority],
+)?;
+
+rpc_client.send_and_confirm_transaction(&tx)?;
+
+// Step 3: Derive the subaccount address to verify it was created
+let role_id_bytes = sub_account_role_id.to_le_bytes();
+let (sub_account, _bump) = Pubkey::find_program_address(
+    &sub_account_seeds(&swig_id, &role_id_bytes),
+    &program_id(),
+);
+
+println!("Subaccount created at: {}", sub_account);
+```
+</Tab>
 </Tabs>
+
+## Creating Swig Account and SubAccount in One Transaction
+
+If you're creating a new Swig wallet and want to set up a subaccount immediately, you can create both the Swig account with subaccount authority and the subaccount itself in a single transaction. This reduces the number of transactions needed from 3 to 1.
+
+<Tabs>
+<Tab title="Rust">
+```rust
+use solana_program::pubkey::Pubkey;
+use solana_sdk::{
+    message::{v0, VersionedMessage},
+    signature::Keypair,
+    transaction::VersionedTransaction,
+};
+use swig_interface::{
+    AuthorityConfig, ClientAction, CreateInstruction, CreateSubAccountInstruction,
+};
+use swig_state::{
+    action::{all::All, sub_account::SubAccount},
+    authority::AuthorityType,
+    swig::{sub_account_seeds, swig_account_seeds, swig_wallet_address_seeds},
+};
+
+fn create_swig_and_subaccount_in_one_tx(
+    rpc_client: &RpcClient,
+    authority: &Keypair,
+    fee_payer: &Keypair,
+) -> Result<(Pubkey, Pubkey), Box<dyn std::error::Error>> {
+    let swig_id = rand::random::<[u8; 32]>();
+    let program_id = swig_interface::program_id();
+
+    // Derive the Swig account address
+    let (swig_key, swig_bump) =
+        Pubkey::find_program_address(&swig_account_seeds(&swig_id), &program_id);
+    let (swig_wallet_address, wallet_address_bump) = Pubkey::find_program_address(
+        &swig_wallet_address_seeds(swig_key.as_ref()),
+        &program_id,
+    );
+
+    // Derive the sub-account address (role_id 0 since this is the initial authority)
+    let role_id: u32 = 0;
+    let role_id_bytes = role_id.to_le_bytes();
+    let (sub_account, sub_account_bump) =
+        Pubkey::find_program_address(&sub_account_seeds(&swig_id, &role_id_bytes), &program_id);
+
+    // Step 1: Create instruction to create Swig account with All + SubAccount permissions
+    let create_swig_ix = CreateInstruction::new(
+        swig_key,
+        swig_bump,
+        fee_payer.pubkey(),
+        swig_wallet_address,
+        wallet_address_bump,
+        AuthorityConfig {
+            authority_type: AuthorityType::Ed25519,
+            authority: authority.pubkey().as_ref(),
+        },
+        vec![
+            ClientAction::All(All {}),
+            ClientAction::SubAccount(SubAccount::new_for_creation()),
+        ],
+        swig_id,
+    )?;
+
+    // Step 2: Create instruction to create the subaccount
+    // This uses role_id 0 since the authority is the initial/root authority
+    let create_sub_account_ix = CreateSubAccountInstruction::new_with_ed25519_authority(
+        swig_key,
+        authority.pubkey(),
+        fee_payer.pubkey(),
+        sub_account,
+        role_id,
+        sub_account_bump,
+    )?;
+
+    // Step 3: Submit both instructions in a single transaction
+    let recent_blockhash = rpc_client.get_latest_blockhash()?;
+    let message = v0::Message::try_compile(
+        &fee_payer.pubkey(),
+        &[create_swig_ix, create_sub_account_ix],
+        &[],
+        recent_blockhash,
+    )?;
+
+    let tx = VersionedTransaction::try_new(
+        VersionedMessage::V0(message),
+        &[fee_payer, authority],
+    )?;
+
+    rpc_client.send_and_confirm_transaction(&tx)?;
+
+    // Verify both accounts were created
+    let swig_account = rpc_client.get_account(&swig_key)?;
+    let sub_account_data = rpc_client.get_account(&sub_account)?;
+    
+    assert_eq!(sub_account_data.owner, solana_sdk::system_program::id());
+
+    Ok((swig_key, sub_account))
+}
+```
+</Tab>
+</Tabs>
+
+**Note**: This approach attempts to create both the Swig account and subaccount atomically in a single transaction. While this can be more efficient, it may fail if the subaccount creation instruction requires the Swig account to be fully initialized and written to the blockchain first. If this fails, fall back to the multi-transaction approach shown in the previous examples.
 
 ## Using Sub Accounts
 
@@ -262,6 +500,73 @@ const signIx = await getSignInstructions(
 );
 
 await sendTransaction(connection, signIx, subAccountAuthority);
+```
+</Tab>
+<Tab title="Rust">
+```rust
+use solana_program::{
+    instruction::Instruction,
+    pubkey::Pubkey,
+    system_instruction,
+};
+use solana_sdk::{
+    message::{v0, VersionedMessage},
+    signature::Keypair,
+    transaction::VersionedTransaction,
+};
+use swig_sdk::{
+    SwigInstructionBuilder,
+    client_role::Ed25519ClientRole,
+};
+
+// Fund the sub account
+rpc_client.request_airdrop(&sub_account, 1_000_000_000)?; // 1 SOL
+
+// Create a transfer from the sub account
+let recipient = Keypair::new().pubkey();
+let transfer_amount = 100_000_000; // 0.1 SOL
+
+// Create the transfer instruction targeting the subaccount
+// The subaccount address is used as the 'from' account
+let transfer_ix = system_instruction::transfer(
+    &sub_account,      // from: subaccount address
+    &recipient,        // to: recipient
+    transfer_amount,   // amount
+);
+
+// Sign with sub account using the SwigInstructionBuilder
+// Note: The builder should be configured with the sub_account_authority
+// and the appropriate role_id that has subaccount permissions
+let mut sub_account_builder = SwigInstructionBuilder::new(
+    swig_id,
+    Box::new(Ed25519ClientRole::new(sub_account_authority.pubkey())),
+    fee_payer.pubkey(),
+    sub_account_role_id,
+);
+
+// Sign the instruction for subaccount use
+// The sign_instruction method will handle subaccount signing when the role
+// has subaccount permissions and the instruction targets the subaccount address
+let signed_instructions = sub_account_builder.sign_instruction(
+    vec![transfer_ix],
+    None, // current_slot not required for Ed25519
+)?;
+
+// Build and send the transaction
+let recent_blockhash = rpc_client.get_latest_blockhash()?;
+let msg = v0::Message::try_compile(
+    &fee_payer.pubkey(),
+    &signed_instructions,
+    &[],
+    recent_blockhash,
+)?;
+
+let tx = VersionedTransaction::try_new(
+    VersionedMessage::V0(msg),
+    &[fee_payer, &sub_account_authority],
+)?;
+
+rpc_client.send_and_confirm_transaction(&tx)?;
 ```
 </Tab>
 </Tabs>
