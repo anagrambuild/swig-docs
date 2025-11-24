@@ -29,7 +29,7 @@ To work with sub accounts, there are several key steps:
 1. **First**: Add a `SubAccount` permission to a new or existing Authority on your Swig wallet
 2. **Second**: Create the actual subaccount, which populates the blank SubAccount action with the subaccount's public key
 
-**Important**: Even if an authority has `All` permission, you **must** explicitly add the `SubAccount` permission with a blank subaccount (`[0; 32]` in Rust with `SubAccount::new_for_create()`, or using `Actions.set().subAccount().get()` in TypeScript) to enable subaccount creation. The `All` permission alone is not sufficient for subaccount creation.
+**Important**: Even if an authority has `All` permission, you **must** explicitly add the `SubAccount` permission with a blank subaccount (`[0; 32]` in Rust, or using `Actions.set().subAccount().get()` in TypeScript) to enable subaccount creation. The `All` permission alone is not sufficient for subaccount creation.
 </Warning>
 
 ## Creating a Sub Account Authority
