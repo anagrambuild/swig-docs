@@ -1,0 +1,162 @@
+---
+title: "Migrating from Squads multisig"
+description: "Let's do some migration!!"
+---
+
+# Migrating from Squads multisig
+
+This guide demostrates how to migrate from Squads multisig.
+
+## Prerequisites
+
+Before you begin, make sure you have the following installed:
+
+- [Bun](https://bun.sh) (latest version)
+- The PublicKey of the Multisig
+- A Member of the multisig with some SOL for transaction fees
+
+## Setup
+
+First, clone the swig-ts repository and navigate to the migrate-from-squads example:
+
+```bash
+git clone https://github.com/anagrambuild/swig-ts.git
+cd swig-ts/examples/migrate-from-squads
+bun install
+```
+
+The example already includes all necessary dependencies:
+
+- `@sqds/multisig` for Squads Multisig functionality
+- `@swig-wallet/classic` for Swig wallet functionality
+- `@solana/web3.js` for Solana interactions
+- `chalk` for colorful console output
+
+## Understanding the Code
+
+The example demonstrates several key concepts:
+
+1. Extrating data from the Squads multisig account
+2. Creating a Swig with multiple authorities in a single transaction
+3. Updating Swig roles
+
+Let's break down the main components:
+
+### 1. Decode the multisig account
+
+Before swapping, we need to ensure the Swig account has the necessary token accounts:
+
+```typescript
+const squadsRawAccountInfo = await connection.getAccountInfo(squadAddress);
+if (!squadsRawAccountInfo)
+	throw new Error(
+		`No squad multisig found for address ${squadAddress.toBase58()}`
+	);
+
+const squads =
+	multisig.accounts.Multisig.fromAccountInfo(squadsRawAccountInfo)[0];
+```
+
+### 2. Extract data needed to create a Swig
+
+```typescript
+// we use the same seeds for creating the squads mulitsig to create the swig
+const swigId = squads.createKey.toBytes();
+
+// we check if the keypair is a member on the squads multisig
+if (
+	!squads.members.find(
+		(member) =>
+			member.key.toBase58() === squadsMemberKeypair.publicKey.toBase58()
+	)
+) {
+	throw new Error(
+		`The provided keypair ${squadsMemberKeypair.publicKey.toBase58()} is not a member on the multisig.`
+	);
+}
+
+// we make sure we the config authority excluded from the members' list to eliminate duplicate when adding authorities
+const otherMembers = squads.members
+	.map((s) => s.key)
+	.filter((key) => key.toBase58() !== squadsMemberKeypair.publicKey.toBase58());
+```
+
+### 3. Create a Swig including all the members as authorities
+
+The most critical part is properly separating and handling instructions:
+
+```typescript
+const swigAddress = findSwigPda(swigId);
+
+const createIxBuilder = getCreateSwigInstructionBuilder({
+	payer: squadsMemberKeypair.publicKey,
+	// we set the action of the config authority on swig to `All`
+	// to grant it root access as it has on the multisig
+	actions: Actions.set().all().get(),
+	authorityInfo: createEd25519AuthorityInfo(squads.configAuthority),
+	id: swigId,
+	swigAddress,
+	options: {},
+});
+
+// we include instructions for adding the other members as authorites on the swig
+otherMembers.forEach((authority) =>
+	createIxBuilder.addAuthority(
+		createEd25519AuthorityInfo(authority),
+		// we limit the actions on these authorites,
+		// these authorities can be updated as needed the config authority (root authority)
+		Actions.set().programCurated().get()
+	)
+);
+
+const createIxs = await createIxBuilder.getInstructions();
+
+const tx = new Transaction().add(...createIxs);
+tx.feePayer = squadsMemberKeypair.publicKey;
+tx.recentBlockhash = (await connection.getLatestBlockhash()).blockhash;
+tx.sign(squadsMemberKeypair);
+
+const sig = await connection.sendRawTransaction(tx.serialize());
+await connection.confirmTransaction(sig);
+```
+
+
+## Next steps
+
+1. **Asset Transfer**:
+
+- Transfer of assets can be done from the Squads multisig dashboard.
+- Assets should be transferred to the wallet address of the newly created Swig.
+
+
+## Running the Example
+
+1. Prepare a member keypair file of the squad mulitig. (This will also be the transaction fee payer).
+2. Get the address of the squads multisig.
+3. Run the example:
+
+```bash
+bun run index.ts path/to/squads/member/keypair.json SQUADS_ADDRESS [optional-swig-id]
+```
+
+The example will:
+
+- Get all the members of the squads multisig
+- Include all members of the squads multisig as authorities in a newly created swig.
+
+## Production Considerations
+
+1. **Security**:
+
+   - Securely manage keypairs and private keys
+   - Implement proper error recovery mechanisms
+   - Add transaction timeout handling
+
+2. **Performance**:
+
+   - Consider using RPC endpoints with higher rate limits
+   - Implement proper retry mechanisms
+
+3. **User Experience**:
+   - Add progress indicators for multi-step operations
+
