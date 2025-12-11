@@ -155,6 +155,39 @@ pub fn switch_authority(&mut self, role_id: u32, authority: Pubkey) -> Result<()
 
 Switches the current authority and role ID.
 
+## SubAccount Management
+
+### Creating SubAccounts
+
+**New in v1.4.0**: Support for multiple subaccounts per role (indices 0-254).
+
+```rust
+pub fn create_sub_account_with_index(
+    &mut self,
+    sub_account_index: u8,
+) -> Result<Instruction, SwigError>
+```
+
+Creates an instruction to create a subaccount at a specific index (0-254).
+
+**Parameters:**
+- `sub_account_index`: The index of the subaccount to create (0-254). Index 0 uses legacy PDA derivation for backwards compatibility.
+
+### Deriving SubAccount PDAs
+
+```rust
+use swig_interface::derive_sub_account_pda;
+
+// Derive subaccount PDA with index support
+let (sub_account_0, bump_0) = derive_sub_account_pda(&swig_id, role_id, 0);
+let (sub_account_1, bump_1) = derive_sub_account_pda(&swig_id, role_id, 1);
+let (sub_account_2, bump_2) = derive_sub_account_pda(&swig_id, role_id, 2);
+```
+
+The `derive_sub_account_pda` function automatically handles:
+- **Index 0**: Uses legacy 3-seed PDA derivation for backwards compatibility
+- **Indices 1-254**: Uses new 4-seed PDA derivation with index in seeds
+
 ## Examples
 
 ### Creating a New Swig Account
@@ -179,4 +212,44 @@ let add_authority_ix = instruction_builder.add_authority_instruction(
     vec![Permission::All],
     Some(current_slot)
 )?;
+```
+
+### Adding Authority with Multiple SubAccount Permissions
+
+```rust
+// Add authority with permissions for 3 different subaccounts
+let add_authority_ix = instruction_builder.add_authority_instruction(
+    AuthorityType::Ed25519,
+    new_authority_bytes,
+    vec![
+        Permission::SubAccount { sub_account: [0; 32] }, // Index 0
+        Permission::SubAccount { sub_account: [0; 32] }, // Index 1
+        Permission::SubAccount { sub_account: [0; 32] }, // Index 2
+    ],
+    Some(current_slot)
+)?;
+```
+
+### Creating Multiple SubAccounts
+
+```rust
+use swig_interface::derive_sub_account_pda;
+
+// Create subaccount at index 0 (backwards compatible)
+let create_sub_0_ix = instruction_builder.create_sub_account_with_index(0)?;
+
+// Create subaccount at index 1
+let create_sub_1_ix = instruction_builder.create_sub_account_with_index(1)?;
+
+// Create subaccount at index 2
+let create_sub_2_ix = instruction_builder.create_sub_account_with_index(2)?;
+
+// Derive the addresses
+let (sub_account_0, _) = derive_sub_account_pda(&swig_id, role_id, 0);
+let (sub_account_1, _) = derive_sub_account_pda(&swig_id, role_id, 1);
+let (sub_account_2, _) = derive_sub_account_pda(&swig_id, role_id, 2);
+
+println!("SubAccount 0: {}", sub_account_0);
+println!("SubAccount 1: {}", sub_account_1);
+println!("SubAccount 2: {}", sub_account_2);
 ```

@@ -146,18 +146,19 @@ const signedInstructions = await getSignInstructions(swig, roleId, [
 ### PDA Functions
 
 - `findSwigPda(id)` - Derive Swig PDA (async)
-- `findSwigSubAccountPda(swigId, roleId)` - Derive SubAccount PDA (async)
+- `findSwigSubAccountPda(swigId, roleId)` - Derive SubAccount PDA for index 0 (async, backwards compatible)
+- `findSwigSubAccountPdaWithIndex(swigId, roleId, index)` - Derive SubAccount PDA at specific index (async, **new in v1.4.0**)
 
 ### Instruction Functions
 
 - `getCreateSwigInstruction(args)` - Create Swig instruction
 - `getAddAuthorityInstructions(swig, roleId, authorityInfo, actions, options?)` - Add authority
 - `getRemoveAuthorityInstructions(swig, roleId, roleToRemoveId, options?)` - Remove authority
-- `getSignInstructions(swig, roleId, instructions, withSubAccount?, options?)` - Sign instructions
+- `getSignInstructions(swig, roleId, instructions, withSubAccount?, options?)` - Sign instructions (options now accepts `subAccountIndex`)
 - `getCreateSessionInstructions(swig, roleId, sessionKey, duration?, options?)` - Create session
-- `getCreateSubAccountInstructions(swig, roleId, options?)` - Create sub-account
-- `getToggleSubAccountInstructions(swig, roleId, enabled, options?)` - Toggle sub-account
-- `getWithdrawFromSubAccountSubAccountInstructions(swig, roleId, withdrawArgs, options?)` - Withdraw from sub-account
+- `getCreateSubAccountInstructions(swig, roleId, options?)` - Create sub-account (options now accepts `subAccountIndex`)
+- `getToggleSubAccountInstructions(swig, roleId, enabled, options?)` - Toggle sub-account (options now accepts `subAccountIndex`)
+- `getWithdrawFromSubAccountSubAccountInstructions(swig, roleId, withdrawArgs, options?)` - Withdraw from sub-account (options now accepts `subAccountIndex`)
 
 ## Migration from Classic
 

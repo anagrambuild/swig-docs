@@ -8,10 +8,19 @@ This guide explains how to work with sub accounts in Swig, which allow authoriti
 You can find complete working examples in the Swig repository:
 - [Classic Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-subaccount.ts)
 - [Kit Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/transfer-local-subaccount.ts)
+- [Multiple SubAccounts Classic Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/multi-subaccount-svm.ts)
+- [Multiple SubAccounts Kit Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/multi-subaccount-local.ts)
 
 ## What are Sub Accounts?
 
-Sub accounts in Swig allow an authority to create and manage a single sub account address and perform any actions on behalf of that sub account. This is a super high level of permission so use with care. It works for use cases like portfolio management, where you want to allow an unlimited complexity of actions on behalf of a single address, but you don't want to give the authority control over all the assets of the swig. The root authority can always pull funds (SOL and tokens) from the sub account back to the main Swig wallet.
+Sub accounts in Swig allow an authority to create and manage multiple sub account addresses (up to 255 per role) and perform any actions on behalf of those sub accounts. This is a super high level of permission so use with care. It works for use cases like portfolio management, where you want to allow an unlimited complexity of actions on behalf of specific addresses, but you don't want to give the authority control over all the assets of the swig. The root authority can always pull funds (SOL and tokens) from the sub accounts back to the main Swig wallet.
+
+<Note>
+**New in v1.4.0**: Each role can now have up to 255 subaccounts (indices 0-254). This enables advanced use cases like:
+- Multiple isolated trading strategies per authority
+- Separate subaccounts for different asset classes
+- Per-client subaccounts in custodial scenarios
+</Note>
 
 A great example of this is Breeze, Anagram's onchain yield optimizer. Breeze can optimize the yield of a user's portfolio without giving them control over their whole swig.
 
@@ -19,17 +28,21 @@ A great example of this is Breeze, Anagram's onchain yield optimizer. Breeze can
 
 To work with sub accounts, there are several key steps:
 
-1. **Sub Account Permission**: The authority must have the sub account permission to create the sub account. This permission is set when creating or modifying a role.
-2. **Create Sub Account**: Once the authority has the permission, they can create a sub account using the `getCreateSubAccountInstructions`.
-3. **Sub Account Sign**: Once created, sub accounts can perform on-chain actions using the `getSignInstructions` with the `isSubAccount` parameter set to `true`.
+1. **Sub Account Permission**: The authority must have the sub account permission(s) to create sub account(s). This permission is set when creating or modifying a role. Each subaccount index (0-254) requires its own permission.
+2. **Create Sub Account**: Once the authority has the permission, they can create a sub account using `getCreateSubAccountInstructions` with an optional `subAccountIndex` parameter.
+3. **Sub Account Sign**: Once created, sub accounts can perform on-chain actions using the `getSignInstructions` with the `isSubAccount` parameter set to `true` and the `subAccountIndex` specified.
 
 <Warning>
 **Critical Requirement**: Creating a subaccount requires a **two-step process**:
 
-1. **First**: Add a `SubAccount` permission to a new or existing Authority on your Swig wallet
-2. **Second**: Create the actual subaccount, which populates the blank SubAccount action with the subaccount's public key
+1. **First**: Add one or more `SubAccount` permissions to a new or existing Authority on your Swig wallet. Each permission corresponds to a specific subaccount index.
+2. **Second**: Create the actual subaccount(s), which populates each blank SubAccount action with the subaccount's public key
 
-**Important**: Even if an authority has `All` permission, you **must** explicitly add the `SubAccount` permission with a blank subaccount (`[0; 32]` in Rust, or using `Actions.set().subAccount().get()` in TypeScript) to enable subaccount creation. The `All` permission alone is not sufficient for subaccount creation.
+**Important**: Even if an authority has `All` permission, you **must** explicitly add the `SubAccount` permission(s) with blank subaccount(s) (`[0; 32]` in Rust, or using `Actions.set().subAccount(index).get()` in TypeScript) to enable subaccount creation. The `All` permission alone is not sufficient for subaccount creation.
+
+**Multiple SubAccounts**: To create multiple subaccounts for a role, add multiple SubAccount actions with different indices:
+- TypeScript: `Actions.set().subAccount(0).subAccount(1).subAccount(2).get()`
+- Rust: `vec![Permission::SubAccount { sub_account: [0; 32] }, ...]` (one per index, populated when created)
 </Warning>
 
 ## Creating a Sub Account Authority
@@ -71,11 +84,24 @@ const createSwigIx = await getCreateSwigInstruction({
 const swig = await fetchSwig(connection, swigAddress);
 const rootRole = swig.roles[0];
 
+// Add authority with single subaccount permission (index 0, default)
 const addAuthorityIx = await getAddAuthorityInstructions(
   swig,
   rootRole.id,
   createEd25519AuthorityInfo(subAccountAuthority.publicKey),
-  Actions.set().subAccount().get(),
+  Actions.set().subAccount().get(), // Defaults to index 0
+);
+
+// Or add authority with multiple subaccount permissions
+const addMultiSubAccountIx = await getAddAuthorityInstructions(
+  swig,
+  rootRole.id,
+  createEd25519AuthorityInfo(subAccountAuthority.publicKey),
+  Actions.set()
+    .subAccount(0) // Allow creating subaccount at index 0
+    .subAccount(1) // Allow creating subaccount at index 1
+    .subAccount(2) // Allow creating subaccount at index 2
+    .get(),
 );
 ```
 </Tab>
@@ -113,11 +139,24 @@ const createSwigIx = await getCreateSwigInstruction({
 const swig = await fetchSwig(connection.rpc, swigAddress);
 const rootRole = swig.roles[0];
 
+// Add authority with single subaccount permission (index 0, default)
 const addAuthorityIx = await getAddAuthorityInstructions(
   swig,
   rootRole.id,
   createEd25519AuthorityInfo(subAccountAuthority.address),
-  Actions.set().subAccount().get(),
+  Actions.set().subAccount().get(), // Defaults to index 0
+);
+
+// Or add authority with multiple subaccount permissions
+const addMultiSubAccountIx = await getAddAuthorityInstructions(
+  swig,
+  rootRole.id,
+  createEd25519AuthorityInfo(subAccountAuthority.address),
+  Actions.set()
+    .subAccount(0) // Allow creating subaccount at index 0
+    .subAccount(1) // Allow creating subaccount at index 1
+    .subAccount(2) // Allow creating subaccount at index 2
+    .get(),
 );
 ```
 </Tab>
@@ -159,30 +198,42 @@ let create_swig_ix = root_builder.build_swig_account()?;
 
 // Step 2: Add a new authority with SubAccount permission
 // 
-// IMPORTANT: You must include the blank SubAccount permission even if
-// you're also granting All permission. The blank SubAccount action
-// (with sub_account: [0; 32]) is required and will be populated when
-// the subaccount is created.
+// IMPORTANT: You must include the blank SubAccount permission(s) even if
+// you're also granting All permission. Each blank SubAccount action
+// (with sub_account: [0; 32]) will be populated when the corresponding
+// subaccount is created at that index.
+
+// Single subaccount (index 0, default)
 let add_authority_ix = root_builder.add_authority_instruction(
     AuthorityType::Ed25519,
     &sub_account_authority.pubkey().to_bytes(),
     vec![
         Permission::SubAccount {
-            sub_account: [0; 32], // Blank subaccount - will be populated on creation
+            sub_account: [0; 32], // Blank - will be populated on creation at index 0
         },
     ],
     None, // current_slot not required for Ed25519
 )?;
 
-// If you want to grant All permission AND SubAccount permission:
+// Multiple subaccounts (indices 0, 1, 2)
+let add_multi_subaccount_ix = root_builder.add_authority_instruction(
+    AuthorityType::Ed25519,
+    &sub_account_authority.pubkey().to_bytes(),
+    vec![
+        Permission::SubAccount { sub_account: [0; 32] }, // Index 0
+        Permission::SubAccount { sub_account: [0; 32] }, // Index 1
+        Permission::SubAccount { sub_account: [0; 32] }, // Index 2
+    ],
+    None,
+)?;
+
+// If you want to grant All permission AND SubAccount permissions:
 let add_authority_with_all_ix = root_builder.add_authority_instruction(
     AuthorityType::Ed25519,
     &sub_account_authority.pubkey().to_bytes(),
     vec![
         Permission::All,
-        Permission::SubAccount {
-            sub_account: [0; 32], // Blank subaccount - REQUIRED even with All
-        },
+        Permission::SubAccount { sub_account: [0; 32] }, // REQUIRED even with All
     ],
     None,
 )?;
@@ -193,15 +244,16 @@ let add_authority_with_all_ix = root_builder.add_authority_instruction(
 </Tab>
 </Tabs>
 
-## Creating a Sub Account
+## Creating Sub Accounts
 
-Once you have an authority with sub account permissions, you can create the sub account:
+Once you have an authority with sub account permissions, you can create the sub account(s). Each subaccount is identified by an index (0-254).
 
 <Tabs>
 <Tab title="Classic">
 ```typescript
 import {
   findSwigSubAccountPda,
+  findSwigSubAccountPdaWithIndex,
   getCreateSubAccountInstructions,
 } from '@swig-wallet/classic';
 
@@ -209,18 +261,53 @@ import {
 await swig.refetch();
 const subAccountAuthRole = swig.roles[1];
 
-// Create sub account
-const createSubAccountIx = await getCreateSubAccountInstructions(
+// Create sub account at index 0 (default, backwards compatible)
+const createSubAccount0Ix = await getCreateSubAccountInstructions(
   swig,
   subAccountAuthRole.id,
+  { subAccountIndex: 0 }, // Optional, defaults to 0
 );
+await sendTransaction(connection, createSubAccount0Ix, subAccountAuthority);
 
-await sendTransaction(connection, createSubAccountIx, subAccountAuthority);
-
-// Get the sub account address
-const subAccountAddress = findSwigSubAccountPda(
+// Get the sub account address for index 0
+// Both methods work for index 0 (backwards compatible)
+const subAccount0Legacy = findSwigSubAccountPda(
   subAccountAuthRole.swigId,
   subAccountAuthRole.id,
+);
+const subAccount0New = findSwigSubAccountPdaWithIndex(
+  subAccountAuthRole.swigId,
+  subAccountAuthRole.id,
+  0,
+);
+// These addresses are identical for index 0
+
+// Create additional sub accounts at different indices
+const createSubAccount1Ix = await getCreateSubAccountInstructions(
+  swig,
+  subAccountAuthRole.id,
+  { subAccountIndex: 1 },
+);
+await sendTransaction(connection, createSubAccount1Ix, subAccountAuthority);
+
+const subAccount1 = findSwigSubAccountPdaWithIndex(
+  subAccountAuthRole.swigId,
+  subAccountAuthRole.id,
+  1,
+);
+
+// Create sub account at index 2
+const createSubAccount2Ix = await getCreateSubAccountInstructions(
+  swig,
+  subAccountAuthRole.id,
+  { subAccountIndex: 2 },
+);
+await sendTransaction(connection, createSubAccount2Ix, subAccountAuthority);
+
+const subAccount2 = findSwigSubAccountPdaWithIndex(
+  subAccountAuthRole.swigId,
+  subAccountAuthRole.id,
+  2,
 );
 ```
 </Tab>
@@ -228,6 +315,7 @@ const subAccountAddress = findSwigSubAccountPda(
 ```typescript
 import {
   findSwigSubAccountPda,
+  findSwigSubAccountPdaWithIndex,
   getCreateSubAccountInstructions,
 } from '@swig-wallet/kit';
 
@@ -235,18 +323,62 @@ import {
 await swig.refetch();
 const subAccountAuthRole = swig.roles[1];
 
-// Create sub account
-const createSubAccountIx = await getCreateSubAccountInstructions(
+// Create sub account at index 0 (default, backwards compatible)
+const createSubAccount0Ix = await getCreateSubAccountInstructions(
   swig,
   subAccountAuthRole.id,
+  { 
+    payer: subAccountAuthority.address,
+    subAccountIndex: 0, // Optional, defaults to 0
+  },
 );
+await sendTransaction(connection, createSubAccount0Ix, subAccountAuthority);
 
-await sendTransaction(connection, createSubAccountIx, subAccountAuthority);
-
-// Get the sub account address
-const subAccountAddress = await findSwigSubAccountPda(
+// Get the sub account address for index 0
+// Both methods work for index 0 (backwards compatible)
+const subAccount0Legacy = await findSwigSubAccountPda(
   subAccountAuthRole.swigId,
   subAccountAuthRole.id,
+);
+const subAccount0New = await findSwigSubAccountPdaWithIndex(
+  subAccountAuthRole.swigId,
+  subAccountAuthRole.id,
+  0,
+);
+// These addresses are identical for index 0
+
+// Create additional sub accounts at different indices
+const createSubAccount1Ix = await getCreateSubAccountInstructions(
+  swig,
+  subAccountAuthRole.id,
+  { 
+    payer: subAccountAuthority.address,
+    subAccountIndex: 1,
+  },
+);
+await sendTransaction(connection, createSubAccount1Ix, subAccountAuthority);
+
+const subAccount1 = await findSwigSubAccountPdaWithIndex(
+  subAccountAuthRole.swigId,
+  subAccountAuthRole.id,
+  1,
+);
+
+// Create sub account at index 2
+const createSubAccount2Ix = await getCreateSubAccountInstructions(
+  swig,
+  subAccountAuthRole.id,
+  { 
+    payer: subAccountAuthority.address,
+    subAccountIndex: 2,
+  },
+);
+await sendTransaction(connection, createSubAccount2Ix, subAccountAuthority);
+
+const subAccount2 = await findSwigSubAccountPdaWithIndex(
+  subAccountAuthRole.swigId,
+  subAccountAuthRole.id,
+  2,
 );
 ```
 </Tab>
@@ -262,7 +394,7 @@ use swig_sdk::{
     SwigInstructionBuilder,
     client_role::Ed25519ClientRole,
 };
-use swig_state::swig::sub_account_seeds;
+use swig_interface::derive_sub_account_pda;
 use swig_interface::program_id;
 
 // Step 1: Get the role ID of the newly added authority
@@ -270,7 +402,7 @@ use swig_interface::program_id;
 // For this example, we know it will be role_id 1 (first added authority)
 let sub_account_role_id = 1;
 
-// Step 2: Create the subaccount using the sub-account authority
+// Step 2: Create the subaccount builder
 let mut sub_account_builder = SwigInstructionBuilder::new(
     swig_id,
     Box::new(Ed25519ClientRole::new(sub_account_authority.pubkey())),
@@ -278,32 +410,39 @@ let mut sub_account_builder = SwigInstructionBuilder::new(
     sub_account_role_id,
 );
 
-let create_sub_account_ix = sub_account_builder.create_sub_account(None)?;
+// Create subaccount at index 0 (default, backwards compatible)
+let create_sub_account_0_ix = sub_account_builder.create_sub_account_with_index(
+    0, // Index 0 uses legacy PDA derivation
+)?;
 
-// Send transaction to create subaccount
+// Send transaction
 let recent_blockhash = rpc_client.get_latest_blockhash()?;
 let msg = v0::Message::try_compile(
     &fee_payer.pubkey(),
-    &[create_sub_account_ix],
+    &[create_sub_account_0_ix],
     &[],
     recent_blockhash,
 )?;
-
 let tx = VersionedTransaction::try_new(
     VersionedMessage::V0(msg),
     &[fee_payer, &sub_account_authority],
 )?;
-
 rpc_client.send_and_confirm_transaction(&tx)?;
 
-// Step 3: Derive the subaccount address to verify it was created
-let role_id_bytes = sub_account_role_id.to_le_bytes();
-let (sub_account, _bump) = Pubkey::find_program_address(
-    &sub_account_seeds(&swig_id, &role_id_bytes),
-    &program_id(),
-);
+// Derive the subaccount address for index 0
+let (sub_account_0, _) = derive_sub_account_pda(&swig_id, sub_account_role_id, 0);
+println!("Subaccount 0 created at: {}", sub_account_0);
 
-println!("Subaccount created at: {}", sub_account);
+// Create additional subaccounts at different indices
+let create_sub_account_1_ix = sub_account_builder.create_sub_account_with_index(1)?;
+// ... send transaction ...
+let (sub_account_1, _) = derive_sub_account_pda(&swig_id, sub_account_role_id, 1);
+
+let create_sub_account_2_ix = sub_account_builder.create_sub_account_with_index(2)?;
+// ... send transaction ...
+let (sub_account_2, _) = derive_sub_account_pda(&swig_id, sub_account_role_id, 2);
+
+println!("Created subaccounts: {}, {}, {}", sub_account_0, sub_account_1, sub_account_2);
 ```
 </Tab>
 </Tabs>
@@ -438,15 +577,33 @@ const transfer = SystemProgram.transfer({
   lamports: 0.1 * LAMPORTS_PER_SOL,
 });
 
-// Sign with sub account (note: isSubAccount = true)
+// Sign with sub account at index 0 (default)
 const signIx = await getSignInstructions(
   swig,
   subAccountAuthRole.id,
   [transfer],
   true, // isSubAccount flag
+  { subAccountIndex: 0 }, // Optional, defaults to 0
 );
 
 await sendTransaction(connection, signIx, subAccountAuthority);
+
+// To use a different subaccount index:
+const transfer1 = SystemProgram.transfer({
+  fromPubkey: subAccount1, // subaccount at index 1
+  toPubkey: recipient,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
+
+const signIx1 = await getSignInstructions(
+  swig,
+  subAccountAuthRole.id,
+  [transfer1],
+  true,
+  { subAccountIndex: 1 }, // Use subaccount at index 1
+);
+
+await sendTransaction(connection, signIx1, subAccountAuthority);
 ```
 </Tab>
 <Tab title="Kit">
@@ -491,15 +648,46 @@ const transfer = {
   ),
 };
 
-// Sign with sub account (note: isSubAccount = true)
+// Sign with sub account at index 0 (default)
 const signIx = await getSignInstructions(
   swig,
   subAccountAuthRole.id,
   [transfer],
   true, // isSubAccount flag
+  { 
+    payer: subAccountAuthority.address,
+    subAccountIndex: 0, // Optional, defaults to 0
+  },
 );
 
 await sendTransaction(connection, signIx, subAccountAuthority);
+
+// To use a different subaccount index:
+const transfer1 = {
+  programAddress: SYSTEM_PROGRAM_ADDRESS,
+  accounts: [
+    { address: subAccount1, role: AccountRole.WRITABLE_SIGNER },
+    { address: recipient, role: AccountRole.WRITABLE },
+  ],
+  data: new Uint8Array(
+    getTransferSolInstructionDataEncoder().encode({
+      amount: 0.1 * LAMPORTS_PER_SOL,
+    }),
+  ),
+};
+
+const signIx1 = await getSignInstructions(
+  swig,
+  subAccountAuthRole.id,
+  [transfer1],
+  true,
+  { 
+    payer: subAccountAuthority.address,
+    subAccountIndex: 1, // Use subaccount at index 1
+  },
+);
+
+await sendTransaction(connection, signIx1, subAccountAuthority);
 ```
 </Tab>
 <Tab title="Rust">
@@ -575,11 +763,14 @@ rpc_client.send_and_confirm_transaction(&tx)?;
 
 Sub accounts in Swig have several important characteristics:
 
-- **Dedicated Address**: Each sub account has its own unique address derived from the Swig ID and role ID
+- **Dedicated Addresses**: Each sub account has its own unique address derived from the Swig ID, role ID, and index
+- **Multiple Per Role**: Each role can have up to 255 subaccounts (indices 0-254), enabling parallel operations
 - **Isolated Operations**: Sub accounts can perform complex operations without affecting the main Swig balance
+- **Backwards Compatible**: Index 0 maintains the same address derivation as v1.3.x for seamless upgrades
 - **Root Authority Control**: The root authority can always reclaim funds from sub accounts
 - **Permission-Based**: Only authorities with sub account permissions can create and manage sub accounts
 - **Unlimited Actions**: Sub accounts can perform any on-chain action within their permission scope
+- **Index-Specific Permissions**: Each subaccount index requires its own SubAccount action/permission
 
 ## Testing Environment Options
 
@@ -634,7 +825,10 @@ Sub accounts are perfect for:
 
 - **Portfolio Management**: Allow complex DeFi operations without full wallet access
 - **Yield Optimization**: Automated strategies with isolated risk
-- **Multi-Strategy Trading**: Separate accounts for different trading strategies
+- **Multi-Strategy Trading**: Separate subaccounts for different trading strategies (now with multiple per role!)
+- **Asset Segregation**: Different subaccounts for different asset classes or risk profiles
+- **Custodial Services**: Per-client subaccounts with a single authority managing multiple clients
+- **Parallel Operations**: Execute independent operations simultaneously across different subaccounts
 - **Delegation**: Give specific permissions for particular use cases
 
 ## Additional Resources
@@ -642,6 +836,12 @@ Sub accounts are perfect for:
 You can find more working examples in our repositories:
 
 - **Rust Examples**: [Swig test suite](https://github.com/anagrambuild/swig-wallet/blob/main/program/tests/sub_account_test.rs#L33)
-- **Classic TypeScript**: [transfer-svm-subaccount.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-subaccount.ts)
-- **Kit TypeScript**: [transfer-local-subaccount.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/transfer-local-subaccount.ts)
+- **Classic TypeScript (Single)**: [transfer-svm-subaccount.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/transfer-svm-subaccount.ts)
+- **Kit TypeScript (Single)**: [transfer-local-subaccount.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/transfer-local-subaccount.ts)
+- **Classic TypeScript (Multiple)**: [multi-subaccount-svm.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/multi-subaccount-svm.ts)
+- **Kit TypeScript (Multiple)**: [multi-subaccount-local.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/multi-subaccount-local.ts)
 - **All Examples**: [Swig TypeScript examples](https://github.com/anagrambuild/swig-ts/tree/main/examples)
+
+## Migration Guide
+
+If you're upgrading from v1.3.x to v1.4.x, your existing subaccounts will continue to work without any changes. The default subaccount (index 0) uses the same address derivation as before, ensuring backwards compatibility. To take advantage of multiple subaccounts, simply add additional `SubAccount` actions with different indices to your roles.

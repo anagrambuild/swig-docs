@@ -498,20 +498,42 @@ const recurringStakeActions = Actions.set()
 
 ### 6. Account Management Actions
 
-#### `subAccount()`
+#### `subAccount(index?)`
 
-Grants permission to control a subaccount.
+Grants permission to control a subaccount at a specific index. Each role can have up to 255 subaccounts (indices 0-254).
 
-**Inputs:** None  
+**Inputs:**
+- `index?: number` - Subaccount index (0-254). Defaults to 0 if not specified.
+
 **Output:** `Actions` instance
 
 **Usage:**
 ```typescript
+// Single subaccount (index 0, default)
 const subAccountActions = Actions.set().subAccount().get();
+
+// Specific subaccount index
+const subAccount1Actions = Actions.set().subAccount(1).get();
+
+// Multiple subaccounts for one role
+const multiSubAccountActions = Actions.set()
+  .subAccount(0)  // Allow subaccount at index 0
+  .subAccount(1)  // Allow subaccount at index 1
+  .subAccount(2)  // Allow subaccount at index 2
+  .get();
 ```
 
 **Permissions Granted:**
-- Control and manage subaccount operations
+- Control and manage subaccount operations at the specified index
+- Each index provides access to a unique subaccount address
+
+**Important Notes:**
+- Index 0 uses legacy PDA derivation for backwards compatibility
+- Indices 1-254 use new PDA derivation with the index in the seeds
+- Each subaccount index requires its own `subAccount()` action
+- Maximum 255 subaccounts per role (indices 0-254)
+
+**New in v1.4.0**: Support for multiple subaccounts per role via the index parameter.
 
 ---
 
