@@ -28,6 +28,10 @@ const createSwigInstruction = await getCreateSwigInstruction({
   actions: rootActions,
 });
 
+// Fetch the Swig account and get the wallet address
+const swig = await fetchSwig(connection, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
 // Add a new authority with a spending limit
 const dappActions = Actions.set().solLimit({ amount: BigInt(0.1 * LAMPORTS_PER_SOL) }).get();
 const addAuthorityInstructions = await getAddAuthorityInstructions(
@@ -37,9 +41,9 @@ const addAuthorityInstructions = await getAddAuthorityInstructions(
   dappActions,
 );
 
-// Transfer SOL with Swig authority
+// Transfer SOL with Swig authority (use swigWalletAddress, not swigAccountAddress)
 const transferIx = SystemProgram.transfer({
-  fromPubkey: swigAddress,
+  fromPubkey: swigWalletAddress,
   toPubkey: dappAuthorityKeypair.publicKey,
   lamports: 0.1 * LAMPORTS_PER_SOL,
 });
@@ -68,6 +72,10 @@ const createSwigInstruction = await getCreateSwigInstruction({
   actions: rootActions,
 });
 
+// Fetch the Swig account and get the wallet address
+const swig = await fetchSwig(connection.rpc, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
 // Add a dapp authority with spending limit
 const dappActions = Actions.set().solLimit({ amount: BigInt(0.1 * LAMPORTS_PER_SOL) }).get();
 const addAuthorityInstructions = await getAddAuthorityInstructions(
@@ -77,9 +85,9 @@ const addAuthorityInstructions = await getAddAuthorityInstructions(
   dappActions,
 );
 
-// Transfer SOL
+// Transfer SOL (use swigWalletAddress, not swigAccountAddress)
 const transferInstruction = getSolTransferInstruction({
-  fromAddress: swigAddress,
+  fromAddress: swigWalletAddress,
   toAddress: dappAuthority.address,
   lamports: 0.1 * LAMPORTS_PER_SOL,
 });
@@ -120,7 +128,7 @@ await connection.requestAirdrop(signer.publicKey, LAMPORTS_PER_SOL);
 
 // Find Swig PDA by ID
 const id = Uint8Array.from(Array(32).fill(1)); // use any 32-byte identifier
-const swigAddress = findSwigPda(id);
+const swigAccountAddress = findSwigPda(id);
 
 // Create Swig with Secp256k1 authority
 const rootActions = Actions.set().all().get();
@@ -129,6 +137,17 @@ const createSwigInstruction = await getCreateSwigInstruction({
   id,
   payer: payer.publicKey,
   actions: rootActions,
+});
+
+// Fetch the Swig account and get the wallet address
+const swig = await fetchSwig(connection, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
+// Prepare transfer (use swigWalletAddress, not swigAccountAddress)
+const transfer = SystemProgram.transfer({
+  fromPubkey: swigWalletAddress,
+  toPubkey: dappTreasury,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
 });
 
 // Prepare transfer
@@ -175,7 +194,7 @@ const dappTreasury = await generateKeyPairSigner();
 
 // Find Swig PDA by ID
 const id = Uint8Array.from(Array(32).fill(1));
-const swigAddress = await findSwigPda(id);
+const swigAccountAddress = await findSwigPda(id);
 
 // Create Swig with Secp256k1 authority
 const rootActions = Actions.set().all().get();
@@ -186,12 +205,16 @@ const createSwigIx = await getCreateSwigInstruction({
   actions: rootActions,
 });
 
-// Prepare transfer instruction
+// Fetch the Swig account and get the wallet address
+const swig = await fetchSwig(connection.rpc, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
+// Prepare transfer instruction (use swigWalletAddress, not swigAccountAddress)
 const transfer = {
   programAddress: SYSTEM_PROGRAM_ADDRESS,
   accounts: [
     {
-      address: swigAddress,
+      address: swigWalletAddress,
       role: AccountRole.WRITABLE_SIGNER,
     },
     {
@@ -231,7 +254,7 @@ For a more complete Ethereum wallet integration using Viem:
 // Using Viem account
 const privateKeyAccount = privateKeyToAccount(userWallet.getPrivateKeyString());
 
-const swigAddress = findSwigPda(id);
+const swigAccountAddress = findSwigPda(id);
 const rootActions = Actions.set().all().get();
 
 const createSwigInstruction = await getCreateSwigInstruction({
@@ -243,8 +266,9 @@ const createSwigInstruction = await getCreateSwigInstruction({
 
 sendSVMTransaction(svm, [createSwigInstruction], transactionPayer);
 
-let swig = fetchSwig(svm, swigAddress);
-svm.airdrop(swigAddress, BigInt(LAMPORTS_PER_SOL));
+let swig = fetchSwig(svm, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
+svm.airdrop(swigWalletAddress, BigInt(LAMPORTS_PER_SOL));
 
 let rootRole = swig.findRolesBySecp256k1SignerAddress(privateKeyAccount.address)[0];
 if (!rootRole) throw new Error('Role not found for authority');
@@ -340,11 +364,21 @@ const createSessionIx = await getCreateSessionInstructions(
   50n, // session duration
 );
 
+// Fetch the Swig account and get the wallet address
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
 // Find and use session role
 const sessionRole = swig.findRoleBySessionKey(dappSessionKeypair.publicKey);
 if (!sessionRole || !sessionRole.isSessionBased()) {
   throw new Error('Invalid session role');
 }
+
+// Create transfer using swigWalletAddress
+const transfer = SystemProgram.transfer({
+  fromPubkey: swigWalletAddress,
+  toPubkey: dappTreasury,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
 
 // Sign with session key
 const signedTransfer = await getSignInstructions(
@@ -381,11 +415,21 @@ const createSessionIx = await getCreateSessionInstructions(
   50n, // session duration
 );
 
+// Fetch the Swig account and get the wallet address
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
 // Find and use session role
 const sessionRole = swig.findRolesByEd25519SignerPk(dappSessionKeypair.address)[0];
 if (!sessionRole || !sessionRole.isSessionBased()) {
   throw new Error('Invalid session role');
 }
+
+// Create transfer using swigWalletAddress
+const transferIx = getSolTransferInstruction({
+  fromAddress: swigWalletAddress,
+  toAddress: dappTreasury.address,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
 
 // Sign with session key
 const signedTransferIx = await getSignInstructions(
@@ -438,9 +482,19 @@ const sessionInstructions = await getCreateSessionInstructions(
   },
 );
 
+// Fetch the Swig account and get the wallet address
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
 // Find and use session role
 const sessionRole = swig.findRoleBySessionKey(dappSessionKeypair.publicKey);
 if (!sessionRole) throw new Error('Session role not found');
+
+// Create transfer using swigWalletAddress
+const transferIx = SystemProgram.transfer({
+  fromPubkey: swigWalletAddress,
+  toPubkey: dappTreasury,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
 
 // Sign with session key
 const signTransfer = await getSignInstructions(
@@ -492,9 +546,19 @@ const sessionInstructions = await getCreateSessionInstructions(
   },
 );
 
+// Fetch the Swig account and get the wallet address
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
 // Find and use session role
 const sessionRole = swig.findRoleBySessionKey(dappSessionKeypair.address);
 if (!sessionRole) throw new Error('Session role not found');
+
+// Create transfer using swigWalletAddress
+const transferIx = getSolTransferInstruction({
+  fromAddress: swigWalletAddress,
+  toAddress: dappTreasury.address,
+  lamports: 0.1 * LAMPORTS_PER_SOL,
+});
 
 // Sign with session key
 const signTransfer = await getSignInstructions(

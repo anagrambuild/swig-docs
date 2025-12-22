@@ -36,7 +36,7 @@ const connection = new Connection('http://localhost:8899', 'confirmed');
 
 // Create Swig with session support
 const id = randomBytes(32);
-const swigAddress = findSwigPda(id);
+const swigAccountAddress = findSwigPda(id);
 const rootActions = Actions.set().all().get();
 
 const ix = await getCreateSwigInstruction({
@@ -92,7 +92,7 @@ const connection = {
 
 // Create Swig with session support
 const id = randomBytes(32);
-const swigAddress = await findSwigPda(id);
+const swigAccountAddress = await findSwigPda(id);
 const rootActions = Actions.set().all().get();
 
 const createSwigIx = await getCreateSwigInstruction({
@@ -126,18 +126,20 @@ import {
 import {
   fetchSwig,
   getSignInstructions,
+  getSwigWalletAddress,
 } from '@swig-wallet/classic';
 
 // Find the role by session key
-const swig = await fetchSwig(connection, swigAddress);
+const swig = await fetchSwig(connection, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
 const rootRole = swig.findRoleBySessionKey(dappSessionKeypair.publicKey);
 
 if (!rootRole || !rootRole.isSessionBased())
   throw new Error('Role not found for authority');
 
-// Create and sign a transfer using session authority
+// Create and sign a transfer using session authority (use swigWalletAddress)
 const transfer = SystemProgram.transfer({
-  fromPubkey: swigAddress,
+  fromPubkey: swigWalletAddress,
   toPubkey: dappTreasury,
   lamports: 0.1 * LAMPORTS_PER_SOL,
 });
@@ -166,20 +168,22 @@ import {
 import {
   fetchSwig,
   getSignInstructions,
+  getSwigWalletAddress,
 } from '@swig-wallet/kit';
 
 // Find the role by session key
-const swig = await fetchSwig(connection.rpc, swigAddress);
+const swig = await fetchSwig(connection.rpc, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
 const sessionRole = swig.findRolesByEd25519SignerPk(dappSessionKeypair.address)[0];
 
 if (!sessionRole || !sessionRole.isSessionBased())
   throw new Error('Role not found for authority');
 
-// Create and sign a transfer using session authority
+// Create and sign a transfer using session authority (use swigWalletAddress)
 const transferIx: IInstruction = {
   programAddress: SYSTEM_PROGRAM_ADDRESS,
   accounts: [
-    { address: swigAddress, role: AccountRole.WRITABLE_SIGNER },
+    { address: swigWalletAddress, role: AccountRole.WRITABLE_SIGNER },
     { address: dappTreasury.address, role: AccountRole.WRITABLE },
   ],
   data: new Uint8Array(

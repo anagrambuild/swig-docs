@@ -35,6 +35,7 @@ import {
   getCreateSwigInstruction,
   getEvmPersonalSignPrefix,
   getSignInstructions,
+  getSwigWalletAddress,
   Swig,
   SWIG_PROGRAM_ADDRESS,
   type SigningFn,
@@ -49,7 +50,7 @@ const privateKeyAccount = privateKeyToAccount(userWallet.getPrivateKeyString());
 const transactionPayer = Keypair.generate();
 const dappTreasury = Keypair.generate().publicKey;
 const id = Uint8Array.from(Array(32).fill(0));
-const swigAddress = findSwigPda(id);
+const swigAccountAddress = findSwigPda(id);
 const rootActions = Actions.set().all().get();
 
 // Create Swig with secp256k1 authority
@@ -60,8 +61,9 @@ const createSwigInstruction = await getCreateSwigInstruction({
   actions: rootActions,
 });
 
-// Fetch Swig and find role
-let swig = fetchSwig(svm, swigAddress);
+// Fetch Swig and get wallet address
+let swig = fetchSwig(svm, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
 let rootRole = swig.findRolesBySecp256k1SignerAddress(
   privateKeyAccount.address,
 )[0];
@@ -101,9 +103,9 @@ const viemSignMessage: SigningFn = async (message: Uint8Array) => {
   };
 };
 
-// Create and sign a transfer transaction
+// Create and sign a transfer transaction (use swigWalletAddress)
 const transfer = SystemProgram.transfer({
-  fromPubkey: swigAddress,
+  fromPubkey: swigWalletAddress,
   toPubkey: dappTreasury,
   lamports: 0.1 * LAMPORTS_PER_SOL,
 });
@@ -152,6 +154,7 @@ import {
   getCreateSwigInstruction,
   getEvmPersonalSignPrefix,
   getSignInstructions,
+  getSwigWalletAddress,
   type SigningFn,
 } from '@swig-wallet/kit';
 
@@ -179,7 +182,7 @@ const dappTreasury = await generateKeyPairSigner();
 
 // Swig ID and address
 const swigId = Uint8Array.from(Array(32).fill(1));
-const swigAddress = await findSwigPda(swigId);
+const swigAccountAddress = await findSwigPda(swigId);
 
 // Create Swig with secp256k1 authority
 const rootActions = Actions.set().all().get();
@@ -190,8 +193,9 @@ const createSwigIx = await getCreateSwigInstruction({
   actions: rootActions,
 });
 
-// Fetch Swig account and role
-let swig = await fetchSwig(rpc, swigAddress);
+// Fetch Swig account and get wallet address
+let swig = await fetchSwig(rpc, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
 let rootRole = swig.findRolesBySecp256k1SignerAddress(evmAccount.address)[0];
 
 // Different signing methods available:
@@ -221,11 +225,11 @@ const viemSignMessage: SigningFn = async (message) => {
   };
 };
 
-// Prepare transfer instruction (0.1 SOL)
+// Prepare transfer instruction (0.1 SOL, use swigWalletAddress)
 const transferIx = {
   programAddress: SYSTEM_PROGRAM_ADDRESS,
   accounts: [
-    { address: swigAddress, role: AccountRole.WRITABLE_SIGNER },
+    { address: swigWalletAddress, role: AccountRole.WRITABLE_SIGNER },
     { address: dappTreasury.address, role: AccountRole.WRITABLE },
   ],
   data: new Uint8Array(
