@@ -11,8 +11,9 @@ This guide demonstrates how to perform token swaps on Solana using Jupiter Proto
 
 Before you begin, make sure you have the following installed:
 - [Bun](https://bun.sh) (latest version)
-- A Solana wallet with some SOL for transaction fees
+- A Solana wallet with some SOL for transaction fees (at least 0.02 SOL)
 - A keypair file for the root user
+- RPC_URL environment variable set to your Solana RPC endpoint
 
 ## Setup
 
@@ -22,6 +23,7 @@ First, clone the swig-ts repository and navigate to the swap example:
 git clone https://github.com/anagrambuild/swig-ts.git
 cd swig-ts/examples/swap
 bun install
+export RPC_URL="your-solana-rpc-url"
 ```
 
 The example already includes all necessary dependencies:
@@ -73,24 +75,41 @@ function toTransactionInstruction(instruction: any): TransactionInstruction {
     data: Buffer.from(instruction.data, 'base64'),
   });
 }
+
+// Helper function to format numbers with commas
+function formatNumber(n: number) {
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// Helper function to generate random bytes (for Swig ID)
+function randomBytes(length: number): Uint8Array {
+  const randomArray = new Uint8Array(length);
+  crypto.getRandomValues(randomArray);
+  return randomArray;
+}
 ```
 
 Let's break down the main components:
 
 ### 1. Setting Up Token Accounts
 <Note>
-This isnt technically necessary, but we leave it here for your benefit. Jupiter will create the token accounts for you if they don't exisst in the setup instructions that are returned from the Jupiter API.
+This isnt technically necessary, but we leave it here for your benefit. Jupiter will create the token accounts for you if they don't exist in the setup instructions that are returned from the Jupiter API.
 </Note>
 
-Before swapping, we need to ensure the Swig account has the necessary token accounts:
-
-
+Before swapping, we need to ensure the Swig wallet has the necessary token accounts (both USDC and Wrapped SOL):
 
 ```typescript
+const usdcMint = new PublicKey(
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+);
+const wrappedSolMint = new PublicKey(
+  'So11111111111111111111111111111111111111112',
+);
+
 // Check if Swig has USDC ATA
 const swigUsdcAta = await getAssociatedTokenAddress(
   usdcMint,
-  swigAddress,
+  swigWalletAddress,
   true,
 );
 try {
@@ -103,7 +122,7 @@ try {
   const createAtaIx = createAssociatedTokenAccountInstruction(
     rootUser.publicKey,
     swigUsdcAta,
-    swigAddress,
+    swigWalletAddress,
     usdcMint,
   );
   await sendTransaction(connection, [createAtaIx], rootUser);
@@ -112,11 +131,39 @@ try {
     chalk.cyan(swigUsdcAta.toBase58()),
   );
 }
+
+// Check if Swig has Wrapped SOL ATA
+const swigWrappedSolAta = await getAssociatedTokenAddress(
+  wrappedSolMint,
+  swigWalletAddress,
+  true,
+);
+try {
+  await getAccount(connection, swigWrappedSolAta);
+  console.log(
+    chalk.green('✓ Wrapped SOL ATA exists:'),
+    chalk.cyan(swigWrappedSolAta.toBase58()),
+  );
+} catch {
+  const createAtaIx = createAssociatedTokenAccountInstruction(
+    rootUser.publicKey,
+    swigWrappedSolAta,
+    swigWalletAddress,
+    wrappedSolMint,
+  );
+  await sendTransaction(connection, [createAtaIx], rootUser);
+  console.log(
+    chalk.green('✓ Created Wrapped SOL ATA:'),
+    chalk.cyan(swigWrappedSolAta.toBase58()),
+  );
+}
 ```
 
 ### 2. Getting Jupiter Quote
 
 ```typescript
+const transferAmount = 0.01 * LAMPORTS_PER_SOL;
+
 const jupiter = createJupiterApiClient();
 const quote = await jupiter.quoteGet({
   inputMint: wrappedSolMint.toBase58(),
@@ -125,6 +172,15 @@ const quote = await jupiter.quoteGet({
   slippageBps: 50,
   maxAccounts: 64,
 });
+
+if (!quote) {
+  console.log(chalk.red('❌ No quote available'));
+  return;
+}
+
+console.log(chalk.blue('📊 Quote received:'));
+console.log(`   Input: ${formatNumber(Number(quote.inAmount))} lamports`);
+console.log(`   Output: ${formatNumber(Number(quote.outAmount))} USDC (raw)`);
 ```
 
 ### 3. Handling Compute Budget and Instructions
@@ -135,7 +191,7 @@ The most critical part is properly separating and handling instructions:
 const swapInstructionsRes = await jupiter.swapInstructionsPost({
   swapRequest: {
     quoteResponse: quote,
-    userPublicKey: swigAddress.toBase58(),
+    userPublicKey: swigWalletAddress.toBase58(),
     wrapAndUnwrapSol: true,
     useSharedAccounts: true,
   },
@@ -197,6 +253,13 @@ const result = await connection.confirmTransaction({
 if (result.value.err) {
   throw new Error(`Transaction failed: ${JSON.stringify(result.value.err)}`);
 }
+
+const postSwapBalance = await connection.getTokenAccountBalance(swigUsdcAta);
+console.log(chalk.green('🎉 Swap successful!'));
+console.log(chalk.gray(`   Signature: ${signature}`));
+console.log(
+  chalk.blue(`💰 New USDC balance: ${postSwapBalance.value.uiAmount}`),
+);
 ```
 
 ## Important Considerations
