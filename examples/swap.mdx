@@ -91,7 +91,40 @@ function randomBytes(length: number): Uint8Array {
 
 Let's break down the main components:
 
-### 1. Setting Up Token Accounts
+### 1. Creating and Getting the Swig Wallet Address
+
+After creating your Swig account, you need to get the wallet address which is used for all transfers and token operations:
+
+```typescript
+import {
+  fetchSwig,
+  findSwigPda,
+  getSwigWalletAddress,
+  getCreateSwigInstruction,
+} from '@swig-wallet/classic';
+
+// Create or find your Swig account
+const id = randomBytes(32);
+const swigAccountAddress = findSwigPda(id);
+
+// Create the Swig (if new)
+const createIx = await getCreateSwigInstruction({
+  payer: rootUser.publicKey,
+  actions: rootActions,
+  authorityInfo: createEd25519AuthorityInfo(rootUser.publicKey),
+  id,
+});
+await sendTransaction(connection, [createIx], rootUser);
+
+// Fetch the Swig account and get the wallet address
+const swig = await fetchSwig(connection, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
+console.log('Swig wallet address:', swigWalletAddress.toBase58());
+```
+
+**Important**: Always use `swigWalletAddress` (not `swigAccountAddress`) for all transfer operations, token accounts, and Jupiter swaps.
+
+### 2. Setting Up Token Accounts
 <Note>
 This isnt technically necessary, but we leave it here for your benefit. Jupiter will create the token accounts for you if they don't exist in the setup instructions that are returned from the Jupiter API.
 </Note>
@@ -159,7 +192,7 @@ try {
 }
 ```
 
-### 2. Getting Jupiter Quote
+### 3. Getting Jupiter Quote
 
 ```typescript
 const transferAmount = 0.01 * LAMPORTS_PER_SOL;
@@ -183,7 +216,7 @@ console.log(`   Input: ${formatNumber(Number(quote.inAmount))} lamports`);
 console.log(`   Output: ${formatNumber(Number(quote.outAmount))} USDC (raw)`);
 ```
 
-### 3. Handling Compute Budget and Instructions
+### 4. Handling Compute Budget and Instructions
 
 The most critical part is properly separating and handling instructions:
 
@@ -213,7 +246,7 @@ const signIxs = await getSignInstructions(
 );
 ```
 
-### 4. Creating and Sending the Transaction
+### 5. Creating and Sending the Transaction
 
 ```typescript
 const lookupTables = await Promise.all(

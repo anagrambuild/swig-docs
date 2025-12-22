@@ -444,7 +444,7 @@ const userWallet = p256.keygen();
 const userKeypair = Keypair.generate();
 
 // Setup Swig with secp256r1 authority
-const swigAddress = findSwigPda(new Uint8Array(32));
+const swigAccountAddress = findSwigPda(new Uint8Array(32));
 const createInstruction = await getCreateSwigInstruction({
   authorityInfo: createSecp256r1AuthorityInfo(userWallet.publicKey),
   id: new Uint8Array(32),
@@ -458,13 +458,19 @@ const signingFn = getSigningFnForSecp256r1PrivateKey(userWallet.secretKey);
 // Send transactions
 svm.sendTransaction(new Transaction().add(createInstruction));
 
-// Use for signing other instructions
+// Fetch Swig and get wallet address
+const swig = await fetchSwig(svm, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
+// Use for signing other instructions (use swigWalletAddress for transfers)
 const signedTransfer = await getSignInstructions(
   swig,
   roleId,
   [
     SystemProgram.transfer({
-      /* ... */
+      fromPubkey: swigWalletAddress,
+      toPubkey: recipientAddress,
+      lamports: 1_000_000,
     }),
   ],
   false,

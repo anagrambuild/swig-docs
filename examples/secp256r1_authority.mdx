@@ -49,6 +49,7 @@ import {
   findSwigPda,
   getCreateSwigInstruction,
   getSignInstructions,
+  getSwigWalletAddress,
   Swig,
   Actions,
 } from '@swig-wallet/classic';
@@ -73,7 +74,7 @@ async function setupSecp256r1Transfer() {
   
   // 5. Find Swig PDA
   const swigId = new Uint8Array(32);
-  const [swigAddress] = findSwigPda(swigId);
+  const [swigAccountAddress] = findSwigPda(swigId);
   
   // 6. Create Swig account
   const createSwigInstruction = await getCreateSwigInstruction({
@@ -90,12 +91,13 @@ async function setupSecp256r1Transfer() {
   // 7. Create signing function
   const signingFn = getSigningFnForSecp256r1PrivateKey(userWallet.secretKey);
   
-  // 8. Load the created Swig
-  const swig = await Swig.fromAccountAddress(svm, swigAddress);
+  // 8. Load the created Swig and get wallet address
+  const swig = await Swig.fromAccountAddress(svm, swigAccountAddress);
+  const swigWalletAddress = await getSwigWalletAddress(swig);
   
-  // 9. Create transfer instruction
+  // 9. Create transfer instruction (use swigWalletAddress)
   const transferInstruction = SystemProgram.transfer({
-    fromPubkey: swigAddress,
+    fromPubkey: swigWalletAddress,
     toPubkey: recipientKeypair.publicKey,
     lamports: 1000000, // 0.001 SOL
   });
