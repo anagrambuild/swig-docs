@@ -84,7 +84,8 @@
               "examples/sessions",
               "examples/sub_accounts",
               "examples/v2_features",
-              "examples/multi_authority"
+              "examples/multi_authority",
+              "examples/batch-sign"
             ]
           }
         ]

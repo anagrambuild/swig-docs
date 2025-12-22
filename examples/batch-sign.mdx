@@ -1,0 +1,473 @@
+---
+title: 'Batch Signing Transactions with Swig'
+description: '"Efficiency is doing things right; effectiveness is doing the right things" - Peter Drucker'
+---
+
+# Batch Signing Transactions with Swig
+
+This guide demonstrates how to sign multiple transactions at once using Swig's batch signing functionality. This is particularly useful when you need to prepare multiple transactions for execution, send them to third-party services, or optimize your transaction processing workflow.
+
+You can find the complete example code in the [swig-ts/examples/classic/transfer/batch-sign-svm.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/batch-sign-svm.ts) and [swig-ts/examples/kit/transfer/batch-sign-svm.ts](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/batch-sign-svm.ts) files.
+
+<Tip>This example uses LiteSVM for testing. See the file for implementation details.</Tip>
+
+## Overview
+
+Batch signing allows you to:
+- Sign multiple transactions in a single operation
+- Choose between partial signing (Swig only) or full signing (Swig + all required signers)
+- Get transactions in multiple encoding formats (base64, base58, buffer)
+- Efficiently prepare transactions for third-party services or delayed execution
+
+## Key Concepts
+
+### Sign Modes
+
+The batch signing function supports two modes:
+
+1. **Partial Signing** (`signMode: 'partial'`): Only signs with the Swig authority, leaving other signatures to be added later
+2. **Full Signing** (`signMode: 'full'`): Signs with both Swig authority and all provided signers, producing ready-to-send transactions
+
+### Encoding Options
+
+You can request transactions in different formats:
+- `base64`: Standard base64 encoding (commonly used by RPC endpoints)
+- `base58`: Solana's base58 encoding
+- `buffer`: Raw Uint8Array buffer
+
+## Basic Setup
+
+First, create a Swig wallet and set up the necessary authorities:
+
+<Tabs>
+  <Tab title="Classic">
+```ts
+import {
+  batchSignTransactions,
+  createEd25519AuthorityInfo,
+  findSwigPda,
+  getCreateSwigInstruction,
+  getSwigWalletAddress,
+  Actions,
+} from '@swig-wallet/classic';
+import { Keypair, SystemProgram } from '@solana/web3.js';
+
+// Create user and dapp authorities
+const userRootKeypair = Keypair.generate();
+const dappAuthorityKeypair = Keypair.generate();
+
+// Create Swig account
+const id = Uint8Array.from(Array(32).fill(2));
+const swigAccountAddress = findSwigPda(id);
+
+const rootActions = Actions.set().all().get();
+const createSwigInstruction = await getCreateSwigInstruction({
+  authorityInfo: createEd25519AuthorityInfo(userRootKeypair.publicKey),
+  id,
+  payer: userRootKeypair.publicKey,
+  actions: rootActions,
+});
+
+// Fetch Swig and get wallet address
+const swig = await fetchSwig(connection, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
+// Add dapp authority
+const dappActions = Actions.set().all().get();
+const addAuthorityIx = await getAddAuthorityInstructions(
+  swig,
+  rootRole.id,
+  createEd25519AuthorityInfo(dappAuthorityKeypair.publicKey),
+  dappActions,
+);
+```
+  </Tab>
+  <Tab title="Kit">
+```ts
+import {
+  batchSignTransactions,
+  createEd25519AuthorityInfo,
+  findSwigPda,
+  getCreateSwigInstruction,
+  getSwigWalletAddress,
+  Actions,
+} from '@swig-wallet/kit';
+import { generateKeyPairSigner } from '@solana/web3.js';
+
+// Create user and dapp authorities
+const userRoot = await generateKeyPairSigner();
+const dappAuthority = await generateKeyPairSigner();
+
+// Create Swig account
+const id = Uint8Array.from(Array(32).fill(2));
+const swigAccountAddress = await findSwigPda(id);
+
+const rootActions = Actions.set().all().get();
+const createSwigInstruction = await getCreateSwigInstruction({
+  authorityInfo: createEd25519AuthorityInfo(userRoot.address),
+  id,
+  payer: userRoot.address,
+  actions: rootActions,
+});
+
+// Fetch Swig and get wallet address
+const swig = await fetchSwig(rpc, swigAccountAddress);
+const swigWalletAddress = await getSwigWalletAddress(swig);
+
+// Add dapp authority
+const dappActions = Actions.set().all().get();
+const addAuthorityIx = await getAddAuthorityInstructions(
+  swig,
+  rootRole.id,
+  createEd25519AuthorityInfo(dappAuthority.address),
+  dappActions,
+);
+```
+  </Tab>
+</Tabs>
+
+## Example 1: Partial Signing
+
+Partial signing is useful when you need to add additional signatures later or send transactions to a third-party service:
+
+<Tabs>
+  <Tab title="Classic">
+```ts
+// Create multiple transfer instructions
+const transfers = [];
+const transferAmount = 0.1 * LAMPORTS_PER_SOL;
+
+for (let i = 0; i < 3; i++) {
+  transfers.push(
+    SystemProgram.transfer({
+      fromPubkey: swigWalletAddress,
+      toPubkey: dappTreasury,
+      lamports: transferAmount,
+    }),
+  );
+}
+
+const blockhash = await connection.getLatestBlockhash();
+
+// Batch sign with partial mode
+const partialSigned = await batchSignTransactions(
+  {
+    swig,
+    roleId: dappRole.id,
+    transactions: transfers.map((transfer) => ({
+      innerInstructions: [transfer],
+      feePayer: dappAuthorityKeypair.publicKey,
+      recentBlockhash: blockhash.blockhash,
+      signers: [dappAuthorityKeypair], // Will be used when adding signatures
+    })),
+  },
+  {
+    signMode: 'partial',
+    encoding: 'buffer', // Can request multiple formats
+  },
+);
+
+console.log(`Signed ${partialSigned.length} transactions`);
+console.log('First transaction encodings:');
+console.log(' Base64:', partialSigned[0].encoded.base64);
+console.log(' Base58:', partialSigned[0].encoded.base58);
+console.log(' Buffer length:', partialSigned[0].encoded.buffer.length);
+console.log(' Is fully signed:', partialSigned[0].isFullySigned); // false
+
+// Add payer signature and send
+const partialTx = partialSigned[0].transaction;
+partialTx.sign(dappAuthorityKeypair);
+await connection.sendTransaction(partialTx);
+```
+  </Tab>
+  <Tab title="Kit">
+```ts
+// Create multiple transfer instructions
+const transfers = [];
+const transferAmount = lamports(100_000_000n); // 0.1 SOL
+
+for (let i = 0; i < 3; i++) {
+  transfers.push(
+    getSolTransferInstruction({
+      fromAddress: swigWalletAddress,
+      toAddress: dappTreasury.address,
+      lamports: transferAmount,
+    }),
+  );
+}
+
+const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+
+// Batch sign with partial mode
+const partialSigned = await batchSignTransactions(
+  {
+    swig,
+    roleId: dappRole.id,
+    transactions: transfers.map((transfer) => ({
+      innerInstructions: [transfer],
+      feePayer: dappAuthority.address,
+      recentBlockhash: latestBlockhash.blockhash,
+      signers: [dappAuthority], // Will be used when adding signatures
+    })),
+  },
+  {
+    signMode: 'partial',
+    encoding: 'buffer', // Can request multiple formats
+  },
+);
+
+console.log(`Signed ${partialSigned.length} transactions`);
+console.log('First transaction encodings:');
+console.log(' Base64:', partialSigned[0].encoded.base64);
+console.log(' Base58:', partialSigned[0].encoded.base58);
+console.log(' Buffer length:', partialSigned[0].encoded.buffer.length);
+console.log(' Is fully signed:', partialSigned[0].isFullySigned); // false
+
+// Add payer signature and send
+const partialTx = partialSigned[0].transaction;
+await signTransaction([dappAuthority], partialTx);
+await sendAndConfirmTransaction(partialTx);
+```
+  </Tab>
+</Tabs>
+
+## Example 2: Full Signing
+
+Full signing produces ready-to-send transactions with all required signatures:
+
+<Tabs>
+  <Tab title="Classic">
+```ts
+// Batch sign with full mode
+const fullSigned = await batchSignTransactions(
+  {
+    swig,
+    roleId: dappRole.id,
+    transactions: transfers.map((transfer) => ({
+      innerInstructions: [transfer],
+      feePayer: dappAuthorityKeypair.publicKey,
+      recentBlockhash: blockhash.blockhash,
+      signers: [dappAuthorityKeypair],
+    })),
+  },
+  {
+    signMode: 'full',
+  },
+);
+
+console.log(`Signed ${fullSigned.length} transactions`);
+console.log(' Is fully signed:', fullSigned[0].isFullySigned); // true
+
+// Send fully signed transactions directly
+for (const signed of fullSigned) {
+  const signature = await connection.sendTransaction(signed.transaction);
+  await connection.confirmTransaction(signature);
+}
+```
+  </Tab>
+  <Tab title="Kit">
+```ts
+// Batch sign with full mode
+const fullSigned = await batchSignTransactions(
+  {
+    swig,
+    roleId: dappRole.id,
+    transactions: transfers.map((transfer) => ({
+      innerInstructions: [transfer],
+      feePayer: dappAuthority.address,
+      recentBlockhash: latestBlockhash.blockhash,
+      signers: [dappAuthority],
+    })),
+  },
+  {
+    signMode: 'full',
+  },
+);
+
+console.log(`Signed ${fullSigned.length} transactions`);
+console.log(' Is fully signed:', fullSigned[0].isFullySigned); // true
+
+// Send fully signed transactions directly
+for (const signed of fullSigned) {
+  await sendAndConfirmTransaction(signed.transaction);
+}
+```
+  </Tab>
+</Tabs>
+
+## Example 3: Third-Party Service Integration
+
+When integrating with third-party services that require signed transactions:
+
+<Tabs>
+  <Tab title="Classic">
+```ts
+// Sign for third-party service (partial mode for flexibility)
+const thirdPartySigned = await batchSignTransactions(
+  {
+    swig,
+    roleId: dappRole.id,
+    transactions: [
+      {
+        innerInstructions: [
+          SystemProgram.transfer({
+            fromPubkey: swigWalletAddress,
+            toPubkey: dappTreasury,
+            lamports: transferAmount,
+          }),
+        ],
+        feePayer: dappAuthorityKeypair.publicKey,
+        recentBlockhash: blockhash.blockhash,
+        signers: [dappAuthorityKeypair],
+      },
+    ],
+  },
+  {
+    signMode: 'partial',
+    encoding: 'base64', // Most APIs expect base64
+  },
+);
+
+// Send to third-party service
+console.log('Sending to third-party service:');
+console.log(' Transaction (base64):', thirdPartySigned[0].encoded.base64);
+
+// You can also access other formats if needed
+console.log(' Transaction (base58):', thirdPartySigned[0].encoded.base58);
+console.log(' Transaction (buffer):', thirdPartySigned[0].encoded.buffer);
+```
+  </Tab>
+  <Tab title="Kit">
+```ts
+// Sign for third-party service (partial mode for flexibility)
+const thirdPartySigned = await batchSignTransactions(
+  {
+    swig,
+    roleId: dappRole.id,
+    transactions: [
+      {
+        innerInstructions: [
+          getSolTransferInstruction({
+            fromAddress: swigWalletAddress,
+            toAddress: dappTreasury.address,
+            lamports: transferAmount,
+          }),
+        ],
+        feePayer: dappAuthority.address,
+        recentBlockhash: latestBlockhash.blockhash,
+        signers: [dappAuthority],
+      },
+    ],
+  },
+  {
+    signMode: 'partial',
+    encoding: 'base64', // Most APIs expect base64
+  },
+);
+
+// Send to third-party service
+console.log('Sending to third-party service:');
+console.log(' Transaction (base64):', thirdPartySigned[0].encoded.base64);
+
+// You can also access other formats if needed
+console.log(' Transaction (base58):', thirdPartySigned[0].encoded.base58);
+console.log(' Transaction (buffer):', thirdPartySigned[0].encoded.buffer);
+```
+  </Tab>
+</Tabs>
+
+## API Reference
+
+### `batchSignTransactions`
+
+Signs multiple transactions at once using a Swig authority.
+
+**Parameters:**
+
+1. **Transaction Data** (object):
+   - `swig`: The Swig instance
+   - `roleId`: The role ID to use for signing
+   - `transactions`: Array of transaction objects, each containing:
+     - `innerInstructions`: Array of instructions to include in the transaction
+     - `feePayer`: Public key/address of the fee payer
+     - `recentBlockhash`: Recent blockhash for the transaction
+     - `signers`: Array of keypairs/signers (used in full mode or for metadata)
+
+2. **Options** (object):
+   - `signMode`: `'partial'` or `'full'`
+     - `'partial'`: Only signs with Swig authority
+     - `'full'`: Signs with Swig and all provided signers
+   - `encoding`: (optional) `'base64'`, `'base58'`, or `'buffer'`
+     - Defaults to returning all three formats if not specified
+
+**Returns:**
+
+Array of signed transaction objects, each containing:
+- `transaction`: The signed Transaction object
+- `encoded`: Object with transaction in requested encoding(s):
+  - `base64`: Base64-encoded string
+  - `base58`: Base58-encoded string
+  - `buffer`: Raw Uint8Array
+- `isFullySigned`: Boolean indicating if all required signatures are present
+
+## Use Cases
+
+### 1. Bulk Operations
+Sign multiple similar transactions (transfers, token swaps, etc.) in a single batch for efficiency.
+
+### 2. Delayed Execution
+Pre-sign transactions for later execution, useful for scheduled payments or time-locked operations.
+
+### 3. Third-Party Services
+Prepare signed transactions for submission to external services like transaction relayers or bundlers.
+
+### 4. Multi-Step Workflows
+Create and sign multiple dependent transactions that need to be executed in sequence.
+
+### 5. Transaction Bundling
+Batch sign related transactions that should be submitted together for atomic execution.
+
+## Important Considerations
+
+1. **Blockhash Expiry**: Blockhashes expire after approximately 60 seconds (150 slots). Ensure you use signed transactions before they expire.
+
+2. **Sign Mode Selection**:
+   - Use `partial` when you need flexibility to add signatures later
+   - Use `full` when transactions are ready for immediate submission
+
+3. **Encoding Choice**:
+   - Request only the encoding you need to minimize overhead
+   - If unspecified, all three formats are returned
+
+4. **Error Handling**: Always check `isFullySigned` before sending transactions to ensure all required signatures are present.
+
+5. **Transaction Size**: Be mindful of Solana's transaction size limits (1232 bytes). Complex instructions may require multiple transactions.
+
+## Running the Example
+
+The complete example can be run using LiteSVM:
+
+```bash
+# Navigate to the swig-ts repository
+cd swig-ts
+
+# Install dependencies
+bun install
+
+# Run the batch signing example
+bun run examples/classic/transfer/batch-sign-svm.ts
+```
+
+The example demonstrates:
+- Partial signing with later signature addition
+- Full signing for immediate execution
+- Multiple encoding format usage
+- Third-party service integration patterns
+
+## Related Examples
+
+- [Transfer Guide](/examples/transfer) - Basic transfer operations
+- [Sessions Guide](/examples/sessions) - Using session-based authorities
+- [Multi-Authority](/examples/multi_authority) - Managing multiple authorities
+
+For more information, check out the [Swig TypeScript SDK reference](/reference/typescript/actions).
