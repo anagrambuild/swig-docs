@@ -84,8 +84,7 @@
               "examples/sessions",
               "examples/sub_accounts",
               "examples/v2_features",
-              "examples/multi_authority",
-              "examples/migrating-from-squads"
+              "examples/multi_authority"
             ]
           }
         ]
