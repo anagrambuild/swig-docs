@@ -1,0 +1,287 @@
+---
+title: "Swig v1.4 Release Notes"
+description: "Multiple SubAccounts per Role - Parallel Operations and Enhanced Flexibility"
+---
+
+# Swig v1.4 Release Notes
+
+The v1.4 release introduces support for **multiple subaccounts per role**, enabling parallel operations, asset segregation, and more flexible account management patterns.
+
+## 🚀 What's New
+
+### Multiple SubAccounts per Role
+
+Each role can now have up to **255 subaccounts** (indices 0-254), allowing for advanced use cases:
+
+- **Parallel Operations**: Execute independent strategies simultaneously
+- **Asset Segregation**: Different subaccounts for different asset classes
+- **Custodial Services**: Per-client subaccounts with centralized management
+- **Multi-Strategy Trading**: Isolated accounts for different trading strategies
+
+### Backwards Compatibility
+
+- **Index 0**: Uses legacy 3-seed PDA derivation (same address as v1.3.x)
+- **Indices 1-254**: New 4-seed PDA derivation with index parameter
+- Existing v1.3.x subaccounts continue to work without any changes
+
+## 📦 Packages Updated
+
+### TypeScript SDK (v1.4.0)
+- `@swig-wallet/classic@1.4.0`
+- `@swig-wallet/kit@1.4.0`
+- `@swig-wallet/lib@1.4.0`
+- `@swig-wallet/coder@1.4.0`
+
+### Rust SDK (v1.3.3)
+- `swig-interface@1.3.3`
+- `swig-state@1.3.3`
+
+## 🔑 Key Features
+
+### 1. Index-Based SubAccount Creation
+
+**TypeScript:**
+```typescript
+// Create subaccount at index 0 (backwards compatible)
+const createSubAccount0 = await getCreateSubAccountInstructions(
+  swig,
+  roleId,
+  { subAccountIndex: 0 }
+);
+
+// Create subaccount at index 1
+const createSubAccount1 = await getCreateSubAccountInstructions(
+  swig,
+  roleId,
+  { subAccountIndex: 1 }
+);
+
+// Create subaccount at index 2
+const createSubAccount2 = await getCreateSubAccountInstructions(
+  swig,
+  roleId,
+  { subAccountIndex: 2 }
+);
+```
+
+**Rust:**
+```rust
+// Create subaccount at different indices
+let create_sub_0 = builder.create_sub_account_with_index(0)?;
+let create_sub_1 = builder.create_sub_account_with_index(1)?;
+let create_sub_2 = builder.create_sub_account_with_index(2)?;
+```
+
+### 2. Multiple SubAccount Permissions
+
+**TypeScript:**
+```typescript
+// Grant permissions for multiple subaccounts
+const actions = Actions.set()
+  .subAccount(0)  // Allow index 0
+  .subAccount(1)  // Allow index 1
+  .subAccount(2)  // Allow index 2
+  .get();
+
+const addAuthority = await getAddAuthorityInstructions(
+  swig,
+  rootRoleId,
+  authorityInfo,
+  actions
+);
+```
+
+**Rust:**
+```rust
+// Multiple subaccount permissions
+vec![
+  Permission::SubAccount { sub_account: [0; 32] }, // Index 0
+  Permission::SubAccount { sub_account: [0; 32] }, // Index 1
+  Permission::SubAccount { sub_account: [0; 32] }, // Index 2
+]
+```
+
+### 3. New PDA Derivation Functions
+
+**TypeScript:**
+```typescript
+import { findSwigSubAccountPdaWithIndex } from '@swig-wallet/classic';
+
+// Legacy method (index 0 only)
+const subAccount0Legacy = findSwigSubAccountPda(swigId, roleId);
+
+// New method with index support
+const subAccount0 = findSwigSubAccountPdaWithIndex(swigId, roleId, 0);
+const subAccount1 = findSwigSubAccountPdaWithIndex(swigId, roleId, 1);
+const subAccount2 = findSwigSubAccountPdaWithIndex(swigId, roleId, 2);
+
+// Both methods return the same address for index 0
+assert(subAccount0Legacy === subAccount0);
+```
+
+**Rust:**
+```rust
+use swig_interface::derive_sub_account_pda;
+
+// Works for all indices (0-254)
+let (sub_account_0, bump_0) = derive_sub_account_pda(&swig_id, role_id, 0);
+let (sub_account_1, bump_1) = derive_sub_account_pda(&swig_id, role_id, 1);
+let (sub_account_2, bump_2) = derive_sub_account_pda(&swig_id, role_id, 2);
+```
+
+### 4. Index-Aware Operations
+
+All subaccount operations now accept an optional `subAccountIndex` parameter:
+
+**TypeScript:**
+```typescript
+// Sign with specific subaccount
+const signIx = await getSignInstructions(
+  swig,
+  roleId,
+  instructions,
+  true, // isSubAccount
+  { subAccountIndex: 1 } // Use index 1
+);
+
+// Toggle specific subaccount
+const toggleIx = await getToggleSubAccountInstructions(
+  swig,
+  roleId,
+  true, // enabled
+  { subAccountIndex: 2 } // Toggle index 2
+);
+
+// Withdraw from specific subaccount
+const withdrawIx = await getWithdrawFromSubAccountInstructions(
+  swig,
+  roleId,
+  withdrawArgs,
+  { subAccountIndex: 1 } // Withdraw from index 1
+);
+```
+
+## 🔄 Migration Guide
+
+### From v1.3.x to v1.4.x
+
+**No Breaking Changes!** Your existing code continues to work:
+
+```typescript
+// This still works (uses index 0 by default)
+const createSubAccount = await getCreateSubAccountInstructions(swig, roleId);
+const subAccount = findSwigSubAccountPda(swigId, roleId);
+```
+
+**To use multiple subaccounts:**
+
+1. **Add multiple SubAccount actions** when creating/modifying a role:
+   ```typescript
+   Actions.set().subAccount(0).subAccount(1).subAccount(2).get()
+   ```
+
+2. **Create subaccounts at different indices**:
+   ```typescript
+   await getCreateSubAccountInstructions(swig, roleId, { subAccountIndex: 1 })
+   ```
+
+3. **Use the new PDA helper** for non-zero indices:
+   ```typescript
+   findSwigSubAccountPdaWithIndex(swigId, roleId, 1)
+   ```
+
+## 📚 Examples
+
+Complete working examples are available:
+
+- [Classic SDK Multi-SubAccount Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/classic/transfer/multi-subaccount-svm.ts)
+- [Kit SDK Multi-SubAccount Example](https://github.com/anagrambuild/swig-ts/blob/main/examples/kit/transfer/multi-subaccount-local.ts)
+
+## 🔧 Technical Details
+
+### PDA Derivation
+
+**Index 0 (Backwards Compatible):**
+```
+PDA = find_program_address([
+  b"sub-account",
+  swig_id (32 bytes),
+  role_id (4 bytes LE)
+], program_id)
+```
+
+**Indices 1-254 (New):**
+```
+PDA = find_program_address([
+  b"sub-account",
+  swig_id (32 bytes),
+  role_id (4 bytes LE),
+  index (1 byte)
+], program_id)
+```
+
+### On-Chain Storage
+
+Each SubAccount action now includes a `sub_account_index` field:
+
+```rust
+pub struct CreateSubAccountV1Args {
+    discriminator: u8,
+    _padding1: [u8; 2],
+    pub role_id: u32,
+    pub sub_account_bump: u8,
+    pub sub_account_index: u8,  // New field
+    _padding2: [u8; 6],
+}
+```
+
+The change maintains the same struct size (16 bytes) by using one byte from the previous padding, ensuring backwards compatibility.
+
+## 🎯 Use Cases
+
+### Custodial Services
+```typescript
+// Create separate subaccounts for different clients
+for (let clientId = 0; clientId < 10; clientId++) {
+  await getCreateSubAccountInstructions(swig, custodianRoleId, {
+    subAccountIndex: clientId
+  });
+}
+```
+
+### Multi-Strategy Trading
+```typescript
+// Different strategies on different subaccounts
+const conservativeStrategy = { subAccountIndex: 0 };
+const aggressiveStrategy = { subAccountIndex: 1 };
+const hedgingStrategy = { subAccountIndex: 2 };
+```
+
+### Asset Class Segregation
+```typescript
+// Separate accounts for different asset types
+const solSubAccount = 0;      // Native SOL operations
+const stablecoinsSubAccount = 1;  // USDC, USDT
+const bluechipsSubAccount = 2;   // BTC, ETH
+```
+
+## 📖 Updated Documentation
+
+- [Sub Accounts Guide](./examples/sub_accounts) - Updated with multi-subaccount examples
+- [Actions Reference](./reference/typescript/actions) - Updated `subAccount(index)` documentation
+- [Instruction Builder (Rust)](./reference/rust/instruction_builder) - New subaccount methods
+
+## 🐛 Bug Fixes
+
+- Improved error messages for invalid subaccount indices
+- Better validation of subaccount permissions
+
+## 🙏 Acknowledgments
+
+Thank you to all developers who requested this feature and provided feedback during development!
+
+---
+
+For questions or support, please open an issue on our GitHub repositories:
+- [TypeScript SDK](https://github.com/anagrambuild/swig-ts/issues)
+- [Rust SDK](https://github.com/anagrambuild/swig-wallet/issues)
