@@ -1,0 +1,221 @@
+---
+title: "Using Paymaster SDK"
+description: '"Gasless transactions for seamless user experiences" - Swig Engineering'
+---
+
+This guide covers how to use the Swig Paymaster SDK to sponsor transaction fees for your users, enabling gasless transactions.
+
+## What is a Paymaster?
+
+A paymaster is a service that pays transaction fees on behalf of users. Instead of requiring users to hold SOL for gas fees, the paymaster covers these costs, creating a seamless onboarding experience.
+
+**Benefits:**
+- Users don't need SOL for transaction fees
+- Lower barrier to entry for new users
+- Better user experience for dApps
+
+## Prerequisites
+
+Before using the paymaster SDK:
+
+1. **Create a paymaster** in the [Developer Portal](https://dashboard.onswig.com)
+2. **Fund your paymaster** with SOL
+3. **Get your API key** from the Developer Portal
+
+<Note>
+  Paymasters require a paid subscription (PRO, ULTRA, or ENTERPRISE). See [Subscriptions & Billing](/examples/dev-portal/subscriptions-billing) for details.
+</Note>
+
+## Installation
+
+Choose the package that matches your Solana SDK version:
+
+<Tabs>
+  <Tab title="Classic (web3.js 1.x)">
+```bash
+npm install @swig-wallet/paymaster-classic
+```
+
+For applications using `@solana/web3.js` version 1.x (the traditional Solana SDK).
+  </Tab>
+  <Tab title="Kit (web3.js 2.0)">
+```bash
+npm install @swig-wallet/paymaster-kit
+```
+
+For applications using `@solana/kit` (the new modular Solana SDK 2.0).
+  </Tab>
+</Tabs>
+
+## Configuration
+
+Create a paymaster client with your credentials:
+
+<Tabs>
+  <Tab title="Classic (web3.js 1.x)">
+```typescript
+import { createPaymasterClient } from '@swig-wallet/paymaster-classic';
+
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+```
+  </Tab>
+  <Tab title="Kit (web3.js 2.0)">
+```typescript
+import { createPaymasterClient } from '@swig-wallet/paymaster-kit';
+import { address } from '@solana/kit';
+
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: address(process.env.PAYMASTER_PUBKEY!),
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+```
+  </Tab>
+</Tabs>
+
+### Configuration Options
+
+| Option | Type | Required | Description |
+|--------|------|----------|-------------|
+| `apiKey` | string | Yes | API key from Developer Portal |
+| `paymasterPubkey` | string | Yes | Paymaster public key |
+| `baseUrl` | string | Yes | Paymaster API URL (`https://api.onswig.com`) |
+| `network` | `'mainnet'` \| `'devnet'` | Yes | Solana network |
+| `customRpcUrl` | string | No | Custom RPC endpoint (overrides default) |
+| `retryOptions` | object | No | Retry configuration for failed requests |
+
+### Retry Options
+
+Configure automatic retries for transient failures:
+
+```typescript
+const paymaster = createPaymasterClient({
+  apiKey: 'sk_your_api_key',
+  paymasterPubkey: '...',
+  baseUrl: 'https://api.onswig.com',
+  network: 'mainnet',
+  retryOptions: {
+    maxRetries: 3,        // Number of retry attempts
+    retryDelay: 1000,     // Initial delay in milliseconds
+    backoffMultiplier: 2, // Exponential backoff multiplier
+  },
+});
+```
+
+## Quick Start
+
+Here's a minimal example to sponsor a transaction:
+
+<Tabs>
+  <Tab title="Classic (web3.js 1.x)">
+```typescript
+import { Keypair, PublicKey, TransactionInstruction } from '@solana/web3.js';
+import { createPaymasterClient } from '@swig-wallet/paymaster-classic';
+
+// Initialize client
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+
+// User's keypair
+const userKeypair = Keypair.generate();
+
+// Create an instruction (memo example)
+const instruction = new TransactionInstruction({
+  keys: [{ pubkey: userKeypair.publicKey, isSigner: true, isWritable: false }],
+  programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
+  data: Buffer.from('Hello, gasless world!'),
+});
+
+// Create transaction - paymaster is set as fee payer
+const transaction = await paymaster.createLegacyTransaction(
+  [instruction],
+  [userKeypair], // User signs here
+);
+
+// Paymaster signs and sends
+const signature = await paymaster.signAndSend(transaction);
+console.log(`https://explorer.solana.com/tx/${signature}?cluster=devnet`);
+```
+  </Tab>
+  <Tab title="Kit (web3.js 2.0)">
+```typescript
+import { getAddMemoInstruction } from '@solana-program/memo';
+import {
+  address,
+  generateKeyPairSigner,
+  getSignatureFromTransaction,
+  partiallySignTransaction,
+} from '@solana/kit';
+import { createPaymasterClient } from '@swig-wallet/paymaster-kit';
+
+// Initialize client
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: address(process.env.PAYMASTER_PUBKEY!),
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+
+// User's keypair
+const userKeypair = await generateKeyPairSigner();
+
+// Create an instruction
+const instruction = getAddMemoInstruction({
+  memo: 'Hello, gasless world!',
+  signers: [userKeypair],
+});
+
+// Create transaction - paymaster is set as fee payer
+const unsignedTx = await paymaster.createTransaction([instruction]);
+
+// User signs
+const partiallySignedTx = await partiallySignTransaction(
+  [userKeypair.keyPair],
+  unsignedTx,
+);
+
+// Paymaster signs and validates
+const signedTx = await paymaster.fullySign(partiallySignedTx);
+
+// Get signature
+const signature = getSignatureFromTransaction(signedTx).toString();
+console.log(`https://explorer.solana.com/tx/${signature}?cluster=devnet`);
+```
+  </Tab>
+</Tabs>
+
+## Transaction Flow
+
+The paymaster transaction flow works as follows:
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Create    │───▶│    User     │───▶│  Paymaster  │───▶│   Submit    │
+│ Transaction │    │    Signs    │    │    Signs    │    │  to Network │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+       │                  │                  │                  │
+       ▼                  ▼                  ▼                  ▼
+   Paymaster         User proves       Fee covered        Transaction
+   as fee payer     authorization      by paymaster        confirmed
+```
+
+1. **Create Transaction**: Build the transaction with the paymaster set as the fee payer
+2. **User Signs**: User signs to authorize the transaction
+3. **Paymaster Signs**: Paymaster validates and signs (covering the fee)
+4. **Submit**: Transaction is sent to the Solana network
+
+## Next Steps
+
+- [Sponsoring Transactions](./sponsor-transactions) - Detailed examples and methods
+- [Advanced Usage](./advanced-usage) - Error handling, retries, versioned transactions
+- [Create a Paymaster](/examples/dev-portal/create-paymaster) - Set up your paymaster in the Developer Portal
