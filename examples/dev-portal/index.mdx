@@ -24,41 +24,26 @@ Before using the Developer Portal features, you'll need:
 ## Portal Sections
 
 <CardGroup cols={2}>
-  <Card title="Creating an API Key" icon="key" href="./create-api-key">
+  <Card title="Organizations" icon="building" href="/examples/dev-portal/organizations">
+    Manage your organization, team members, and billing
+  </Card>
+  <Card title="API Keys" icon="key" href="/examples/dev-portal/create-api-key">
     Generate API keys for programmatic access to Swig services
   </Card>
-  <Card title="Creating a Policy" icon="shield" href="./create-policy">
-    Define signers and permissions for wallet creation
+  <Card title="Policies & Wallets" icon="shield" href="/examples/dev-portal/create-policy">
+    Define policies and create Swig wallets programmatically
   </Card>
-  <Card title="Fetching Policies" icon="download" href="./fetch-policy">
-    Retrieve policy details via API or SDK
+  <Card title="Paymaster" icon="credit-card" href="/examples/dev-portal/paymaster-overview">
+    Set up and manage transaction sponsorship
   </Card>
-  <Card title="Creating a Swig Wallet" icon="wallet" href="./create-swig">
-    Create wallets programmatically using the API or SDK
+  <Card title="API Reference" icon="book" href="/examples/dev-portal/api-reference">
+    Complete API documentation and endpoints
+  </Card>
+  <Card title="Troubleshooting" icon="wrench" href="/examples/dev-portal/error-codes">
+    Error codes and debugging guides
   </Card>
 </CardGroup>
 
-## SDK Installation
-
-To interact with the Developer Portal programmatically, install the Swig API package:
-
-```bash
-npm install @swig-wallet/api
-# or
-bun add @swig-wallet/api
-```
-
-Then initialize the client:
-
-```typescript
-import { SwigApiClient } from '@swig-wallet/api';
-
-const client = new SwigApiClient({
-  apiKey: 'sk_your_api_key',
-  portalUrl: 'https://dashboard.onswig.com',
-});
-```
-
 ## Next Steps
 
-Start by [creating an API key](./create-api-key) to access the Swig API programmatically.
+Start by reviewing your [organization settings](/examples/dev-portal/organizations) or [create an API key](/examples/dev-portal/create-api-key) to access the Swig API programmatically.
