@@ -1,0 +1,213 @@
+---
+title: "Creating a Policy"
+description: '"A good policy is worth a thousand lines of code" - Swig Protocol'
+---
+
+Policies define how Swig wallets are created and what permissions they have. This guide explains the concepts behind policies and walks you through creating one in the Developer Portal.
+
+## Understanding Policies
+
+A **Policy** combines two key components:
+
+- **Signer**: The cryptographic identity (authority) that controls the wallet
+- **Permission**: The set of allowed actions for that signer
+
+```
+Policy = Signer + Permission
+```
+
+When you create a Swig wallet using a policy, the wallet is initialized with the signer and permissions defined in that policy.
+
+<Tip>
+  Policies can be created without a signer. In this case, you must provide the signer information when creating a wallet via the API.
+</Tip>
+
+## Key Concepts
+
+### Signers
+
+A **Signer** represents a cryptographic authority that can sign transactions for the wallet. Each signer has:
+
+- **Type**: The signature algorithm used
+- **Public Key**: The cryptographic public key
+- **Max Duration Slots** (for sessions): How long the authority remains valid
+
+### Permissions
+
+A **Permission** defines what actions a signer can perform. Permissions are composed of one or more **Actions** that specify allowed operations.
+
+### Authority Types
+
+Swig supports multiple authority types for different use cases:
+
+| Type | Description | Use Case |
+|------|-------------|----------|
+| `ED25519` | Standard Solana keypair | Most common, native Solana wallets |
+| `ED25519_SESSION` | Time-limited Ed25519 | Temporary access, delegated signing |
+| `SECP256K1` | Ethereum-compatible keys | Cross-chain, Ethereum wallet users |
+| `SECP256K1_SESSION` | Time-limited Secp256k1 | Temporary Ethereum key access |
+| `SECP256R1` | WebAuthn/Passkey compatible | Browser-based authentication |
+| `SECP256R1_SESSION` | Time-limited Secp256r1 | Temporary passkey sessions |
+
+### Action Types
+
+Actions define what operations are permitted:
+
+**General:**
+- `All` - Full access to all operations
+- `AllButManageAuthority` - Everything except adding/removing signers
+- `ManageAuthority` - Can add and remove signers
+
+**SOL Transfers:**
+- `SolLimit` - Transfer up to a specified amount of SOL
+- `SolRecurringLimit` - Transfer up to an amount within a time window
+- `SolDestinationLimit` - Transfer to a specific destination only
+- `SolRecurringDestinationLimit` - Recurring limit to specific destination
+
+**Token Transfers:**
+- `TokenLimit` - Transfer up to a specified amount of a token
+- `TokenRecurringLimit` - Token transfer with time-based limits
+- `TokenDestinationLimit` - Token transfer to specific destination
+- `TokenRecurringDestinationLimit` - Recurring token limit to destination
+
+**Program Access:**
+- `Program` - Can interact with a specific program ID
+- `ProgramAll` - Can interact with any program
+- `ProgramCurated` - Can interact with curated/approved programs
+
+**Staking:**
+- `StakeLimit` - Stake up to a specified amount
+- `StakeRecurringLimit` - Staking with time-based limits
+- `StakeAll` - Full staking permissions
+
+**Sub-accounts:**
+- `SubAccount` - Can manage sub-accounts
+
+## Creating a Policy
+
+### Step 1: Navigate to Policies
+
+1. Log in to the [Developer Portal](https://dashboard.onswig.com)
+2. Select your project
+3. Click **Policies** in the navigation menu
+
+### Step 2: Start Policy Creation
+
+Click the **Create Policy** button to open the policy creation dialog.
+
+### Step 3: Select or Create a Permission
+
+The first step asks you to choose permissions:
+
+**Option A: Use an Existing Permission**
+- Search and select from your previously created permissions
+- Useful for reusing permission sets across multiple policies
+
+**Option B: Start from a Template**
+- **Blank**: Start with no actions (add your own)
+- **Full Access**: Includes the `All` action
+- Other templates may be available
+
+**Option C: Create a New Permission**
+- Configure custom actions for this policy
+- The permission is saved and can be reused later
+
+### Step 4: Configure the Policy
+
+Fill in the policy details:
+
+#### Basic Information
+- **Policy Name** (required): A descriptive name, e.g., `user-wallet-policy`
+- **Description** (optional): Explain the policy's purpose
+
+#### Signer Configuration
+
+Choose one of three options:
+
+**Link Existing Signer:**
+- Select from signers you've previously created
+- Useful for reusing the same authority across policies
+
+**Create New Signer:**
+- **Signer Name**: Descriptive name for the signer
+- **Type**: Select the authority type (Ed25519, Secp256k1, etc.)
+- **Public Key**: The authority's public key
+  - For Ed25519: Base58-encoded public key
+  - For Secp256k1/Secp256r1: Hex-encoded (64 bytes)
+- **Max Duration Slots** (session types only): How long the session is valid
+
+**Skip for Now:**
+- Create the policy without a signer
+- You must provide the signer when creating wallets via the API
+
+#### Permission Configuration
+
+If you didn't select an existing permission:
+- Use the **Permissions Builder** to add actions
+- Configure limits and destinations as needed
+- At least one action is required
+
+### Step 5: Create the Policy
+
+Review your configuration and click **Create Policy**.
+
+## Policy Status
+
+Policies have different statuses based on their configuration:
+
+| Status | Meaning |
+|--------|---------|
+| **Complete** | Has both signer and permission |
+| **Missing Signer** | Has permission but no signer attached |
+| **Missing Permission** | Has signer but no permission (rare) |
+| **Incomplete** | Missing both signer and permission |
+
+<Tip>
+  Policies with "Missing Signer" status can still be used. Provide the signer information when creating a wallet via the API's `signerId` parameter.
+</Tip>
+
+## Example: Creating a Limited Transfer Policy
+
+Here's an example of creating a policy that allows limited SOL transfers:
+
+1. **Policy Name**: `limited-sol-transfer`
+2. **Description**: `Allows up to 1 SOL transfers per day`
+3. **Signer**:
+   - Type: `ED25519`
+   - Public Key: Your user's Solana public key
+4. **Permission Actions**:
+   - `SolRecurringLimit`:
+     - Amount: `1000000000` (1 SOL in lamports)
+     - Window: `86400` (24 hours in seconds)
+
+This policy creates wallets where the signer can transfer up to 1 SOL per day.
+
+## Managing Policies
+
+### Viewing Policies
+
+The Policies page shows:
+- Policy name and description
+- Attached signer (if any)
+- Permission summary
+- Status indicator
+- Last updated timestamp
+
+### Updating Policies
+
+Click on a policy to:
+- Change the name or description
+- Attach a different signer
+- Update the permission
+
+### Deleting Policies
+
+<Warning>
+  Deleting a policy does not affect wallets already created with it. Existing wallets retain their original configuration.
+</Warning>
+
+## Next Steps
+
+Now that you've created a policy, you can:
+- [Fetch the policy](./fetch-policy) via the API to verify its configuration
+- [Create Swig wallets](./create-swig) using your policy

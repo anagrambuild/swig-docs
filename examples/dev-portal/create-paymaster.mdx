@@ -1,0 +1,250 @@
+---
+title: "Creating a Paymaster"
+description: '"A well-configured paymaster is a happy paymaster" - Swig Operations'
+---
+
+This guide walks you through creating a paymaster in the Swig Developer Portal.
+
+## Prerequisites
+
+Before creating a paymaster, ensure you have:
+
+- A **paid subscription** (PRO, ULTRA, or ENTERPRISE)
+- Access to the Developer Portal
+- SOL to fund the paymaster
+
+<Warning>
+  Paymasters are not available on the FREE tier. Upgrade your subscription to access paymaster features.
+</Warning>
+
+## Creating a Paymaster
+
+### Step 1: Navigate to Paymasters
+
+1. Log in to the [Developer Portal](https://dashboard.onswig.com)
+2. Select your organization
+3. Click **Paymaster** in the sidebar
+
+### Step 2: Create New Paymaster
+
+1. Click **Create Paymaster**
+2. Configure the settings (see below)
+3. Click **Create**
+
+### Step 3: Configure Settings
+
+#### Label (Optional)
+
+A display name for your paymaster:
+- Default: `Paymaster {first4}...{last4}` of the public key
+- Use descriptive names like `production-mainnet` or `dev-testing`
+- Maximum 64 characters
+
+#### Usage API Threshold
+
+Maximum API calls per month:
+- Default: 1,000
+- Minimum: 1
+- Prevents excessive API usage
+
+#### SOL Usage Threshold
+
+Maximum SOL to spend per month:
+- Default: 10 SOL (10,000,000,000 lamports)
+- Minimum: 0.000000001 SOL
+- Controls monthly spending
+
+#### Single TX Limit
+
+Maximum SOL per single transaction:
+- Default: 0.1 SOL (100,000,000 lamports)
+- Minimum: 0.000000001 SOL
+- Prevents large individual transactions
+
+#### Allow Other Instructions
+
+Whether to sponsor non-Swig instructions:
+- Default: `false`
+- Set to `true` to sponsor any transaction type
+- Use with caution (increases potential for abuse)
+
+### Step 4: Paymaster Created
+
+After creation, you'll see:
+- **Public Key** - The paymaster's Solana address
+- **Label** - Your configured display name
+- **Balance** - Current SOL balance (starts at 0)
+
+## Funding Your Paymaster
+
+After creation, your paymaster needs SOL to sponsor transactions.
+
+### Get the Address
+
+1. Go to the Paymaster page
+2. Find your paymaster in the list
+3. Copy the **Public Key** (Solana address)
+
+### Send SOL
+
+Transfer SOL to the paymaster address:
+
+**Using Solana CLI:**
+```bash
+solana transfer <PAYMASTER_ADDRESS> <AMOUNT> --allow-unfunded-recipient
+```
+
+**Using a Wallet:**
+1. Open your Solana wallet (Phantom, Solflare, etc.)
+2. Send SOL to the paymaster address
+3. Wait for confirmation
+
+### Verify Balance
+
+1. Return to the Developer Portal
+2. View the paymaster's balance
+3. The balance updates after blockchain confirmation
+
+## Example Configuration
+
+### Development Paymaster
+
+For testing on devnet:
+
+| Setting | Value | Reason |
+|---------|-------|--------|
+| Label | `dev-testing` | Clear purpose |
+| Usage API Threshold | 100 | Low for testing |
+| SOL Usage Threshold | 1 SOL | Conservative limit |
+| Single TX Limit | 0.01 SOL | Prevent large test transactions |
+| Allow Other Ixs | `true` | Flexibility for testing |
+
+### Production Paymaster
+
+For mainnet applications:
+
+| Setting | Value | Reason |
+|---------|-------|--------|
+| Label | `production-mainnet` | Clear purpose |
+| Usage API Threshold | 10,000 | Higher for production |
+| SOL Usage Threshold | 100 SOL | Match expected usage |
+| Single TX Limit | 0.1 SOL | Reasonable per-tx limit |
+| Allow Other Ixs | `false` | Security first |
+
+## Using Your Paymaster
+
+### Get the Public Key
+
+You'll need the paymaster public key for API calls:
+
+```typescript
+// The paymaster address is shown in the portal
+const paymasterPubkey = 'YourPaymasterPublicKeyHere...';
+```
+
+### Create Wallets with Paymaster
+
+Use the paymaster when creating Swig wallets:
+
+```typescript
+import { SwigApiClient } from '@swig-wallet/api';
+
+const client = new SwigApiClient({
+  apiKey: 'sk_your_api_key',
+  portalUrl: 'https://dashboard.onswig.com',
+});
+
+const { data: wallet, error } = await client.wallet.create({
+  policyId: 'your-policy-id',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+});
+```
+
+### Sponsor Transactions
+
+Use the paymaster to sponsor transactions:
+
+```typescript
+import { createPaymasterClient } from '@swig-wallet/paymaster-classic';
+
+const paymaster = createPaymasterClient({
+  apiKey: 'sk_your_api_key',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+
+// Create a sponsored transaction
+const tx = await paymaster.createLegacyTransaction(
+  [yourInstruction],
+  [userKeypair]
+);
+
+// Sign and send (paymaster covers the fee)
+const signature = await paymaster.signAndSend(tx);
+```
+
+## Tier Limits
+
+Your subscription tier limits how many paymasters you can create:
+
+| Tier | Paymasters Allowed |
+|------|-------------------|
+| FREE | 0 |
+| PRO | Limited |
+| ULTRA | More |
+| ENTERPRISE | Unlimited |
+
+Check your subscription status if you hit the limit.
+
+## Multiple Paymasters
+
+Consider creating multiple paymasters for:
+
+### Different Environments
+
+- `dev-devnet` - Development testing
+- `staging-devnet` - Staging environment
+- `production-mainnet` - Live application
+
+### Different Use Cases
+
+- `user-onboarding` - New user transactions
+- `high-value-ops` - Large transactions (higher limits)
+- `automated-tasks` - Scheduled operations
+
+### Cost Tracking
+
+- Separate paymasters per product/feature
+- Easier to attribute costs
+- Better usage visibility
+
+## Troubleshooting
+
+### "Subscription required" Error
+
+You need a paid subscription:
+1. Go to **Billing** in the sidebar
+2. Upgrade to PRO or higher
+3. Try creating the paymaster again
+
+### "Paymaster limit reached" Error
+
+You've hit your tier's paymaster limit:
+1. Check your current paymaster count
+2. Delete unused paymasters
+3. Or upgrade your subscription
+
+### Paymaster Balance is 0
+
+The paymaster needs funding:
+1. Copy the paymaster's public key
+2. Send SOL to that address
+3. Wait for blockchain confirmation
+
+## Next Steps
+
+- [Manage paymaster settings](./manage-paymaster)
+- [View transaction history](./transaction-history)
+- [Monitor usage and analytics](./transaction-history)

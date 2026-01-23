@@ -1,0 +1,406 @@
+---
+title: "Sponsoring Transactions"
+description: '"Let your users transact without worrying about gas" - Swig Engineering'
+---
+
+This guide covers how to create, sign, and send sponsored transactions using the Swig Paymaster SDK.
+
+## Available Methods
+
+The paymaster client provides several methods for working with transactions:
+
+| Method | Classic | Kit | Description |
+|--------|---------|-----|-------------|
+| Create legacy tx | `createLegacyTransaction()` | N/A | Legacy transaction (no lookup tables) |
+| Create versioned tx | `createTransaction()` | `createTransaction()` | Versioned v0 transaction |
+| Sign only | `sign()` | `sign()` | Sign without sending |
+| Sign + validate | N/A | `fullySign()` | Sign and assert fully signed |
+| Sign + send | `signAndSend()` | `signAndSend()` | Sign and submit to network |
+
+## Creating Transactions
+
+### Legacy Transactions (Classic Only)
+
+Legacy transactions are simpler but don't support address lookup tables:
+
+```typescript
+import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
+import { createPaymasterClient } from '@swig-wallet/paymaster-classic';
+
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+
+const sender = Keypair.generate();
+const recipient = new PublicKey('...');
+
+// Create a SOL transfer instruction
+const transferInstruction = SystemProgram.transfer({
+  fromPubkey: sender.publicKey,
+  toPubkey: recipient,
+  lamports: 1_000_000, // 0.001 SOL
+});
+
+// Create legacy transaction with user signing
+const transaction = await paymaster.createLegacyTransaction(
+  [transferInstruction],
+  [sender], // Signers
+);
+```
+
+### Versioned Transactions
+
+Versioned transactions (v0) support address lookup tables for more efficient transactions:
+
+<Tabs>
+  <Tab title="Classic (web3.js 1.x)">
+```typescript
+import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
+import { createPaymasterClient } from '@swig-wallet/paymaster-classic';
+
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+
+const sender = Keypair.generate();
+
+const instruction = SystemProgram.transfer({
+  fromPubkey: sender.publicKey,
+  toPubkey: new PublicKey('...'),
+  lamports: 1_000_000,
+});
+
+// Create versioned transaction (v0)
+const transaction = await paymaster.createTransaction(
+  [instruction],
+  [sender],
+  // Optional: address lookup tables
+  // [lookupTableAddress]
+);
+```
+  </Tab>
+  <Tab title="Kit (web3.js 2.0)">
+```typescript
+import { address, generateKeyPairSigner } from '@solana/kit';
+import { getTransferSolInstruction } from '@solana-program/system';
+import { createPaymasterClient } from '@swig-wallet/paymaster-kit';
+
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: address(process.env.PAYMASTER_PUBKEY!),
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+
+const sender = await generateKeyPairSigner();
+
+const instruction = getTransferSolInstruction({
+  source: sender,
+  destination: address('...'),
+  amount: 1_000_000n, // 0.001 SOL
+});
+
+// Create versioned transaction
+const transaction = await paymaster.createTransaction([instruction]);
+```
+  </Tab>
+</Tabs>
+
+## Signing Transactions
+
+### Sign and Send (Recommended)
+
+The simplest approach - sign and submit in one call:
+
+<Tabs>
+  <Tab title="Classic (web3.js 1.x)">
+```typescript
+// Create transaction with user signing
+const transaction = await paymaster.createLegacyTransaction(
+  [instruction],
+  [userKeypair],
+);
+
+// Paymaster signs and submits
+const signature = await paymaster.signAndSend(transaction);
+console.log(`Transaction: https://explorer.solana.com/tx/${signature}`);
+```
+  </Tab>
+  <Tab title="Kit (web3.js 2.0)">
+```typescript
+import { partiallySignTransaction } from '@solana/kit';
+
+// Create transaction
+const unsignedTx = await paymaster.createTransaction([instruction]);
+
+// User signs
+const partiallySignedTx = await partiallySignTransaction(
+  [userKeypair.keyPair],
+  unsignedTx,
+);
+
+// Paymaster signs and validates
+const signedTx = await paymaster.fullySign(partiallySignedTx);
+
+// Send using your own RPC connection
+await sendAndConfirmTransaction(connection)(signedTx);
+```
+  </Tab>
+</Tabs>
+
+### Sign Only (For Inspection)
+
+Sign without sending - useful for inspecting the transaction before submission:
+
+<Tabs>
+  <Tab title="Classic (web3.js 1.x)">
+```typescript
+const transaction = await paymaster.createLegacyTransaction(
+  [instruction],
+  [userKeypair],
+);
+
+// Get signed transaction without sending
+const signedTx = await paymaster.sign(transaction);
+
+// Inspect the transaction
+console.log('Signatures:', signedTx.signatures);
+console.log('Fee payer:', signedTx.feePayer?.toBase58());
+
+// Send manually when ready
+const signature = await connection.sendRawTransaction(signedTx.serialize());
+```
+  </Tab>
+  <Tab title="Kit (web3.js 2.0)">
+```typescript
+import { partiallySignTransaction, getTransactionCodec } from '@solana/kit';
+
+const unsignedTx = await paymaster.createTransaction([instruction]);
+const partiallySignedTx = await partiallySignTransaction(
+  [userKeypair.keyPair],
+  unsignedTx,
+);
+
+// Get signed transaction without sending
+const signedTx = await paymaster.sign(partiallySignedTx);
+
+// Inspect the transaction
+const codec = getTransactionCodec();
+console.log('Transaction bytes:', codec.encode(signedTx));
+
+// Send manually when ready
+```
+  </Tab>
+</Tabs>
+
+### Full Signature Validation (Kit Only)
+
+The Kit SDK provides `fullySign()` which validates that all required signatures are present:
+
+```typescript
+import { partiallySignTransaction, assertIsFullySignedTransaction } from '@solana/kit';
+
+const unsignedTx = await paymaster.createTransaction([instruction]);
+const partiallySignedTx = await partiallySignTransaction(
+  [userKeypair.keyPair],
+  unsignedTx,
+);
+
+// Sign and validate all signatures are present
+const fullySignedTx = await paymaster.fullySign(partiallySignedTx);
+
+// TypeScript knows this is fully signed
+// No need to call assertIsFullySignedTransaction()
+```
+
+## Complete Examples
+
+### SOL Transfer with Memo
+
+<Tabs>
+  <Tab title="Classic (web3.js 1.x)">
+```typescript
+import {
+  Keypair,
+  PublicKey,
+  SystemProgram,
+  TransactionInstruction,
+} from '@solana/web3.js';
+import { createPaymasterClient } from '@swig-wallet/paymaster-classic';
+
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+
+const sender = Keypair.generate();
+const recipient = new PublicKey('RecipientAddressHere...');
+
+// SOL transfer instruction
+const transferIx = SystemProgram.transfer({
+  fromPubkey: sender.publicKey,
+  toPubkey: recipient,
+  lamports: 10_000_000, // 0.01 SOL
+});
+
+// Memo instruction
+const memoIx = new TransactionInstruction({
+  keys: [{ pubkey: sender.publicKey, isSigner: true, isWritable: false }],
+  programId: new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'),
+  data: Buffer.from('Payment for services'),
+});
+
+// Create transaction with both instructions
+const transaction = await paymaster.createLegacyTransaction(
+  [transferIx, memoIx],
+  [sender],
+);
+
+// Sign and send
+const signature = await paymaster.signAndSend(transaction);
+console.log(`Success: https://explorer.solana.com/tx/${signature}?cluster=devnet`);
+```
+  </Tab>
+  <Tab title="Kit (web3.js 2.0)">
+```typescript
+import {
+  address,
+  generateKeyPairSigner,
+  getSignatureFromTransaction,
+  partiallySignTransaction,
+  createSolanaRpc,
+  createSolanaRpcSubscriptions,
+  sendAndConfirmTransactionFactory,
+} from '@solana/kit';
+import { getTransferSolInstruction } from '@solana-program/system';
+import { getAddMemoInstruction } from '@solana-program/memo';
+import { createPaymasterClient } from '@swig-wallet/paymaster-kit';
+
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: address(process.env.PAYMASTER_PUBKEY!),
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+
+// Set up RPC for sending
+const rpc = createSolanaRpc('https://api.devnet.solana.com');
+const rpcSubscriptions = createSolanaRpcSubscriptions('wss://api.devnet.solana.com');
+const sendAndConfirm = sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions });
+
+const sender = await generateKeyPairSigner();
+const recipient = address('RecipientAddressHere...');
+
+// SOL transfer instruction
+const transferIx = getTransferSolInstruction({
+  source: sender,
+  destination: recipient,
+  amount: 10_000_000n, // 0.01 SOL
+});
+
+// Memo instruction
+const memoIx = getAddMemoInstruction({
+  memo: 'Payment for services',
+  signers: [sender],
+});
+
+// Create transaction
+const unsignedTx = await paymaster.createTransaction([transferIx, memoIx]);
+
+// User signs
+const partiallySignedTx = await partiallySignTransaction(
+  [sender.keyPair],
+  unsignedTx,
+);
+
+// Paymaster signs
+const signedTx = await paymaster.fullySign(partiallySignedTx);
+
+// Send and confirm
+await sendAndConfirm(signedTx, { commitment: 'confirmed' });
+
+const signature = getSignatureFromTransaction(signedTx).toString();
+console.log(`Success: https://explorer.solana.com/tx/${signature}?cluster=devnet`);
+```
+  </Tab>
+</Tabs>
+
+### Multiple Signers
+
+When a transaction requires multiple user signatures:
+
+<Tabs>
+  <Tab title="Classic (web3.js 1.x)">
+```typescript
+const user1 = Keypair.generate();
+const user2 = Keypair.generate();
+
+// Instruction requiring both signatures
+const multiSigInstruction = new TransactionInstruction({
+  keys: [
+    { pubkey: user1.publicKey, isSigner: true, isWritable: true },
+    { pubkey: user2.publicKey, isSigner: true, isWritable: false },
+  ],
+  programId: PROGRAM_ID,
+  data: Buffer.from([...]),
+});
+
+// Both users sign
+const transaction = await paymaster.createLegacyTransaction(
+  [multiSigInstruction],
+  [user1, user2], // Multiple signers
+);
+
+const signature = await paymaster.signAndSend(transaction);
+```
+  </Tab>
+  <Tab title="Kit (web3.js 2.0)">
+```typescript
+const user1 = await generateKeyPairSigner();
+const user2 = await generateKeyPairSigner();
+
+// Create transaction
+const unsignedTx = await paymaster.createTransaction([multiSigInstruction]);
+
+// Both users sign
+const partiallySignedTx = await partiallySignTransaction(
+  [user1.keyPair, user2.keyPair],
+  unsignedTx,
+);
+
+// Paymaster signs
+const signedTx = await paymaster.fullySign(partiallySignedTx);
+```
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Test on Devnet First" icon="flask">
+    Always test your integration on devnet before deploying to mainnet. Create a separate devnet paymaster for testing.
+  </Card>
+  <Card title="Handle Errors Gracefully" icon="shield">
+    Wrap paymaster calls in try-catch and handle errors appropriately. See [Advanced Usage](./advanced-usage) for error handling patterns.
+  </Card>
+  <Card title="Monitor Your Balance" icon="chart-line">
+    Keep your paymaster funded. Set up alerts in the Developer Portal to avoid running out of SOL.
+  </Card>
+  <Card title="Use Retry Options" icon="rotate">
+    Configure retry options for production to handle transient network issues automatically.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+- [Advanced Usage](./advanced-usage) - Error handling, retries, versioned transactions
+- [Manage Paymasters](/examples/dev-portal/manage-paymaster) - Monitor and manage your paymaster
+- [Transaction History](/examples/dev-portal/transaction-history) - View sponsored transactions

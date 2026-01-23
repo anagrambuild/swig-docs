@@ -1,0 +1,288 @@
+---
+title: "Managing Paymasters"
+description: '"Keep your paymasters healthy, keep your users happy" - Swig Ops'
+---
+
+This guide covers how to manage, configure, and monitor your paymasters in the Swig Developer Portal.
+
+## Viewing Paymasters
+
+### Paymaster List
+
+1. Log in to the [Developer Portal](https://dashboard.onswig.com)
+2. Select your organization
+3. Click **Paymaster** in the sidebar
+
+The list shows:
+- **Label** - Display name
+- **Address** - Solana public key
+- **Balance** - Current SOL balance
+- **Status** - Active or closed
+- **Network** - Mainnet or devnet
+- **Actions** - Edit, view, delete
+
+### Paymaster Details
+
+Click a paymaster to view:
+- Full configuration
+- Balance history
+- Usage statistics
+- Transaction history
+
+## Editing Settings
+
+### Accessing Edit
+
+1. Find the paymaster in the list
+2. Click **Edit** or the settings icon
+3. Modify the settings
+4. Click **Save**
+
+### Editable Settings
+
+#### Label
+
+Update the display name:
+- Descriptive and clear
+- Maximum 64 characters
+- Example: `production-mainnet-v2`
+
+#### Usage API Threshold
+
+Adjust API call limits:
+- Increase for higher usage
+- Decrease to reduce exposure
+- Minimum: 1
+
+#### SOL Usage Threshold
+
+Modify monthly SOL spending limit:
+- Set based on expected usage
+- Consider adding buffer
+- Minimum: 0.000000001 SOL
+
+#### Single TX Limit
+
+Change per-transaction limit:
+- Balance security vs. functionality
+- Higher for DeFi operations
+- Lower for simple transfers
+
+#### Allow Other Instructions
+
+Toggle non-Swig instruction sponsorship:
+- `false` - Only Swig instructions (recommended)
+- `true` - Any instruction (use carefully)
+
+## Monitoring Balance
+
+### Current Balance
+
+View the paymaster's SOL balance:
+- Displayed in SOL
+- Updates from blockchain
+- Refresh to get latest
+
+### Balance Alerts
+
+For Enterprise accounts:
+1. Set a low balance threshold
+2. Configure alert recipients
+3. Receive notifications when balance drops
+
+### Funding
+
+When balance is low:
+1. Copy the paymaster address
+2. Send SOL from any wallet
+3. Balance updates after confirmation
+
+## Usage Monitoring
+
+### Current Period Usage
+
+View usage for the current billing period:
+- API calls made
+- SOL spent
+- USD value sponsored
+- Transactions count
+
+### Usage Limits
+
+Track progress toward limits:
+- Progress bars show percentage used
+- Warnings at 80% and 90%
+- Critical at 100%
+
+### Usage Reset
+
+Usage resets at the start of each billing period:
+- Monthly reset
+- Counters go back to zero
+- Limits restored
+
+## Limit Management
+
+### Understanding Limits
+
+| Limit Type | Scope | Reset |
+|------------|-------|-------|
+| Usage API Threshold | Per paymaster | Monthly |
+| SOL Usage Threshold | Per paymaster | Monthly |
+| Single TX Limit | Per transaction | N/A |
+| Subscription Limit | Per organization | Monthly |
+
+### Adjusting Limits
+
+When to increase limits:
+- Legitimate usage growth
+- New product launch
+- Seasonal traffic increase
+
+When to decrease limits:
+- Security concern
+- Cost control
+- Usage normalization
+
+### Limit Hierarchy
+
+Transactions are checked against:
+1. Single TX limit (per paymaster)
+2. SOL usage threshold (per paymaster)
+3. Subscription limit (organization-wide)
+
+## Closing a Paymaster
+
+### When to Close
+
+- No longer needed
+- Consolidating paymasters
+- Environment cleanup
+
+### Close Process
+
+1. Find the paymaster in the list
+2. Click **Close** or the close icon
+3. Enter a destination address for remaining funds
+4. Confirm the closure
+
+### What Happens
+
+- Paymaster marked as deleted
+- Remaining SOL transferred to destination
+- Transaction history preserved
+- Cannot be reactivated
+
+<Warning>
+  Closing a paymaster is permanent. Make sure to update any applications using it before closing.
+</Warning>
+
+## Deleting a Paymaster
+
+### Permanent Deletion
+
+After closing, you can permanently delete:
+1. Find the closed paymaster
+2. Click **Delete**
+3. Confirm deletion
+
+<Warning>
+  Deletion is irreversible. Transaction history may be lost.
+</Warning>
+
+## Network Selection
+
+### Switching Networks
+
+View paymasters by network:
+1. Click the **Network Toggle**
+2. Select **Mainnet** or **Devnet**
+3. View paymasters for that network
+
+### Network-Specific Paymasters
+
+Create separate paymasters for:
+- **Devnet** - Testing and development
+- **Mainnet** - Production applications
+
+## Best Practices
+
+### Regular Monitoring
+
+- Check balances weekly (or daily for high-volume)
+- Review usage trends
+- Identify anomalies early
+
+### Conservative Limits
+
+Start with conservative limits:
+- Easier to increase than decrease
+- Limits exposure if issues occur
+- Adjust based on data
+
+### Documentation
+
+Keep records of:
+- Paymaster purpose
+- Expected usage
+- Configuration rationale
+
+### Alerting
+
+Set up alerts for:
+- Low balance (Enterprise)
+- High usage
+- Failed transactions
+
+## Troubleshooting
+
+### Transaction Failures
+
+If transactions fail:
+1. Check paymaster balance
+2. Verify limits aren't exceeded
+3. Confirm paymaster is active
+4. Check transaction details in history
+
+### Balance Not Updating
+
+If balance doesn't update:
+1. Wait for blockchain confirmation
+2. Refresh the page
+3. Check if transfer succeeded on explorer
+
+### Cannot Edit Paymaster
+
+Possible causes:
+- Paymaster is closed
+- Insufficient permissions
+- API error (try again)
+
+## Enterprise Features
+
+### Low Balance Alerts
+
+Configure alerts:
+1. Set threshold (in lamports)
+2. Add recipient emails
+3. Alerts sent with 24-hour cooldown
+
+### Custom Limits
+
+Enterprise accounts can request:
+- Custom monthly limits
+- Custom per-transaction limits
+- Priority processing
+
+### Dedicated Support
+
+Enterprise accounts get:
+- Dedicated support contact
+- Faster response times
+- Custom configuration help
+
+## Next Steps
+
+- [View transaction history](./transaction-history) for detailed analytics
+- [Create more paymasters](./create-paymaster) for different use cases
+- [Manage subscriptions](./subscriptions-billing) for higher limits

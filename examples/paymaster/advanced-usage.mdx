@@ -1,0 +1,315 @@
+---
+title: "Advanced Paymaster Usage"
+description: '"Production-ready patterns for paymaster integration" - Swig Engineering'
+---
+
+This guide covers advanced topics for using the Swig Paymaster SDK in production applications.
+
+## Versioned Transactions with Lookup Tables
+
+Address lookup tables (ALTs) allow you to fit more accounts in a single transaction by referencing them via a compact index.
+
+<Note>
+  Lookup tables are only supported in the Classic SDK via `createTransaction()`. The Kit SDK always creates versioned transactions.
+</Note>
+
+```typescript
+import { Keypair, PublicKey } from '@solana/web3.js';
+import { createPaymasterClient } from '@swig-wallet/paymaster-classic';
+
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'mainnet',
+});
+
+const userKeypair = Keypair.generate();
+
+// Your address lookup table
+const lookupTableAddress = new PublicKey('YourLookupTableAddress...');
+
+// Complex instruction with many accounts
+const complexInstruction = createComplexInstruction(/* ... */);
+
+// Create versioned transaction with lookup tables
+const transaction = await paymaster.createTransaction(
+  [complexInstruction],
+  [userKeypair],
+  [lookupTableAddress], // Address lookup tables
+);
+
+const signature = await paymaster.signAndSend(transaction);
+```
+
+### When to Use Lookup Tables
+
+- Transactions with more than 32 accounts
+- DeFi operations involving multiple programs
+- Batch operations with repeated addresses
+
+## Error Handling
+
+### PaymasterError
+
+The SDK throws `PaymasterError` for API-related failures:
+
+```typescript
+import { PaymasterError } from '@swig-wallet/paymaster-core';
+
+try {
+  const signature = await paymaster.signAndSend(transaction);
+  console.log('Success:', signature);
+} catch (error) {
+  if (error instanceof PaymasterError) {
+    console.error('Paymaster Error:');
+    console.error('  Status:', error.statusCode);
+    console.error('  Message:', error.message);
+    console.error('  Response:', error.response);
+
+    // Handle specific status codes
+    switch (error.statusCode) {
+      case 400:
+        console.error('Invalid transaction');
+        break;
+      case 401:
+        console.error('Invalid API key');
+        break;
+      case 402:
+        console.error('Paymaster has insufficient balance');
+        break;
+      case 429:
+        console.error('Rate limited - try again later');
+        break;
+      case 500:
+        console.error('Server error - retry with backoff');
+        break;
+    }
+  } else {
+    // Handle non-paymaster errors (network issues, etc.)
+    throw error;
+  }
+}
+```
+
+### Common Error Scenarios
+
+| Status Code | Cause | Solution |
+|-------------|-------|----------|
+| 400 | Invalid transaction format | Check transaction structure and signatures |
+| 401 | Invalid or expired API key | Regenerate API key in Developer Portal |
+| 402 | Insufficient paymaster balance | Fund your paymaster with SOL |
+| 403 | Transaction exceeds limits | Check single TX limit or monthly threshold |
+| 429 | Rate limit exceeded | Implement backoff, consider upgrading tier |
+| 500 | Server error | Retry with exponential backoff |
+
+## Retry Configuration
+
+Configure automatic retries when creating the client:
+
+```typescript
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'mainnet',
+  retryOptions: {
+    maxRetries: 3,        // Number of retry attempts
+    retryDelay: 1000,     // Initial delay (1 second)
+    backoffMultiplier: 2, // Exponential backoff
+  },
+});
+```
+
+### How Retries Work
+
+With the configuration above:
+- **Attempt 1**: Immediate
+- **Attempt 2**: After 1 second (1000ms)
+- **Attempt 3**: After 2 seconds (1000ms × 2)
+- **Attempt 4**: After 4 seconds (1000ms × 2 × 2)
+
+### Production Recommendations
+
+```typescript
+// Production configuration
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'mainnet',
+  retryOptions: {
+    maxRetries: 5,
+    retryDelay: 500,
+    backoffMultiplier: 2,
+  },
+});
+```
+
+## Sign Without Sending
+
+Sometimes you need to inspect or store a signed transaction before sending:
+
+<Tabs>
+  <Tab title="Classic (web3.js 1.x)">
+```typescript
+// Create and user-sign the transaction
+const transaction = await paymaster.createLegacyTransaction(
+  [instruction],
+  [userKeypair],
+);
+
+// Get paymaster signature without sending
+const signedTx = await paymaster.sign(transaction);
+
+// Inspect the transaction
+console.log('Signatures:', signedTx.signatures.length);
+console.log('Fee payer:', signedTx.feePayer?.toBase58());
+console.log('Instructions:', signedTx.instructions.length);
+
+// Serialize for storage or later sending
+const serialized = signedTx.serialize();
+console.log('Serialized size:', serialized.length, 'bytes');
+
+// Send manually later
+const connection = new Connection('https://api.mainnet-beta.solana.com');
+const signature = await connection.sendRawTransaction(serialized);
+await connection.confirmTransaction(signature);
+```
+  </Tab>
+  <Tab title="Kit (web3.js 2.0)">
+```typescript
+import {
+  partiallySignTransaction,
+  getTransactionCodec,
+  sendTransaction,
+} from '@solana/kit';
+
+// Create transaction
+const unsignedTx = await paymaster.createTransaction([instruction]);
+
+// User signs
+const partiallySignedTx = await partiallySignTransaction(
+  [userKeypair.keyPair],
+  unsignedTx,
+);
+
+// Get paymaster signature without sending
+const signedTx = await paymaster.sign(partiallySignedTx);
+
+// Inspect the transaction
+const codec = getTransactionCodec();
+const serialized = codec.encode(signedTx);
+console.log('Serialized size:', serialized.length, 'bytes');
+
+// Send manually later
+const signature = await sendTransaction(rpc)(signedTx);
+```
+  </Tab>
+</Tabs>
+
+## Transaction Message Signing (Kit Only)
+
+The Kit SDK supports signing from a transaction message directly:
+
+```typescript
+import {
+  createTransactionMessage,
+  setTransactionMessageFeePayer,
+  setTransactionMessageLifetimeUsingBlockhash,
+  appendTransactionMessageInstructions,
+  pipe,
+} from '@solana/kit';
+import { createPaymasterClient } from '@swig-wallet/paymaster-kit';
+
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  paymasterPubkey: address(process.env.PAYMASTER_PUBKEY!),
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+});
+
+// Get blockhash
+const { value: latestBlockhash } = await rpc.getLatestBlockhash().send();
+
+// Build transaction message manually
+const txMessage = pipe(
+  createTransactionMessage({ version: 0 }),
+  (tx) => setTransactionMessageFeePayer(paymasterPubkey, tx),
+  (tx) => setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+  (tx) => appendTransactionMessageInstructions([instruction], tx),
+);
+
+// Sign the message directly
+const signedTx = await paymaster.signTransactionMessage(txMessage);
+```
+
+## Serialized Transaction Methods
+
+For low-level control, work directly with serialized bytes:
+
+```typescript
+// Sign serialized transaction
+const serializedUnsigned = transaction.serialize({ requireAllSignatures: false });
+const serializedSigned = await paymaster.signSerializedTransaction(
+  new Uint8Array(serializedUnsigned),
+);
+
+// Sign and send serialized transaction
+const signature = await paymaster.signAndSendSerializedTransaction(
+  new Uint8Array(serializedUnsigned),
+);
+```
+
+## Environment-Specific Configuration
+
+### Development
+
+```typescript
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY_DEV!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY_DEV!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+  // No retries in dev for faster feedback
+});
+```
+
+### Staging
+
+```typescript
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY_STAGING!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY_STAGING!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'devnet',
+  retryOptions: {
+    maxRetries: 2,
+    retryDelay: 500,
+    backoffMultiplier: 2,
+  },
+});
+```
+
+### Production
+
+```typescript
+const paymaster = createPaymasterClient({
+  apiKey: process.env.SWIG_API_KEY_PROD!,
+  paymasterPubkey: process.env.PAYMASTER_PUBKEY_PROD!,
+  baseUrl: 'https://api.onswig.com',
+  network: 'mainnet',
+  customRpcUrl: process.env.CUSTOM_RPC_URL, // Use dedicated RPC
+  retryOptions: {
+    maxRetries: 5,
+    retryDelay: 500,
+    backoffMultiplier: 2,
+  },
+});
+```
+
+## Next Steps
+
+- [Manage Paymasters](/examples/dev-portal/manage-paymaster) - Configure limits and settings
+- [Transaction History](/examples/dev-portal/transaction-history) - View analytics
+- [Error Codes](/examples/dev-portal/error-codes) - Full error reference

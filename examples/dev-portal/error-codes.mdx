@@ -1,0 +1,488 @@
+---
+title: "Error Codes & Troubleshooting"
+description: '"Every error is a lesson in disguise" - Swig Debugging'
+---
+
+This guide covers common errors, their causes, and how to resolve them when using the Swig Developer Portal API.
+
+## HTTP Status Codes
+
+| Status | Name | Description |
+|--------|------|-------------|
+| 200 | OK | Request succeeded |
+| 201 | Created | Resource created successfully |
+| 400 | Bad Request | Invalid request parameters |
+| 401 | Unauthorized | Invalid or missing API key |
+| 403 | Forbidden | No access to the resource |
+| 404 | Not Found | Resource doesn't exist |
+| 409 | Conflict | Resource already exists |
+| 429 | Too Many Requests | Rate limit exceeded |
+| 500 | Internal Server Error | Server error |
+| 503 | Service Unavailable | Service temporarily unavailable |
+
+## Error Response Format
+
+All API errors follow this format:
+
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable description",
+    "details": {
+      "field": "Additional context"
+    }
+  }
+}
+```
+
+## Common Error Codes
+
+### Authentication Errors
+
+#### UNAUTHORIZED
+
+```json
+{
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "Invalid or missing API key"
+  }
+}
+```
+
+**Causes:**
+- Missing `Authorization` header
+- Invalid API key format
+- Expired API key
+- Revoked API key
+
+**Solutions:**
+1. Check the `Authorization` header is set correctly:
+   ```
+   Authorization: Bearer sk_your_api_key
+   ```
+2. Verify the API key in the Developer Portal
+3. Generate a new API key if needed
+
+---
+
+#### FORBIDDEN
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "You do not have access to this resource"
+  }
+}
+```
+
+**Causes:**
+- API key doesn't have access to the organization
+- Attempting to access another organization's resources
+
+**Solutions:**
+1. Verify you're using the correct API key
+2. Check the resource belongs to your organization
+
+---
+
+### Resource Errors
+
+#### NOT_FOUND / POLICY_NOT_FOUND
+
+```json
+{
+  "error": {
+    "code": "POLICY_NOT_FOUND",
+    "message": "Policy not found"
+  }
+}
+```
+
+**Causes:**
+- Policy ID doesn't exist
+- Policy was deleted
+- Typo in the policy ID
+
+**Solutions:**
+1. Verify the policy ID in the Developer Portal
+2. Check for typos (IDs are case-sensitive)
+3. Confirm the policy hasn't been deleted
+
+---
+
+#### SWIG_ID_EXISTS / CONFLICT
+
+```json
+{
+  "error": {
+    "code": "CONFLICT",
+    "message": "A Swig with this ID already exists"
+  }
+}
+```
+
+**Causes:**
+- Duplicate custom Swig ID
+- Retry with same ID after successful creation
+
+**Solutions:**
+1. Use a unique Swig ID
+2. Omit `swigId` for auto-generation
+3. Check if the wallet was already created
+
+---
+
+### Validation Errors
+
+#### BAD_REQUEST
+
+```json
+{
+  "error": {
+    "code": "BAD_REQUEST",
+    "message": "Invalid request parameters",
+    "details": {
+      "policyId": "Policy ID is required",
+      "network": "Must be 'mainnet' or 'devnet'"
+    }
+  }
+}
+```
+
+**Causes:**
+- Missing required fields
+- Invalid field values
+- Malformed JSON
+
+**Solutions:**
+1. Check all required fields are provided
+2. Validate field formats and values
+3. Ensure valid JSON in request body
+
+---
+
+#### MISSING_URL
+
+```json
+{
+  "error": {
+    "code": "MISSING_URL",
+    "message": "Portal URL is required for this operation"
+  }
+}
+```
+
+**Causes:**
+- SDK not configured with portal URL
+
+**Solutions:**
+```typescript
+const client = new SwigApiClient({
+  apiKey: 'sk_your_api_key',
+  portalUrl: 'https://dashboard.onswig.com', // Add this
+});
+```
+
+---
+
+### Rate Limit Errors
+
+#### RATE_LIMITED
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Too many requests. Please retry after 60 seconds"
+  }
+}
+```
+
+**Causes:**
+- Exceeded requests per minute
+- Burst of requests
+
+**Solutions:**
+1. Implement exponential backoff
+2. Reduce request frequency
+3. Upgrade subscription for higher limits
+
+---
+
+### Paymaster Errors
+
+#### INSUFFICIENT_BALANCE
+
+```json
+{
+  "error": {
+    "code": "INSUFFICIENT_BALANCE",
+    "message": "Paymaster has insufficient balance"
+  }
+}
+```
+
+**Causes:**
+- Paymaster wallet has no SOL
+- Transaction fee exceeds available balance
+
+**Solutions:**
+1. Fund the paymaster wallet
+2. Reduce transaction complexity
+
+---
+
+#### LIMIT_EXCEEDED
+
+```json
+{
+  "error": {
+    "code": "LIMIT_EXCEEDED",
+    "message": "Monthly limit exceeded"
+  }
+}
+```
+
+**Causes:**
+- Exceeded SOL usage threshold
+- Exceeded API call threshold
+- Exceeded subscription limit
+
+**Solutions:**
+1. Wait for monthly reset
+2. Increase paymaster limits
+3. Upgrade subscription
+
+---
+
+#### SINGLE_TX_LIMIT_EXCEEDED
+
+```json
+{
+  "error": {
+    "code": "SINGLE_TX_LIMIT_EXCEEDED",
+    "message": "Transaction exceeds single transaction limit"
+  }
+}
+```
+
+**Causes:**
+- Transaction fee exceeds per-transaction limit
+
+**Solutions:**
+1. Increase single TX limit in paymaster settings
+2. Simplify the transaction
+
+---
+
+### Subscription Errors
+
+#### SUBSCRIPTION_REQUIRED
+
+```json
+{
+  "error": {
+    "code": "SUBSCRIPTION_REQUIRED",
+    "message": "This feature requires a paid subscription"
+  }
+}
+```
+
+**Causes:**
+- Attempting to use paymaster on FREE tier
+- Feature requires upgrade
+
+**Solutions:**
+1. Upgrade to PRO or higher
+2. Use free tier features only
+
+---
+
+## SDK Error Handling
+
+### API SDK (@swig-wallet/api)
+
+```typescript
+import { SwigApiClient, ApiError } from '@swig-wallet/api';
+
+const client = new SwigApiClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  portalUrl: 'https://dashboard.onswig.com',
+});
+
+const { data, error } = await client.policies.get(policyId);
+
+if (error) {
+  // error is an ApiError
+  console.error('Error code:', error.code);
+  console.error('Status:', error.status);
+  console.error('Message:', error.message);
+  console.error('Details:', error.details);
+
+  switch (error.code) {
+    case 'NOT_FOUND':
+      // Handle missing resource
+      break;
+    case 'UNAUTHORIZED':
+      // Handle auth error
+      break;
+    case 'RATE_LIMITED':
+      // Implement backoff
+      break;
+    default:
+      // Handle unexpected error
+  }
+}
+```
+
+### Developer SDK (@swig-wallet/developer)
+
+```typescript
+import { SwigClient, SwigError } from '@swig-wallet/developer';
+
+const client = new SwigClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  baseUrl: 'https://dashboard.onswig.com',
+});
+
+try {
+  const policy = await client.getPolicy(policyId);
+} catch (error) {
+  if (error instanceof SwigError) {
+    // error is a SwigError
+    console.error('Error code:', error.code);
+    console.error('Status:', error.statusCode);
+    console.error('Message:', error.message);
+    console.error('Response:', error.response);
+
+    switch (error.code) {
+      case 'POLICY_NOT_FOUND':
+        // Handle missing policy
+        break;
+      case 'UNAUTHORIZED':
+        // Handle auth error
+        break;
+      default:
+        // Handle unexpected error
+    }
+  } else {
+    // Handle non-API errors
+    throw error;
+  }
+}
+```
+
+## Retry Strategies
+
+### Exponential Backoff
+
+For transient errors (5xx, network issues):
+
+```typescript
+async function fetchWithRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  baseDelay = 1000
+): Promise<T> {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i === maxRetries - 1) throw error;
+
+      const delay = baseDelay * Math.pow(2, i);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error('Max retries exceeded');
+}
+```
+
+### SDK Built-in Retry
+
+Both SDKs support retry configuration:
+
+```typescript
+// API SDK
+const client = new SwigApiClient({
+  apiKey: 'sk_your_api_key',
+  retry: {
+    maxRetries: 3,
+    retryDelay: 1000,
+    backoffMultiplier: 2,
+  },
+});
+
+// Developer SDK
+const client = new SwigClient({
+  apiKey: 'sk_your_api_key',
+  retryOptions: {
+    maxRetries: 3,
+    retryDelay: 1000,
+    backoffMultiplier: 2,
+  },
+});
+```
+
+## Debugging Tips
+
+### Enable Logging
+
+Log requests and responses for debugging:
+
+```typescript
+// Log before request
+console.log('Request:', { url, method, body });
+
+// Log response
+console.log('Response:', { status, data, error });
+```
+
+### Check API Key
+
+Verify your API key is correct:
+1. Log in to Developer Portal
+2. Go to API Keys
+3. Verify the key exists and isn't expired
+
+### Validate Inputs
+
+Before sending requests:
+```typescript
+if (!policyId) {
+  throw new Error('Policy ID is required');
+}
+
+if (!['mainnet', 'devnet'].includes(network)) {
+  throw new Error('Network must be mainnet or devnet');
+}
+```
+
+### Use Test Environment
+
+Test on devnet first:
+```typescript
+const config = {
+  network: 'devnet', // Use devnet for testing
+  // ...
+};
+```
+
+## Getting Help
+
+If you're stuck:
+
+1. **Check this guide** - Most common issues are covered above
+2. **Search the docs** - Use the search function
+3. **Community support** - Join our [Telegram](https://t.me/onswig)
+4. **GitHub issues** - Report bugs at [swig-wallet](https://github.com/anagrambuild/swig-wallet)
+5. **Email support** - Paid tiers get email support
+
+When reporting issues, include:
+- Error code and message
+- Request details (sanitize sensitive data)
+- Steps to reproduce
+- SDK version
