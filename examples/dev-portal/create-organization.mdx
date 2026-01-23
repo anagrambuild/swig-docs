@@ -1,0 +1,164 @@
+---
+title: "Creating an Organization"
+description: '"Every journey begins with a single organization" - Swig Philosophy'
+---
+
+This guide walks you through creating a new organization in the Swig Developer Portal.
+
+## Prerequisites
+
+Before creating an organization, ensure you have:
+
+- A Swig account at [dashboard.onswig.com](https://dashboard.onswig.com)
+- A **verified email address** (required for organization creation)
+
+<Warning>
+  You must verify your email before creating organizations. Check your inbox for the verification link.
+</Warning>
+
+## Automatic Organization
+
+When you first sign up for Swig, an organization is automatically created for you with:
+
+- **You as the Owner** - Full control over the organization
+- **FREE subscription** - Access to basic features
+- **1 API key slot** - For programmatic access
+- **1 team seat** - Just you to start
+
+You can start using this organization immediately or create additional organizations for different projects.
+
+## Creating a New Organization
+
+### Step 1: Access Organization Settings
+
+1. Log in to the [Developer Portal](https://dashboard.onswig.com)
+2. Click on your organization name in the sidebar
+3. Click **Create New Organization** or access via the organization dropdown
+
+### Step 2: Enter Organization Details
+
+1. **Organization Name** (required)
+   - 1-100 characters
+   - Use a descriptive name (e.g., "Acme Corp", "My DeFi Project")
+   - Can be changed later
+
+2. Click **Create Organization**
+
+### Step 3: What Gets Created
+
+When you create an organization, the system automatically:
+
+1. **Creates the organization record** with you as the owner
+2. **Activates a FREE subscription** for immediate use
+3. **Creates your membership** with the OWNER role
+4. **Sets up Stripe billing** for future upgrades
+
+## After Creation
+
+Once your organization is created, you can:
+
+### Invite Team Members
+
+Add collaborators with appropriate roles:
+- Go to **Members** in the sidebar
+- Click **Invite Member**
+- Enter their email and select a role
+
+### Create API Keys
+
+Generate keys for programmatic access:
+- Go to **API Keys** in the sidebar
+- Click **Create API Key**
+- Copy and securely store the key
+
+### Set Up Policies
+
+Define wallet permissions:
+- Go to **Policies** in the sidebar
+- Create signers and permissions
+- Combine them into policies
+
+### Upgrade Your Subscription
+
+Access more features:
+- Go to **Billing** in the sidebar
+- Choose a plan (PRO, ULTRA, or ENTERPRISE)
+- Complete the payment process
+
+## Organization Limits
+
+### FREE Tier Limits
+
+| Resource | Limit |
+|----------|-------|
+| API Keys | 1 |
+| Team Seats | 1 |
+| Paymasters | Not available |
+
+### Paid Tier Limits
+
+| Resource | PRO | ULTRA | ENTERPRISE |
+|----------|-----|-------|------------|
+| API Keys | Unlimited | Unlimited | Unlimited |
+| Team Seats | Limited | Limited | Unlimited |
+| Paymasters | Yes | Yes | Yes |
+
+## Multiple Organizations
+
+You can create and manage multiple organizations:
+
+### Use Cases
+
+- **Separate projects** - Keep different products isolated
+- **Client work** - Maintain separate billing per client
+- **Environments** - Split development and production
+
+### Switching Organizations
+
+1. Click the organization dropdown in the sidebar
+2. Select the organization you want to switch to
+3. The dashboard updates to show that organization's resources
+
+## Organization Settings
+
+After creation, you can configure:
+
+### General Settings
+
+- **Name** - Update the organization name
+- **Policy Admin** - Set a Solana public key for admin authority
+
+### Danger Zone
+
+- **Delete Organization** - Permanently remove the organization
+  - Only owners can delete
+  - This action cannot be undone
+  - All resources (API keys, policies, paymasters) are deleted
+
+<Warning>
+  Deleting an organization is permanent. Make sure to export any data you need before deletion.
+</Warning>
+
+## Troubleshooting
+
+### "Email not verified" Error
+
+If you see this error when creating an organization:
+1. Check your inbox for the verification email
+2. Click the verification link
+3. Try creating the organization again
+
+### Organization Not Appearing
+
+If your new organization doesn't appear:
+1. Refresh the page
+2. Check the organization dropdown
+3. Log out and log back in
+
+## Next Steps
+
+Now that you have an organization:
+- [Invite team members](./manage-members) to collaborate
+- [Create an API key](./create-api-key) for programmatic access
+- [Set up policies](./create-policy) for wallet permissions
+- [Upgrade your subscription](./subscriptions-billing) for more features

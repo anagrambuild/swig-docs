@@ -1,0 +1,64 @@
+---
+title: "Developer Portal"
+description: '"The best API is the one that gets out of your way" - A wise developer'
+---
+
+The Swig Developer Portal is your central hub for managing API access, policies, and wallet creation. Whether you're building a dApp, integrating Swig wallets, or setting up transaction sponsorship, the portal provides the tools you need.
+
+## What You Can Do
+
+The Developer Portal enables you to:
+
+- **Create and manage API keys** for authenticated access to Swig services
+- **Define policies** that combine signers and permissions for wallet creation
+- **Create Swig wallets** programmatically using your configured policies
+- **Monitor usage** and manage your organization's resources
+
+## Getting Started
+
+Before using the Developer Portal features, you'll need:
+
+1. A Swig account at [dashboard.onswig.com](https://dashboard.onswig.com)
+2. An organization (created automatically on signup)
+
+## Portal Sections
+
+<CardGroup cols={2}>
+  <Card title="Creating an API Key" icon="key" href="./create-api-key">
+    Generate API keys for programmatic access to Swig services
+  </Card>
+  <Card title="Creating a Policy" icon="shield" href="./create-policy">
+    Define signers and permissions for wallet creation
+  </Card>
+  <Card title="Fetching Policies" icon="download" href="./fetch-policy">
+    Retrieve policy details via API or SDK
+  </Card>
+  <Card title="Creating a Swig Wallet" icon="wallet" href="./create-swig">
+    Create wallets programmatically using the API or SDK
+  </Card>
+</CardGroup>
+
+## SDK Installation
+
+To interact with the Developer Portal programmatically, install the Swig API package:
+
+```bash
+npm install @swig-wallet/api
+# or
+bun add @swig-wallet/api
+```
+
+Then initialize the client:
+
+```typescript
+import { SwigApiClient } from '@swig-wallet/api';
+
+const client = new SwigApiClient({
+  apiKey: 'sk_your_api_key',
+  portalUrl: 'https://dashboard.onswig.com',
+});
+```
+
+## Next Steps
+
+Start by [creating an API key](./create-api-key) to access the Swig API programmatically.

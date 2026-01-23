@@ -1,0 +1,258 @@
+---
+title: "Managing Members & Roles"
+description: '"Great teams build great wallets" - Swig Collaboration'
+---
+
+This guide covers how to invite team members, manage roles, and handle permissions in your Swig organization.
+
+## Member Roles
+
+Swig uses role-based access control with four distinct roles:
+
+| Role | Access Level | Description |
+|------|--------------|-------------|
+| **Owner** | Full | Complete control including billing, members, and ownership transfer |
+| **Admin** | High | Can manage members and most settings (except other owners) |
+| **Member** | Standard | Access to project resources (API keys, policies, paymasters) |
+| **Billing** | Limited | View and manage billing only |
+
+### Role Hierarchy
+
+```
+Owner (100)
+  └── Admin (75)
+        └── Member (50)
+
+Billing (25) - Special role, isolated permissions
+```
+
+### Permission Matrix
+
+| Action | Owner | Admin | Member | Billing |
+|--------|-------|-------|--------|---------|
+| View dashboard | ✓ | ✓ | ✓ | ✓ |
+| Manage API keys | ✓ | ✓ | ✓ | ✗ |
+| Manage policies | ✓ | ✓ | ✓ | ✗ |
+| Manage paymasters | ✓ | ✓ | ✓ | ✗ |
+| Invite members | ✓ | ✓ | ✗ | ✗ |
+| Remove members | ✓ | ✓ | ✗ | ✗ |
+| Change roles | ✓ | ✓* | ✗ | ✗ |
+| Access billing | ✓ | ✓ | ✗ | ✓ |
+| Delete organization | ✓ | ✗ | ✗ | ✗ |
+| Transfer ownership | ✓ | ✗ | ✗ | ✗ |
+
+*Admins cannot change roles of owners
+
+## Inviting Members
+
+### Step 1: Navigate to Members
+
+1. Log in to the [Developer Portal](https://dashboard.onswig.com)
+2. Select your organization
+3. Click **Members** in the sidebar
+
+### Step 2: Send Invitation
+
+1. Click **Invite Member**
+2. Enter the member's **email address**
+3. Select a **role**:
+   - Owner (only owners can invite other owners)
+   - Admin
+   - Member
+   - Billing
+4. Click **Send Invitation**
+
+### Step 3: Invitation Sent
+
+The invitee receives an email with:
+- Organization name
+- Your name (as inviter)
+- Invitation link
+- Expiration date (7 days)
+
+<Tip>
+  Invitations expire after 7 days. You can resend them if they expire.
+</Tip>
+
+## Accepting Invitations
+
+### Via Email Link
+
+1. Click the invitation link in the email
+2. Sign in or create a Swig account
+3. Accept the invitation
+4. You're now a member of the organization
+
+### Via Dashboard
+
+If you're already logged in:
+1. Go to [dashboard.onswig.com](https://dashboard.onswig.com)
+2. You'll see pending invitations in your dashboard
+3. Click **Accept** to join the organization
+
+## Managing Existing Members
+
+### Viewing Members
+
+The Members page shows:
+- Member name and email
+- Role (Owner, Admin, Member, Billing)
+- Join date
+- Available actions
+
+### Changing Roles
+
+1. Find the member in the list
+2. Click the role dropdown or action menu
+3. Select the new role
+4. Confirm the change
+
+**Restrictions:**
+- Only owners can assign the Owner role
+- Admins cannot change roles of other owners
+- You cannot demote yourself if you're the last owner
+
+### Removing Members
+
+1. Find the member in the list
+2. Click **Remove** or the delete icon
+3. Confirm the removal
+
+**Restrictions:**
+- The last owner cannot be removed
+- Owners and admins can remove members
+- Members cannot remove other members
+
+## Special Actions
+
+### Promoting to Owner
+
+Only owners can promote members to the Owner role:
+
+1. Find the member in the list
+2. Click **Promote to Owner** (or select Owner from role dropdown)
+3. Confirm the promotion
+
+### Transferring Ownership
+
+Transfer the primary owner designation:
+
+1. Go to organization settings
+2. Click **Transfer Ownership**
+3. Select the new owner (must be an existing member)
+4. Confirm the transfer
+
+<Warning>
+  Transferring ownership changes the `ownerId` of the organization. The previous owner retains Owner role but is no longer the primary owner.
+</Warning>
+
+### Leaving an Organization
+
+To remove yourself from an organization:
+
+1. Go to organization settings
+2. Click **Leave Organization**
+3. Confirm your departure
+
+**Restrictions:**
+- The last owner cannot leave
+- Transfer ownership first if you need to leave as the sole owner
+
+## Seat Limits
+
+Team seats are limited based on your subscription tier:
+
+| Tier | Seat Limit |
+|------|------------|
+| FREE | 1 |
+| PRO | Limited (varies) |
+| ULTRA | Limited (varies) |
+| ENTERPRISE | Unlimited |
+
+### Reaching Seat Limit
+
+When at your seat limit:
+- The **Invite Member** button is disabled
+- A message indicates you've reached the limit
+- You can upgrade your subscription for more seats
+
+### Adding More Seats
+
+1. Go to **Billing** in the sidebar
+2. Click **Upgrade** or **Add Seats**
+3. Select additional seats or upgrade tier
+4. Complete the payment
+
+## Pending Invitations
+
+### Viewing Invitations
+
+Owners and admins can see all pending invitations:
+- Navigate to the Members page
+- View the **Pending Invitations** section
+- See email, role, and expiration date
+
+### Managing Invitations
+
+**Resend Invitation:**
+- Click **Resend** to send a new email
+- This doesn't change the expiration date
+
+**Cancel Invitation:**
+- Click **Cancel** to revoke the invitation
+- The link will no longer work
+
+**Delete Invitation:**
+- Click **Delete** to permanently remove
+- Use for cleaning up old invitations
+
+## Best Practices
+
+### Role Assignment
+
+- **Owners**: Key decision-makers, founders, CTOs
+- **Admins**: Team leads, project managers
+- **Members**: Developers, engineers
+- **Billing**: Finance team, accountants
+
+### Security
+
+- Regularly audit member access
+- Remove members who leave the team
+- Use the minimum role necessary
+- Enable 2FA for all owners and admins
+
+### Organization Structure
+
+For larger teams, consider:
+- One owner per organization (clearer ownership)
+- Multiple admins for redundancy
+- Clear documentation of role responsibilities
+
+## Troubleshooting
+
+### Invitation Not Received
+
+1. Check spam/junk folder
+2. Verify the email address
+3. Resend the invitation
+4. Try a different email address
+
+### Cannot Change Role
+
+Possible causes:
+- You're not an owner or admin
+- You're trying to modify an owner (as admin)
+- You're the last owner
+
+### Cannot Remove Member
+
+Possible causes:
+- The member is the last owner
+- You don't have sufficient permissions
+
+## Next Steps
+
+- [Set up subscriptions](./subscriptions-billing) for your team
+- [Create API keys](./create-api-key) for team members
+- [Define policies](./create-policy) for wallet access

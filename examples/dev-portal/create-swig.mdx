@@ -1,0 +1,536 @@
+---
+title: "Creating a Swig Wallet"
+description: '"Every great wallet starts with a single transaction" - Swig Founders'
+---
+
+This guide shows how to create Swig wallets programmatically using the Developer Portal API. This approach is ideal for applications that need to create wallets on behalf of users with predefined policies.
+
+## When to Use the API
+
+**Use the Portal API when:**
+- Creating wallets from a backend service
+- Using predefined policies from the Developer Portal
+- Leveraging the paymaster for sponsored wallet creation
+- Managing wallets at scale
+
+**Use the SDK directly when:**
+- Building client-side applications
+- Users control their own keypairs
+- You need full control over wallet configuration
+- Not using the Developer Portal policies
+
+<Tip>
+  For direct SDK wallet creation (without the Portal API), see the [Creating a Swig tutorial](/tutorials/typescript/create).
+</Tip>
+
+## Prerequisites
+
+Before creating wallets via the API, ensure you have:
+
+- An [API key](./create-api-key) created in the Developer Portal
+- A [policy](./create-policy) configured (with or without a signer)
+- The paymaster public key (provided by Swig or your own paymaster)
+
+## Installing the SDK
+
+<Tabs>
+  <Tab title="API SDK">
+```bash
+npm install @swig-wallet/api
+# or
+bun add @swig-wallet/api
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```bash
+npm install @swig-wallet/developer
+# or
+bun add @swig-wallet/developer
+```
+  </Tab>
+</Tabs>
+
+## Creating a Swig Wallet
+
+### Using the REST API
+
+Make a POST request to the wallet creation endpoint:
+
+```bash
+curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
+  -H "Authorization: Bearer sk_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "policyId": "clx1234567890abcdef",
+    "network": "devnet",
+    "paymasterPubkey": "PaymasterPublicKeyHere..."
+  }'
+```
+
+**Example Response:**
+
+```json
+{
+  "swigId": "a1b2c3d4e5f67890",
+  "swigAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "signature": "5wHu1qwD7g4p3zWxF..."
+}
+```
+
+### Using the SDK
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+import { SwigApiClient } from '@swig-wallet/api';
+
+// Initialize the client
+const client = new SwigApiClient({
+  apiKey: 'sk_your_api_key',
+  portalUrl: 'https://dashboard.onswig.com',
+});
+
+// Create a wallet
+async function createWallet() {
+  const { data: wallet, error } = await client.wallet.create({
+    policyId: 'clx1234567890abcdef',
+    network: 'devnet',
+    paymasterPubkey: 'PaymasterPublicKeyHere...',
+  });
+
+  if (error) {
+    console.error(`Error creating wallet: ${error.message}`);
+    return null;
+  }
+
+  console.log('Swig ID:', wallet.swigId);
+  console.log('Wallet Address:', wallet.swigAddress);
+  console.log('Transaction Signature:', wallet.signature);
+
+  return wallet;
+}
+
+const wallet = await createWallet();
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+import { SwigClient, SwigError } from '@swig-wallet/developer';
+
+// Initialize the client
+const client = new SwigClient({
+  apiKey: 'sk_your_api_key',
+  baseUrl: 'https://dashboard.onswig.com',
+});
+
+// Create a wallet
+async function createWallet() {
+  try {
+    const wallet = await client.createWallet({
+      policyId: 'clx1234567890abcdef',
+      network: 'devnet',
+      paymasterPubkey: 'PaymasterPublicKeyHere...',
+    });
+
+    console.log('Swig ID:', wallet.swigId);
+    console.log('Wallet Address:', wallet.swigAddress);
+    console.log('Transaction Signature:', wallet.signature);
+
+    return wallet;
+  } catch (error) {
+    if (error instanceof SwigError) {
+      console.error(`Error: ${error.code} - ${error.message}`);
+    }
+    return null;
+  }
+}
+
+const wallet = await createWallet();
+```
+  </Tab>
+</Tabs>
+
+## SDK Comparison
+
+| Feature | @swig-wallet/api | @swig-wallet/developer |
+|---------|------------------|------------------------|
+| Error handling | Returns `{ data, error }` | Throws `SwigError` |
+| Method name | `client.wallet.create()` | `client.createWallet()` |
+| Response type | Basic object | Same basic object |
+| Best for | Low-level control | Developer convenience |
+
+## Request Parameters
+
+### Required Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policyId` | string | The policy ID from the Developer Portal |
+| `network` | `'mainnet'` \| `'devnet'` | Target Solana network |
+| `paymasterPubkey` | string | Public key of the paymaster covering fees |
+
+### Optional Parameters
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `swigId` | string | Custom Swig ID (auto-generated if not provided) |
+| `signerId` | string | Override or provide signer ID when policy has no signer |
+
+## Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `swigId` | string | The 8-byte identifier for this Swig wallet |
+| `swigAddress` | string | The on-chain PDA address of the wallet |
+| `signature` | string | The transaction signature (viewable on explorer) |
+
+## Examples
+
+### Basic Wallet Creation
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+import { SwigApiClient } from '@swig-wallet/api';
+
+const client = new SwigApiClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  portalUrl: 'https://dashboard.onswig.com',
+});
+
+const { data, error } = await client.wallet.create({
+  policyId: 'your-policy-id',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+});
+
+if (data) {
+  console.log(`Wallet created: ${data.swigAddress}`);
+  console.log(`View on explorer: https://explorer.solana.com/address/${data.swigAddress}?cluster=devnet`);
+}
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+import { SwigClient } from '@swig-wallet/developer';
+
+const client = new SwigClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  baseUrl: 'https://dashboard.onswig.com',
+});
+
+const wallet = await client.createWallet({
+  policyId: 'your-policy-id',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+});
+
+console.log(`Wallet created: ${wallet.swigAddress}`);
+console.log(`View on explorer: https://explorer.solana.com/address/${wallet.swigAddress}?cluster=devnet`);
+```
+  </Tab>
+</Tabs>
+
+### With Custom Swig ID
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+// Generate a custom ID (must be unique)
+const customId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+
+const { data, error } = await client.wallet.create({
+  policyId: 'your-policy-id',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+  swigId: customId,
+});
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+// Generate a custom ID (must be unique)
+const customId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+
+const wallet = await client.createWallet({
+  policyId: 'your-policy-id',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+  swigId: customId,
+});
+```
+  </Tab>
+</Tabs>
+
+### With Signer Override
+
+If your policy doesn't have a signer attached, or you want to use a different signer:
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+const { data, error } = await client.wallet.create({
+  policyId: 'policy-without-signer',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+  signerId: 'specific-signer-id', // Signer ID from the portal
+});
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+const wallet = await client.createWallet({
+  policyId: 'policy-without-signer',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+  signerId: 'specific-signer-id', // Signer ID from the portal
+});
+```
+  </Tab>
+</Tabs>
+
+### Production Wallet
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+const { data, error } = await client.wallet.create({
+  policyId: 'production-policy-id',
+  network: 'mainnet', // Use mainnet for production
+  paymasterPubkey: 'ProductionPaymasterKey',
+});
+
+if (data) {
+  // Store the wallet info in your database
+  await db.wallets.create({
+    swigId: data.swigId,
+    address: data.swigAddress,
+    createdAt: new Date(),
+  });
+}
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+const wallet = await client.createWallet({
+  policyId: 'production-policy-id',
+  network: 'mainnet', // Use mainnet for production
+  paymasterPubkey: 'ProductionPaymasterKey',
+});
+
+// Store the wallet info in your database
+await db.wallets.create({
+  swigId: wallet.swigId,
+  address: wallet.swigAddress,
+  createdAt: new Date(),
+});
+```
+  </Tab>
+</Tabs>
+
+## Error Handling
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+const { data, error } = await client.wallet.create({
+  policyId: 'your-policy-id',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+});
+
+if (error) {
+  switch (error.code) {
+    case 'NOT_FOUND':
+      console.error('Policy not found. Check the policy ID.');
+      break;
+    case 'UNAUTHORIZED':
+      console.error('Invalid API key.');
+      break;
+    case 'BAD_REQUEST':
+      console.error('Invalid request:', error.details);
+      break;
+    case 'CONFLICT':
+      console.error('Swig ID already exists. Try a different ID.');
+      break;
+    default:
+      console.error(`Unexpected error: ${error.message}`);
+  }
+}
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+try {
+  const wallet = await client.createWallet({
+    policyId: 'your-policy-id',
+    network: 'devnet',
+    paymasterPubkey: 'YourPaymasterPublicKey',
+  });
+} catch (error) {
+  if (error instanceof SwigError) {
+    switch (error.code) {
+      case 'POLICY_NOT_FOUND':
+        console.error('Policy not found. Check the policy ID.');
+        break;
+      case 'UNAUTHORIZED':
+        console.error('Invalid API key.');
+        break;
+      case 'BAD_REQUEST':
+        console.error('Invalid request:', error.response);
+        break;
+      case 'SWIG_ID_EXISTS':
+        console.error('Swig ID already exists. Try a different ID.');
+        break;
+      default:
+        console.error(`Unexpected error: ${error.message}`);
+    }
+  }
+}
+```
+  </Tab>
+</Tabs>
+
+### Common Errors
+
+| Status | Code | Meaning |
+|--------|------|---------|
+| 400 | `BAD_REQUEST` | Invalid request parameters |
+| 401 | `UNAUTHORIZED` | Invalid or missing API key |
+| 404 | `NOT_FOUND` / `POLICY_NOT_FOUND` | Policy or signer not found |
+| 409 | `CONFLICT` / `SWIG_ID_EXISTS` | Swig ID already exists |
+| 500 | `INTERNAL_ERROR` | Server error, try again |
+
+## Complete Example
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+import { SwigApiClient } from '@swig-wallet/api';
+
+async function main() {
+  const client = new SwigApiClient({
+    apiKey: process.env.SWIG_API_KEY!,
+    portalUrl: 'https://dashboard.onswig.com',
+    retry: { maxRetries: 3, retryDelay: 1000 },
+  });
+
+  const config = {
+    policyId: process.env.SWIG_POLICY_ID!,
+    network: (process.env.SWIG_NETWORK || 'devnet') as 'mainnet' | 'devnet',
+    paymasterPubkey: process.env.SWIG_PAYMASTER_PUBKEY!,
+  };
+
+  console.log('Creating Swig wallet...');
+  console.log(`Network: ${config.network}`);
+  console.log(`Policy: ${config.policyId}`);
+
+  const { data: wallet, error } = await client.wallet.create(config);
+
+  if (error) {
+    console.error('Failed to create wallet:', error.message);
+    console.error('Error code:', error.code);
+    process.exit(1);
+  }
+
+  console.log('\n=== Wallet Created ===');
+  console.log(`Swig ID: ${wallet.swigId}`);
+  console.log(`Address: ${wallet.swigAddress}`);
+  console.log(`Transaction: ${wallet.signature}`);
+
+  const cluster = config.network === 'mainnet' ? '' : '?cluster=devnet';
+  console.log(`\nExplorer: https://explorer.solana.com/address/${wallet.swigAddress}${cluster}`);
+}
+
+main();
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+import { SwigClient, SwigError } from '@swig-wallet/developer';
+
+async function main() {
+  const client = new SwigClient({
+    apiKey: process.env.SWIG_API_KEY!,
+    baseUrl: 'https://dashboard.onswig.com',
+    retryOptions: { maxRetries: 3, retryDelay: 1000 },
+  });
+
+  const config = {
+    policyId: process.env.SWIG_POLICY_ID!,
+    network: (process.env.SWIG_NETWORK || 'devnet') as 'mainnet' | 'devnet',
+    paymasterPubkey: process.env.SWIG_PAYMASTER_PUBKEY!,
+  };
+
+  console.log('Creating Swig wallet...');
+  console.log(`Network: ${config.network}`);
+  console.log(`Policy: ${config.policyId}`);
+
+  try {
+    const wallet = await client.createWallet(config);
+
+    console.log('\n=== Wallet Created ===');
+    console.log(`Swig ID: ${wallet.swigId}`);
+    console.log(`Address: ${wallet.swigAddress}`);
+    console.log(`Transaction: ${wallet.signature}`);
+
+    const cluster = config.network === 'mainnet' ? '' : '?cluster=devnet';
+    console.log(`\nExplorer: https://explorer.solana.com/address/${wallet.swigAddress}${cluster}`);
+  } catch (error) {
+    if (error instanceof SwigError) {
+      console.error('Failed to create wallet:', error.message);
+      console.error('Error code:', error.code);
+      process.exit(1);
+    }
+    throw error;
+  }
+}
+
+main();
+```
+  </Tab>
+</Tabs>
+
+## TypeScript Types
+
+```typescript
+interface CreateWalletRequest {
+  /** Policy ID to use for wallet creation */
+  policyId: string;
+  /** Optional signer ID to override or provide */
+  signerId?: string;
+  /** Optional swig ID (generated if not provided) */
+  swigId?: string;
+  /** Network to use */
+  network: 'mainnet' | 'devnet';
+  /** Paymaster public key */
+  paymasterPubkey: string;
+}
+
+interface CreateWalletResponse {
+  /** Swig ID (8-byte identifier) */
+  swigId: string;
+  /** Swig wallet address */
+  swigAddress: string;
+  /** Transaction signature */
+  signature: string;
+}
+```
+
+## Comparison: API vs Direct SDK
+
+| Feature | Portal API | Direct SDK |
+|---------|------------|------------|
+| Uses predefined policies | Yes | No |
+| Requires API key | Yes | No |
+| Paymaster sponsored | Yes | Optional |
+| Full configuration control | Limited to policy | Full |
+| Best for | Backend services | Client apps |
+| Keypair management | Server-side | Client-side |
+
+## Next Steps
+
+After creating a wallet, you can:
+- View the wallet on [Solana Explorer](https://explorer.solana.com)
+- [Sign transactions](/tutorials/typescript/sign) using the wallet
+- [Manage authorities](/tutorials/typescript/managing_authorities) to add more signers

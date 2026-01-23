@@ -1,0 +1,289 @@
+---
+title: "Transaction History & Analytics"
+description: '"Data drives decisions, transactions tell stories" - Swig Analytics'
+---
+
+This guide covers how to view, filter, and analyze sponsored transactions in the Swig Developer Portal.
+
+## Viewing Transaction History
+
+### Accessing History
+
+1. Log in to the [Developer Portal](https://dashboard.onswig.com)
+2. Select your organization
+3. Click **Paymaster** in the sidebar
+4. Select a paymaster to view its transactions
+
+### Transaction List
+
+The transaction history shows:
+- **Signature** - Solana transaction signature
+- **Date/Time** - When the transaction occurred
+- **Status** - Success, failed, or pending
+- **Fee** - SOL spent on fees
+- **Slot** - Blockchain slot number
+- **Network** - Mainnet or devnet
+
+## Transaction Details
+
+Click a transaction to view:
+
+### Basic Information
+
+- Full transaction signature
+- Timestamp (with timezone)
+- Block/slot number
+- Confirmation status
+
+### Fee Information
+
+- Fee in SOL
+- Fee in lamports
+- USD value at transaction time
+
+### Links
+
+- View on Solana Explorer
+- View on Solscan
+- Copy signature
+
+## Filtering Transactions
+
+### By Date Range
+
+Select a time period:
+- Last 24 hours
+- Last 7 days
+- Last 30 days
+- Custom range
+
+### By Status
+
+Filter by transaction status:
+- **All** - Show all transactions
+- **Success** - Confirmed transactions
+- **Failed** - Failed transactions
+- **Pending** - Awaiting confirmation
+
+### By Network
+
+Toggle between networks:
+- **Mainnet** - Production transactions
+- **Devnet** - Test transactions
+
+## Analytics Dashboard
+
+### Overview Metrics
+
+View aggregate statistics:
+- **Total Transactions** - Count of sponsored transactions
+- **Total SOL Spent** - Sum of fees paid
+- **Total USD Value** - Dollar value sponsored
+- **Average Fee** - Mean fee per transaction
+
+### Time Series Charts
+
+Visualize trends over time:
+
+#### SOL Spent
+
+- Daily/weekly/monthly SOL spending
+- Identify usage patterns
+- Spot anomalies
+
+#### Transaction Volume
+
+- Number of transactions over time
+- Peak usage periods
+- Growth trends
+
+#### USD Value
+
+- Dollar value of sponsored transactions
+- Cost tracking
+- Budget planning
+
+### Chart Time Ranges
+
+Select analysis period:
+- **1 Hour** - Recent activity
+- **1 Week** - Short-term trends
+- **1 Month** - Monthly patterns
+
+## Usage Metrics
+
+### Current Period
+
+View usage for the current billing period:
+
+| Metric | Description |
+|--------|-------------|
+| API Calls | Number of API requests |
+| SOL Spent | Total SOL used for fees |
+| USD Value | Dollar value sponsored |
+| Transaction Count | Number of transactions |
+
+### Limit Progress
+
+Visual indicators show:
+- **Green** - Under 50% of limit
+- **Yellow** - 50-80% of limit
+- **Orange** - 80-90% of limit
+- **Red** - Over 90% of limit
+
+### Historical Usage
+
+View past billing periods:
+- Monthly aggregates
+- Trend analysis
+- Cost history
+
+## Network Comparison
+
+### Switching Networks
+
+Toggle to compare activity:
+- Devnet usage (development)
+- Mainnet usage (production)
+
+### Separate Tracking
+
+Each network tracked independently:
+- Separate transaction lists
+- Separate usage counters
+- Separate analytics
+
+## Exporting Data
+
+### Transaction Export
+
+Export transaction data:
+1. Apply desired filters
+2. Click **Export**
+3. Choose format (CSV, JSON)
+4. Download file
+
+### Export Fields
+
+Exported data includes:
+- Signature
+- Timestamp
+- Status
+- Fee (SOL)
+- Fee (lamports)
+- Slot
+- Network
+
+## Real-Time Updates
+
+### Live Status
+
+Transaction status updates in real-time:
+- Pending → Success
+- Pending → Failed
+- Balance updates
+
+### Refresh
+
+Click refresh to get latest data:
+- Transaction list
+- Usage metrics
+- Balance
+
+## Troubleshooting Transactions
+
+### Failed Transactions
+
+When a transaction fails:
+1. Click the transaction
+2. View the error message
+3. Check the signature on Solana Explorer
+4. Common causes:
+   - Insufficient paymaster balance
+   - Limit exceeded
+   - Network congestion
+   - Invalid transaction
+
+### Missing Transactions
+
+If a transaction doesn't appear:
+1. Wait for blockchain confirmation
+2. Refresh the page
+3. Check the correct network (mainnet/devnet)
+4. Verify the transaction was sent to this paymaster
+
+### Duplicate Transactions
+
+If you see duplicates:
+1. Check transaction signatures (should be different)
+2. Could be legitimate retries
+3. Contact support if unexpected
+
+## Analytics Best Practices
+
+### Regular Review
+
+- Daily: Check for anomalies
+- Weekly: Review usage trends
+- Monthly: Analyze cost and volume
+
+### Alerting
+
+Set up alerts for:
+- Unusual transaction volume
+- High failure rates
+- Budget thresholds
+
+### Budgeting
+
+Use historical data to:
+- Forecast future costs
+- Plan capacity
+- Set appropriate limits
+
+## Integration with Billing
+
+### Cost Attribution
+
+Transaction history links to billing:
+- Each transaction counted toward limits
+- USD value affects subscription usage
+- Overage triggers tracked
+
+### Invoice Details
+
+View transactions related to invoices:
+- Which transactions incurred costs
+- Breakdown by period
+- Cost per paymaster
+
+## API Access
+
+### Programmatic Access
+
+Query transaction history via API:
+
+```typescript
+import { SwigApiClient } from '@swig-wallet/api';
+
+const client = new SwigApiClient({
+  apiKey: 'sk_your_api_key',
+  portalUrl: 'https://dashboard.onswig.com',
+});
+
+// Transaction history is primarily accessed via the Dashboard
+// For real-time monitoring, use webhook integrations (Enterprise)
+```
+
+### Webhook Integration (Enterprise)
+
+Enterprise accounts can configure:
+- Transaction webhooks
+- Real-time notifications
+- Custom integrations
+
+## Next Steps
+
+- [Manage paymaster settings](./manage-paymaster) to adjust limits
+- [Create additional paymasters](./create-paymaster) for different use cases
+- [Review billing](./subscriptions-billing) based on usage data

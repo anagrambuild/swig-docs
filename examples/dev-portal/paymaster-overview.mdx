@@ -1,0 +1,178 @@
+---
+title: "Paymaster Overview"
+description: '"Sponsor transactions, delight users" - Swig Paymasters'
+---
+
+Paymasters enable gasless transactions by sponsoring transaction fees on behalf of your users. This creates a seamless user experience where users don't need SOL to interact with your application.
+
+## What is a Paymaster?
+
+A paymaster is a Solana wallet managed by Swig that:
+- **Holds SOL** for sponsoring transaction fees
+- **Signs transactions** as the fee payer
+- **Tracks usage** for billing and limits
+- **Enforces limits** to prevent abuse
+
+When a user submits a transaction through your application, the paymaster covers the transaction fee, allowing users to transact without holding SOL.
+
+## How It Works
+
+```
+User creates transaction
+        ↓
+Your app sends to Swig Paymaster
+        ↓
+Paymaster signs as fee payer
+        ↓
+Transaction submitted to Solana
+        ↓
+User's action succeeds (gasless!)
+```
+
+## Subscription Requirements
+
+Paymasters are available on **paid tiers only**:
+
+| Tier | Paymaster Access | Monthly Limit | Fee Rate |
+|------|------------------|---------------|----------|
+| FREE | No | - | - |
+| PRO | Yes | $10,000 | 8% |
+| ULTRA | Yes | $20,000 | 7% |
+| ENTERPRISE | Yes | Custom | 6% |
+
+<Warning>
+  FREE tier accounts cannot create paymasters. Upgrade to PRO or higher to access paymaster features.
+</Warning>
+
+## Key Concepts
+
+### Paymaster Limits
+
+Each paymaster has configurable limits:
+
+| Limit | Description | Default |
+|-------|-------------|---------|
+| **Usage API Threshold** | Max API calls per month | 1,000 |
+| **SOL Usage Threshold** | Max SOL to spend per month | 10 SOL |
+| **Single TX Limit** | Max SOL per transaction | 0.1 SOL |
+
+### Monthly Limits
+
+Your subscription tier determines your monthly sponsorship limit:
+- Measured in USD value
+- Resets at the start of each billing period
+- Overage billing applies if exceeded
+
+### Paymaster Balance
+
+Each paymaster needs SOL to sponsor transactions:
+- Fund the paymaster after creation
+- Monitor balance to prevent failed transactions
+- Low balance alerts available for Enterprise
+
+## Use Cases
+
+### User Onboarding
+
+Remove friction for new users:
+- Users don't need to acquire SOL first
+- Immediate access to your application
+- Higher conversion rates
+
+### In-App Transactions
+
+Seamless in-app experiences:
+- Token transfers
+- NFT minting
+- DeFi interactions
+- Game actions
+
+### Subscription Services
+
+Automate recurring transactions:
+- Payment processing
+- Subscription renewals
+- Scheduled operations
+
+## Paymaster vs Direct SDK
+
+| Feature | Paymaster (Portal API) | Direct SDK |
+|---------|------------------------|------------|
+| Fee Payer | Paymaster wallet | User's wallet |
+| User needs SOL | No | Yes |
+| Usage tracking | Automatic | Manual |
+| Billing | Included | N/A |
+| Setup | Portal configuration | Code configuration |
+| Best for | Production apps | Development/testing |
+
+## Getting Started
+
+<CardGroup cols={2}>
+  <Card title="Create a Paymaster" icon="plus" href="./create-paymaster">
+    Set up your first paymaster
+  </Card>
+  <Card title="Manage Paymasters" icon="gear" href="./manage-paymaster">
+    Configure settings and monitor usage
+  </Card>
+  <Card title="Transaction History" icon="clock" href="./transaction-history">
+    View sponsored transactions and analytics
+  </Card>
+</CardGroup>
+
+## Security
+
+### Access Control
+
+- Paymasters are scoped to your organization
+- API keys authenticate requests
+- Per-paymaster limits prevent abuse
+
+### Allow Other Instructions
+
+By default, paymasters only sponsor Swig-related instructions. You can enable `allowOtherIxs` to sponsor any instruction, but use caution:
+
+<Warning>
+  Enabling `allowOtherIxs` allows sponsoring any transaction type. This increases flexibility but also potential for abuse.
+</Warning>
+
+### Monitoring
+
+- Track all sponsored transactions
+- View real-time usage metrics
+- Set up alerts for anomalies
+
+## Best Practices
+
+### Start with Limits
+
+Begin with conservative limits:
+- Low single transaction limit
+- Moderate monthly threshold
+- Increase as you understand usage patterns
+
+### Monitor Usage
+
+Regularly review:
+- Transaction volume
+- SOL spending
+- Error rates
+
+### Maintain Balance
+
+Keep paymaster funded:
+- Monitor balance regularly
+- Set up low balance alerts (Enterprise)
+- Automate top-ups if possible
+
+### Separate Environments
+
+Use different paymasters for:
+- Development (devnet)
+- Staging
+- Production (mainnet)
+
+## Next Steps
+
+- [Create your first paymaster](./create-paymaster)
+- [Learn about settings and limits](./manage-paymaster)
+- [View transaction history](./transaction-history)

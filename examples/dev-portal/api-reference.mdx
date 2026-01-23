@@ -1,0 +1,397 @@
+---
+title: "REST API Reference"
+description: '"The API is the contract between your code and our service" - Swig Engineering'
+---
+
+This reference documents the Swig Developer Portal REST API endpoints.
+
+## Base URLs
+
+| Environment | URL |
+|-------------|-----|
+| Portal API | `https://dashboard.onswig.com` |
+| Paymaster API | `https://api.onswig.com` |
+
+## Authentication
+
+All API requests require authentication via API key:
+
+```
+Authorization: Bearer sk_your_api_key
+```
+
+API keys are created in the [Developer Portal](https://dashboard.onswig.com) and have the format `sk_<64-hex-characters>`.
+
+## Endpoints
+
+### Policies
+
+#### Get Policy
+
+Retrieve a policy by ID.
+
+**Request:**
+```
+GET /api/v1/policies/{policyId}
+```
+
+**Headers:**
+```
+Authorization: Bearer sk_your_api_key
+```
+
+**Path Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `policyId` | string | The policy ID (CUID format) |
+
+**Response:**
+```json
+{
+  "id": "clx1234567890abcdef",
+  "name": "user-wallet-policy",
+  "description": "Standard user wallet with transfer limits",
+  "authority": {
+    "type": "Ed25519",
+    "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+  },
+  "actions": [
+    { "type": "SolLimit", "amount": "1000000000" },
+    { "type": "TokenLimit", "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "amount": "1000000" }
+  ]
+}
+```
+
+**cURL Example:**
+```bash
+curl -X GET "https://dashboard.onswig.com/api/v1/policies/clx1234567890abcdef" \
+  -H "Authorization: Bearer sk_your_api_key"
+```
+
+---
+
+### Wallets
+
+#### Create Wallet
+
+Create a new Swig wallet using a policy.
+
+**Request:**
+```
+POST /api/v1/wallet/create
+```
+
+**Headers:**
+```
+Authorization: Bearer sk_your_api_key
+Content-Type: application/json
+```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `policyId` | string | Yes | Policy ID to use |
+| `network` | string | Yes | `"mainnet"` or `"devnet"` |
+| `paymasterPubkey` | string | Yes | Paymaster public key |
+| `swigId` | string | No | Custom Swig ID (auto-generated if omitted) |
+| `signerId` | string | No | Signer ID override |
+
+**Request Example:**
+```json
+{
+  "policyId": "clx1234567890abcdef",
+  "network": "devnet",
+  "paymasterPubkey": "A1dBRAaYUHyUzyQLGYzHrQzpYy9xTVXCaMnHx4RuEGY5"
+}
+```
+
+**Response:**
+```json
+{
+  "swigId": "a1b2c3d4e5f67890",
+  "swigAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "signature": "5wHu1qwD7g4p3zWxF..."
+}
+```
+
+**cURL Example:**
+```bash
+curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
+  -H "Authorization: Bearer sk_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "policyId": "clx1234567890abcdef",
+    "network": "devnet",
+    "paymasterPubkey": "A1dBRAaYUHyUzyQLGYzHrQzpYy9xTVXCaMnHx4RuEGY5"
+  }'
+```
+
+---
+
+### Paymaster
+
+#### Sponsor Transaction
+
+Submit a transaction for sponsorship.
+
+**Request:**
+```
+POST /sponsor
+```
+
+**Base URL:** `https://api.onswig.com`
+
+**Headers:**
+```
+Authorization: Bearer sk_your_api_key
+Content-Type: application/json
+```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `base58_encoded_transaction` | string | Yes | Base58-encoded transaction |
+| `network` | string | No | `"mainnet"` or `"devnet"` |
+
+**Request Example:**
+```json
+{
+  "base58_encoded_transaction": "BASE58_ENCODED_TX_HERE",
+  "network": "devnet"
+}
+```
+
+**Response:**
+```json
+{
+  "request_id": "req_abc123",
+  "signature": "5wHu1qwD7g4p3zWxF...",
+  "spent_by_paymaster": 5000
+}
+```
+
+**Response Fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `request_id` | string | Unique request identifier |
+| `signature` | string | Transaction signature |
+| `spent_by_paymaster` | number | Lamports spent by paymaster |
+
+---
+
+#### Sign Transaction
+
+Sign a transaction without sending.
+
+**Request:**
+```
+POST /sign
+```
+
+**Base URL:** `https://api.onswig.com`
+
+**Headers:**
+```
+Authorization: Bearer sk_your_api_key
+Content-Type: application/json
+```
+
+**Request Body:**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `base58_encoded_transaction` | string | Yes | Base58-encoded transaction |
+| `network` | string | No | `"mainnet"` or `"devnet"` |
+
+**Response:**
+```json
+{
+  "request_id": "req_abc123",
+  "signed_transaction": "BASE58_ENCODED_SIGNED_TX"
+}
+```
+
+---
+
+#### Health Check
+
+Check paymaster service health.
+
+**Request:**
+```
+GET /health
+```
+
+**Base URL:** `https://api.onswig.com`
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-15T12:00:00Z"
+}
+```
+
+---
+
+## Data Types
+
+### Policy
+
+```typescript
+interface Policy {
+  id: string;
+  name: string;
+  description: string | null;
+  authority: AuthorityConfig | null;
+  actions: ActionConfig[];
+}
+```
+
+### AuthorityConfig
+
+```typescript
+type AuthorityConfig =
+  | { type: 'Ed25519'; publicKey: string }
+  | { type: 'Ed25519Session'; publicKey: string; maxDurationSlots: string }
+  | { type: 'Secp256k1'; publicKey: string }
+  | { type: 'Secp256k1Session'; publicKey: string; maxDurationSlots: string }
+  | { type: 'Secp256r1'; publicKey: string }
+  | { type: 'Secp256r1Session'; publicKey: string; maxDurationSlots: string };
+```
+
+### ActionConfig
+
+```typescript
+type ActionConfig =
+  // General
+  | { type: 'All' }
+  | { type: 'AllButManageAuthority' }
+  | { type: 'ManageAuthority' }
+
+  // SOL
+  | { type: 'SolLimit'; amount: string }
+  | { type: 'SolRecurringLimit'; recurringAmount: string; window: string }
+  | { type: 'SolDestinationLimit'; amount: string; destination: string }
+  | { type: 'SolRecurringDestinationLimit'; recurringAmount: string; window: string; destination: string }
+
+  // Token
+  | { type: 'TokenLimit'; mint: string; amount: string }
+  | { type: 'TokenRecurringLimit'; mint: string; recurringAmount: string; window: string }
+  | { type: 'TokenDestinationLimit'; mint: string; amount: string; destination: string }
+  | { type: 'TokenRecurringDestinationLimit'; mint: string; recurringAmount: string; window: string; destination: string }
+
+  // Program
+  | { type: 'Program'; programId: string }
+  | { type: 'ProgramAll' }
+  | { type: 'ProgramCurated' }
+
+  // Staking
+  | { type: 'StakeLimit'; amount: string }
+  | { type: 'StakeRecurringLimit'; recurringAmount: string; window: string }
+  | { type: 'StakeAll' }
+
+  // Sub-accounts
+  | { type: 'SubAccount' };
+```
+
+### CreateWalletRequest
+
+```typescript
+interface CreateWalletRequest {
+  policyId: string;
+  network: 'mainnet' | 'devnet';
+  paymasterPubkey: string;
+  swigId?: string;
+  signerId?: string;
+}
+```
+
+### CreateWalletResponse
+
+```typescript
+interface CreateWalletResponse {
+  swigId: string;
+  swigAddress: string;
+  signature: string;
+}
+```
+
+## Error Responses
+
+All errors follow this format:
+
+```json
+{
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": {}
+  }
+}
+```
+
+See [Error Codes](./error-codes) for a complete list.
+
+## Rate Limits
+
+API requests are rate-limited based on your subscription tier:
+
+| Tier | Requests/Minute |
+|------|-----------------|
+| FREE | 60 |
+| PRO | 300 |
+| ULTRA | 600 |
+| ENTERPRISE | Custom |
+
+Rate limit headers are included in responses:
+```
+X-RateLimit-Limit: 60
+X-RateLimit-Remaining: 45
+X-RateLimit-Reset: 1642520400
+```
+
+## SDKs
+
+Use our SDKs for easier integration:
+
+<Tabs>
+  <Tab title="API SDK">
+```bash
+npm install @swig-wallet/api
+```
+
+```typescript
+import { SwigApiClient } from '@swig-wallet/api';
+
+const client = new SwigApiClient({
+  apiKey: 'sk_your_api_key',
+  portalUrl: 'https://dashboard.onswig.com',
+});
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```bash
+npm install @swig-wallet/developer
+```
+
+```typescript
+import { SwigClient } from '@swig-wallet/developer';
+
+const client = new SwigClient({
+  apiKey: 'sk_your_api_key',
+  baseUrl: 'https://dashboard.onswig.com',
+});
+```
+  </Tab>
+</Tabs>
+
+## Next Steps
+
+- [Error Codes](./error-codes) - Understand API errors
+- [SDK Examples](./fetch-policy) - See the SDKs in action
+- [Create Wallets](./create-swig) - Full wallet creation guide

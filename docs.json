@@ -66,6 +66,56 @@
             ]
           },
           {
+            "group": "Developer Portal",
+            "pages": [
+              "examples/dev-portal/index",
+              {
+                "group": "Organizations",
+                "pages": [
+                  "examples/dev-portal/organizations",
+                  "examples/dev-portal/create-organization",
+                  "examples/dev-portal/manage-members",
+                  "examples/dev-portal/subscriptions-billing"
+                ]
+              },
+              {
+                "group": "API Keys",
+                "pages": [
+                  "examples/dev-portal/create-api-key"
+                ]
+              },
+              {
+                "group": "Policies & Wallets",
+                "pages": [
+                  "examples/dev-portal/create-policy",
+                  "examples/dev-portal/fetch-policy",
+                  "examples/dev-portal/create-swig"
+                ]
+              },
+              {
+                "group": "Paymaster",
+                "pages": [
+                  "examples/dev-portal/paymaster-overview",
+                  "examples/dev-portal/create-paymaster",
+                  "examples/dev-portal/manage-paymaster",
+                  "examples/dev-portal/transaction-history"
+                ]
+              },
+              {
+                "group": "API Reference",
+                "pages": [
+                  "examples/dev-portal/api-reference"
+                ]
+              },
+              {
+                "group": "Troubleshooting",
+                "pages": [
+                  "examples/dev-portal/error-codes"
+                ]
+              }
+            ]
+          },
+          {
             "group": "Ethereum Onboarding",
             "pages": [
               "examples/ethereum_keys"
