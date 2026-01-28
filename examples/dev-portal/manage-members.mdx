@@ -3,7 +3,7 @@ title: "Managing Members & Roles"
 description: '"Great teams build great wallets" - Swig Collaboration'
 ---
 
-This guide covers how to invite team members, manage roles, and handle permissions in your Swig organization.
+This guide covers how to invite team members, manage roles, and handle permissions in your Swig project.
 
 ## Member Roles
 
@@ -38,7 +38,7 @@ Billing (25) - Special role, isolated permissions
 | Remove members | ✓ | ✓ | ✗ | ✗ |
 | Change roles | ✓ | ✓* | ✗ | ✗ |
 | Access billing | ✓ | ✓ | ✗ | ✓ |
-| Delete organization | ✓ | ✗ | ✗ | ✗ |
+| Delete project | ✓ | ✗ | ✗ | ✗ |
 | Transfer ownership | ✓ | ✗ | ✗ | ✗ |
 
 *Admins cannot change roles of owners
@@ -48,7 +48,7 @@ Billing (25) - Special role, isolated permissions
 ### Step 1: Navigate to Members
 
 1. Log in to the [Developer Portal](https://dashboard.onswig.com)
-2. Select your organization
+2. Select your project
 3. Click **Members** in the sidebar
 
 ### Step 2: Send Invitation
@@ -65,7 +65,7 @@ Billing (25) - Special role, isolated permissions
 ### Step 3: Invitation Sent
 
 The invitee receives an email with:
-- Organization name
+- Project name
 - Your name (as inviter)
 - Invitation link
 - Expiration date (7 days)
@@ -81,14 +81,14 @@ The invitee receives an email with:
 1. Click the invitation link in the email
 2. Sign in or create a Swig account
 3. Accept the invitation
-4. You're now a member of the organization
+4. You're now a member of the project
 
 ### Via Dashboard
 
 If you're already logged in:
 1. Go to [dashboard.onswig.com](https://dashboard.onswig.com)
 2. You'll see pending invitations in your dashboard
-3. Click **Accept** to join the organization
+3. Click **Accept** to join the project
 
 ## Managing Existing Members
 
@@ -137,21 +137,21 @@ Only owners can promote members to the Owner role:
 
 Transfer the primary owner designation:
 
-1. Go to organization settings
+1. Go to project settings
 2. Click **Transfer Ownership**
 3. Select the new owner (must be an existing member)
 4. Confirm the transfer
 
 <Warning>
-  Transferring ownership changes the `ownerId` of the organization. The previous owner retains Owner role but is no longer the primary owner.
+  Transferring ownership changes the `ownerId` of the project. The previous owner retains Owner role but is no longer the primary owner.
 </Warning>
 
-### Leaving an Organization
+### Leaving an Project
 
-To remove yourself from an organization:
+To remove yourself from an project:
 
-1. Go to organization settings
-2. Click **Leave Organization**
+1. Go to project settings
+2. Click **Leave Project**
 3. Confirm your departure
 
 **Restrictions:**
@@ -222,10 +222,10 @@ Owners and admins can see all pending invitations:
 - Use the minimum role necessary
 - Enable 2FA for all owners and admins
 
-### Organization Structure
+### Project Structure
 
 For larger teams, consider:
-- One owner per organization (clearer ownership)
+- One owner per project (clearer ownership)
 - Multiple admins for redundancy
 - Clear documentation of role responsibilities
 
