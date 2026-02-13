@@ -19,7 +19,7 @@ Policy = Signer + Permission
 When you create a Swig wallet using a policy, the wallet is initialized with the signer and permissions defined in that policy.
 
 <Tip>
-  Policies can be created without a signer. In this case, you must provide the signer information when creating a wallet via the API.
+  Policies can be created without a signer. In this case, you must provide the signer information when creating a wallet via the API -- either by referencing a `signerId` from the dashboard or by supplying a `walletAddress` and `walletType` directly.
 </Tip>
 
 ## Key Concepts
@@ -138,7 +138,7 @@ Choose one of three options:
 
 **Skip for Now:**
 - Create the policy without a signer
-- You must provide the signer when creating wallets via the API
+- You must provide the signer when creating wallets via the API (using `signerId`, or `walletAddress` + `walletType`)
 
 #### Permission Configuration
 
@@ -163,7 +163,7 @@ Policies have different statuses based on their configuration:
 | **Incomplete** | Missing both signer and permission |
 
 <Tip>
-  Policies with "Missing Signer" status can still be used. Provide the signer information when creating a wallet via the API's `signerId` parameter.
+  Policies with "Missing Signer" status can still be used. When creating a wallet via the API, you can provide the signer information in two ways: using a `signerId` from the dashboard, or by supplying a `walletAddress` and `walletType` directly. See [Creating a Swig Wallet](./create-swig#specifying-the-wallet-authority) for details.
 </Tip>
 
 ## Example: Creating a Limited Transfer Policy

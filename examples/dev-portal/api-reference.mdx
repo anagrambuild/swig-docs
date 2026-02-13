@@ -96,14 +96,32 @@ Content-Type: application/json
 | `network` | string | Yes | `"mainnet"` or `"devnet"` |
 | `paymasterPubkey` | string | Yes | Paymaster public key |
 | `swigId` | string | No | Custom Swig ID (auto-generated if omitted) |
-| `signerId` | string | No | Signer ID override |
+| `signerId` | string | No | Signer ID from the dashboard (alternative to `walletAddress` + `walletType`) |
+| `walletAddress` | string | No | Wallet public key to use as the authority (alternative to `signerId`). Must be provided together with `walletType`. |
+| `walletType` | string | No | Authority type: `ED25519`, `ED25519_SESSION`, `SECP256K1`, `SECP256K1_SESSION`, `SECP256R1`, or `SECP256R1_SESSION` (alternative to `signerId`). Must be provided together with `walletAddress`. |
+| `maxDurationSlots` | string | No | Maximum session duration in slots. Only valid for session authority types. |
 
-**Request Example:**
+<Info>
+  You can specify the wallet authority in two ways: either by providing a `signerId` from the dashboard, or by supplying a `walletAddress` and `walletType` directly. See [Creating a Swig Wallet](./create-swig#specifying-the-wallet-authority) for details.
+</Info>
+
+**Request Example (with policy signer):**
 ```json
 {
   "policyId": "clx1234567890abcdef",
   "network": "devnet",
   "paymasterPubkey": "A1dBRAaYUHyUzyQLGYzHrQzpYy9xTVXCaMnHx4RuEGY5"
+}
+```
+
+**Request Example (with wallet address and type):**
+```json
+{
+  "policyId": "clx1234567890abcdef",
+  "network": "devnet",
+  "paymasterPubkey": "A1dBRAaYUHyUzyQLGYzHrQzpYy9xTVXCaMnHx4RuEGY5",
+  "walletAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+  "walletType": "ED25519"
 }
 ```
 
@@ -299,6 +317,18 @@ type ActionConfig =
   | { type: 'SubAccount' };
 ```
 
+### WalletType
+
+```typescript
+type WalletType =
+  | 'ED25519'
+  | 'ED25519_SESSION'
+  | 'SECP256K1'
+  | 'SECP256K1_SESSION'
+  | 'SECP256R1'
+  | 'SECP256R1_SESSION';
+```
+
 ### CreateWalletRequest
 
 ```typescript
@@ -308,6 +338,9 @@ interface CreateWalletRequest {
   paymasterPubkey: string;
   swigId?: string;
   signerId?: string;
+  walletAddress?: string;
+  walletType?: WalletType;
+  maxDurationSlots?: string;
 }
 ```
 
