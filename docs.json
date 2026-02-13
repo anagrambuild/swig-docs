@@ -70,10 +70,10 @@
             "pages": [
               "examples/dev-portal/index",
               {
-                "group": "Organizations",
+                "group": "Projects",
                 "pages": [
-                  "examples/dev-portal/organizations",
-                  "examples/dev-portal/create-organization",
+                  "examples/dev-portal/projects",
+                  "examples/dev-portal/create-project",
                   "examples/dev-portal/manage-members",
                   "examples/dev-portal/subscriptions-billing"
                 ]

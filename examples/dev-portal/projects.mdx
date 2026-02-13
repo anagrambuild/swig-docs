@@ -1,13 +1,13 @@
 ---
-title: "Organizations Overview"
+title: "Projects Overview"
 description: '"Together we build, together we Swig" - Swig Team'
 ---
 
-Organizations are the foundation of your Swig Developer Portal experience. They serve as containers for your projects, team members, API keys, policies, and paymasters.
+Projects are the foundation of your Swig Developer Portal experience. They serve as containers for your team members, API keys, policies, and paymasters.
 
-## What is an Organization?
+## What is a Project?
 
-An organization in Swig represents a project or company that uses the Swig protocol. Each organization has:
+A project in Swig represents an application or product that uses the Swig protocol. Each project has:
 
 - **Members** with different roles and permissions
 - **A subscription** that determines available features
@@ -19,7 +19,7 @@ An organization in Swig represents a project or company that uses the Swig proto
 
 ### Team Collaboration
 
-Organizations support multiple members with role-based access control:
+Projects support multiple members with role-based access control:
 
 | Role | Description |
 |------|-------------|
@@ -30,7 +30,7 @@ Organizations support multiple members with role-based access control:
 
 ### Subscription Tiers
 
-Each organization has a subscription that determines available features:
+Each project has a subscription that determines available features:
 
 | Feature | FREE | PRO | ULTRA | ENTERPRISE |
 |---------|------|-----|-------|------------|
@@ -42,15 +42,15 @@ Each organization has a subscription that determines available features:
 ### Automatic Setup
 
 When you sign up for Swig:
-1. An organization is automatically created for you
+1. A project is automatically created for you
 2. You're assigned as the **Owner**
 3. A **FREE** subscription is activated
 4. You can start creating API keys and policies immediately
 
-## Organization Structure
+## Project Structure
 
 ```
-Organization
+Project
 ├── Members (Owner, Admins, Members, Billing)
 ├── Subscription (FREE, PRO, ULTRA, ENTERPRISE)
 ├── API Keys
@@ -63,8 +63,8 @@ Organization
 ## Getting Started
 
 <CardGroup cols={2}>
-  <Card title="Create Organization" icon="plus" href="./create-organization">
-    Set up a new organization for your project
+  <Card title="Create Project" icon="plus" href="./create-project">
+    Set up a new project for your application
   </Card>
   <Card title="Manage Members" icon="users" href="./manage-members">
     Invite team members and manage roles
@@ -76,10 +76,10 @@ Organization
 
 ## Best Practices
 
-### Organization Naming
+### Project Naming
 
-Choose a clear, descriptive name for your organization:
-- Use your company or project name
+Choose a clear, descriptive name for your project:
+- Use your company or application name
 - Keep it recognizable for team members
 - Avoid special characters
 
@@ -91,15 +91,15 @@ Follow the principle of least privilege:
 - Assign **Member** role for developers
 - Use **Billing** for finance team members who only need billing access
 
-### Multiple Organizations
+### Multiple Projects
 
-You can be a member of multiple organizations:
-- Use separate organizations for different projects
+You can be a member of multiple projects:
+- Use separate projects for different applications
 - Keep production and development environments separate
 - Maintain clear boundaries between client projects
 
 ## Next Steps
 
-- [Create an organization](./create-organization) for your project
+- [Create a project](./create-project) for your application
 - [Invite team members](./manage-members) to collaborate
 - [Choose a subscription](./subscriptions-billing) that fits your needs
