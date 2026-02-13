@@ -50,6 +50,39 @@ bun add @swig-wallet/developer
   </Tab>
 </Tabs>
 
+## Specifying the Wallet Authority
+
+When creating a Swig wallet, you need to define the authority (signer) that will control it. There are two ways to do this:
+
+**Option 1: Using a Signer ID from the Dashboard**
+
+If you've already created a signer in the Developer Portal dashboard (or your policy has one attached), you can reference it by its `signerId`. This is the original approach and is useful when you manage signers centrally through the portal.
+
+**Option 2: Providing a Wallet Address and Type Directly**
+
+You can supply a `walletAddress` (the public key) and `walletType` (the authority type) at creation time instead of using a signer ID. This lets you skip creating a signer in the dashboard entirely -- useful when your application already knows the user's public key and authority type.
+
+<Info>
+  You must use one approach or the other -- provide either `signerId` **or** the `walletAddress` + `walletType` pair. If your policy already has a signer attached and you don't pass either, the policy's signer is used by default.
+</Info>
+
+### Supported Wallet Types
+
+When using the `walletAddress` + `walletType` approach, the following types are supported:
+
+| Type | Description |
+|------|-------------|
+| `ED25519` | Standard Solana keypair |
+| `ED25519_SESSION` | Time-limited Ed25519 session |
+| `SECP256K1` | Ethereum-compatible keys |
+| `SECP256K1_SESSION` | Time-limited Secp256k1 session |
+| `SECP256R1` | WebAuthn/Passkey compatible |
+| `SECP256R1_SESSION` | Time-limited Secp256r1 session |
+
+<Tip>
+  For session types (`ED25519_SESSION`, `SECP256K1_SESSION`, `SECP256R1_SESSION`), you must also provide the `maxDurationSlots` parameter to specify how long the session authority remains valid.
+</Tip>
+
 ## Creating a Swig Wallet
 
 ### Using the REST API
@@ -64,6 +97,21 @@ curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
     "policyId": "clx1234567890abcdef",
     "network": "devnet",
     "paymasterPubkey": "PaymasterPublicKeyHere..."
+  }'
+```
+
+You can also supply the wallet authority directly instead of relying on a signer from the dashboard:
+
+```bash
+curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
+  -H "Authorization: Bearer sk_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "policyId": "clx1234567890abcdef",
+    "network": "devnet",
+    "paymasterPubkey": "PaymasterPublicKeyHere...",
+    "walletAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+    "walletType": "ED25519"
   }'
 ```
 
@@ -174,7 +222,10 @@ const wallet = await createWallet();
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `swigId` | string | Custom Swig ID (auto-generated if not provided) |
-| `signerId` | string | Override or provide signer ID when policy has no signer |
+| `signerId` | string | Signer ID from the dashboard (alternative to `walletAddress` + `walletType`) |
+| `walletAddress` | string | Wallet public key to use as the authority (alternative to `signerId`). Must be provided together with `walletType`. |
+| `walletType` | `WalletType` | Authority type for the wallet (alternative to `signerId`). Must be provided together with `walletAddress`. One of: `ED25519`, `ED25519_SESSION`, `SECP256K1`, `SECP256K1_SESSION`, `SECP256R1`, `SECP256R1_SESSION`. |
+| `maxDurationSlots` | string | Maximum session duration in slots. Only valid for session authority types (`ED25519_SESSION`, `SECP256K1_SESSION`, `SECP256R1_SESSION`). |
 
 ## Response Fields
 
@@ -264,7 +315,7 @@ const wallet = await client.createWallet({
 
 ### With Signer Override
 
-If your policy doesn't have a signer attached, or you want to use a different signer:
+If your policy doesn't have a signer attached, or you want to use a different signer from the dashboard:
 
 <Tabs>
   <Tab title="API SDK">
@@ -284,6 +335,66 @@ const wallet = await client.createWallet({
   network: 'devnet',
   paymasterPubkey: 'YourPaymasterPublicKey',
   signerId: 'specific-signer-id', // Signer ID from the portal
+});
+```
+  </Tab>
+</Tabs>
+
+### With Wallet Address and Type
+
+Instead of creating a signer in the dashboard and referencing it by ID, you can supply the wallet's public key and authority type directly at creation time:
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+const { data, error } = await client.wallet.create({
+  policyId: 'your-policy-id',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+  walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+  walletType: 'ED25519',
+});
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+const wallet = await client.createWallet({
+  policyId: 'your-policy-id',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+  walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+  walletType: 'ED25519',
+});
+```
+  </Tab>
+</Tabs>
+
+### With Session Authority
+
+For session-based authority types, include `maxDurationSlots` to set the session lifetime:
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+const { data, error } = await client.wallet.create({
+  policyId: 'your-policy-id',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+  walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+  walletType: 'ED25519_SESSION',
+  maxDurationSlots: '1000000', // session duration in slots
+});
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+const wallet = await client.createWallet({
+  policyId: 'your-policy-id',
+  network: 'devnet',
+  paymasterPubkey: 'YourPaymasterPublicKey',
+  walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+  walletType: 'ED25519_SESSION',
+  maxDurationSlots: '1000000', // session duration in slots
 });
 ```
   </Tab>
@@ -494,11 +605,34 @@ main();
 ## TypeScript Types
 
 ```typescript
+type WalletType =
+  | 'ED25519'
+  | 'ED25519_SESSION'
+  | 'SECP256K1'
+  | 'SECP256K1_SESSION'
+  | 'SECP256R1'
+  | 'SECP256R1_SESSION';
+
 interface CreateWalletRequest {
   /** Policy ID to use for wallet creation */
   policyId: string;
-  /** Optional signer ID to override or provide */
+  /** Optional signer ID to override or provide (alternative to walletAddress + walletType) */
   signerId?: string;
+  /**
+   * Wallet public key to use as the authority (alternative to signerId).
+   * Must be provided together with walletType.
+   */
+  walletAddress?: string;
+  /**
+   * Authority type for the wallet (alternative to signerId).
+   * Must be provided together with walletAddress.
+   */
+  walletType?: WalletType;
+  /**
+   * Maximum session duration in slots (only valid for session authority types).
+   * String to safely handle bigint values.
+   */
+  maxDurationSlots?: string;
   /** Optional swig ID (generated if not provided) */
   swigId?: string;
   /** Network to use */
