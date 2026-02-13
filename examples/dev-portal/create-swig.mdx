@@ -198,6 +198,81 @@ const wallet = await createWallet();
   </Tab>
 </Tabs>
 
+#### With Wallet Address and Type
+
+You can also provide a `walletAddress` and `walletType` directly instead of relying on a signer configured in the dashboard:
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+import { SwigApiClient } from '@swig-wallet/api';
+
+const client = new SwigApiClient({
+  apiKey: 'sk_your_api_key',
+  portalUrl: 'https://dashboard.onswig.com',
+});
+
+async function createWallet() {
+  const { data: wallet, error } = await client.wallet.create({
+    policyId: 'clx1234567890abcdef',
+    network: 'devnet',
+    paymasterPubkey: 'PaymasterPublicKeyHere...',
+    walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+    walletType: 'ED25519',
+  });
+
+  if (error) {
+    console.error(`Error creating wallet: ${error.message}`);
+    return null;
+  }
+
+  console.log('Swig ID:', wallet.swigId);
+  console.log('Wallet Address:', wallet.swigAddress);
+  console.log('Transaction Signature:', wallet.signature);
+
+  return wallet;
+}
+
+const wallet = await createWallet();
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+import { SwigClient, SwigError } from '@swig-wallet/developer';
+
+const client = new SwigClient({
+  apiKey: 'sk_your_api_key',
+  baseUrl: 'https://dashboard.onswig.com',
+});
+
+async function createWallet() {
+  try {
+    const wallet = await client.createWallet({
+      policyId: 'clx1234567890abcdef',
+      network: 'devnet',
+      paymasterPubkey: 'PaymasterPublicKeyHere...',
+      walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
+      walletType: 'ED25519',
+    });
+
+    console.log('Swig ID:', wallet.swigId);
+    console.log('Wallet Address:', wallet.swigAddress);
+    console.log('Transaction Signature:', wallet.signature);
+
+    return wallet;
+  } catch (error) {
+    if (error instanceof SwigError) {
+      console.error(`Error: ${error.code} - ${error.message}`);
+    }
+    return null;
+  }
+}
+
+const wallet = await createWallet();
+```
+  </Tab>
+</Tabs>
+
 ## SDK Comparison
 
 | Feature | @swig-wallet/api | @swig-wallet/developer |
