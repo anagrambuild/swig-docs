@@ -10,7 +10,8 @@ This guide shows how to create Swig wallets programmatically using the Developer
 **Use the Portal API when:**
 - Creating wallets from a backend service
 - Using predefined policies from the Developer Portal
-- Leveraging the paymaster for sponsored wallet creation
+- Leveraging the paymaster for sponsored wallet creation (optional)
+- You want to build the transaction server-side but sign and send it client-side
 - Managing wallets at scale
 
 **Use the SDK directly when:**
@@ -29,7 +30,11 @@ Before creating wallets via the API, ensure you have:
 
 - An [API key](./create-api-key) created in the Developer Portal
 - A [policy](./create-policy) configured (with or without a signer)
-- The paymaster public key (provided by Swig or your own paymaster)
+- (Optional) A paymaster public key — see [Creating a Paymaster](./create-paymaster)
+
+<Info>
+  A paymaster is **optional**. When you omit `paymasterPubkey`, the API returns an unsigned transaction instead of submitting it on-chain. You can then sign and send the transaction yourself. See [Creating Without a Paymaster](#creating-without-a-paymaster) below.
+</Info>
 
 ## Installing the SDK
 
@@ -279,7 +284,7 @@ const wallet = await createWallet();
 |---------|------------------|------------------------|
 | Error handling | Returns `{ data, error }` | Throws `SwigError` |
 | Method name | `client.wallet.create()` | `client.createWallet()` |
-| Response type | Basic object | Same basic object |
+| No-paymaster response | Raw base58 string in `transaction` | Reconstructed `VersionedTransaction` object |
 | Best for | Low-level control | Developer convenience |
 
 ## Request Parameters
@@ -290,12 +295,12 @@ const wallet = await createWallet();
 |-----------|------|-------------|
 | `policyId` | string | The policy ID from the Developer Portal |
 | `network` | `'mainnet'` \| `'devnet'` | Target Solana network |
-| `paymasterPubkey` | string | Public key of the paymaster covering fees |
 
 ### Optional Parameters
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
+| `paymasterPubkey` | string | Public key of the paymaster covering fees. When provided, the paymaster signs and sends the transaction. When omitted, the API returns an unsigned transaction for you to sign and send. |
 | `swigId` | string | Custom Swig ID (auto-generated if not provided) |
 | `signerId` | string | Signer ID from the dashboard (alternative to `walletAddress` + `walletType`) |
 | `walletAddress` | string | Wallet public key to use as the authority (alternative to `signerId`). Must be provided together with `walletType`. |
@@ -304,11 +309,139 @@ const wallet = await createWallet();
 
 ## Response Fields
 
+The response shape depends on whether a paymaster was provided.
+
+### With Paymaster
+
 | Field | Type | Description |
 |-------|------|-------------|
-| `swigId` | string | The 8-byte identifier for this Swig wallet |
+| `swigId` | string | The unique identifier for this Swig wallet |
 | `swigAddress` | string | The on-chain PDA address of the wallet |
 | `signature` | string | The transaction signature (viewable on explorer) |
+
+### Without Paymaster
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `swigId` | string | The unique identifier for this Swig wallet |
+| `swigAddress` | string | The on-chain PDA address of the wallet |
+| `transaction` | string | Base58-encoded serialized `VersionedTransaction` (unsigned) |
+
+<Note>
+  When no paymaster is used, the expected swig address is still recorded in the Developer Portal database so you can track and manage it through the dashboard.
+</Note>
+
+## Creating Without a Paymaster
+
+When you omit `paymasterPubkey`, the API builds the create-swig transaction but does **not** send it. Instead, it returns a base58-encoded serialized `VersionedTransaction` that you can deserialize, sign, and send yourself.
+
+This is useful when:
+- Your users pay their own transaction fees
+- You want to collect multiple signatures before sending
+- You don't want to set up or fund a paymaster
+
+### Using the REST API (No Paymaster)
+
+```bash
+curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
+  -H "Authorization: Bearer sk_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "policyId": "clx1234567890abcdef",
+    "network": "devnet"
+  }'
+```
+
+**Example Response:**
+
+```json
+{
+  "data": {
+    "swigId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "swigAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+    "transaction": "BASE58_ENCODED_VERSIONED_TRANSACTION..."
+  },
+  "error": null
+}
+```
+
+### Using the SDK (No Paymaster)
+
+<Tabs>
+  <Tab title="API SDK">
+```typescript
+import { SwigApiClient } from '@swig-wallet/api';
+
+const client = new SwigApiClient({
+  apiKey: 'sk_your_api_key',
+  portalUrl: 'https://dashboard.onswig.com',
+});
+
+// Create without paymaster — returns the raw transaction data
+const { data, error } = await client.wallet.create({
+  policyId: 'clx1234567890abcdef',
+  network: 'devnet',
+  // No paymasterPubkey
+});
+
+if (error) {
+  console.error(`Error: ${error.message}`);
+} else if (data && 'transaction' in data) {
+  console.log('Swig ID:', data.swigId);
+  console.log('Swig Address:', data.swigAddress);
+  console.log('Transaction (base58):', data.transaction);
+
+  // Reconstruct, sign, and send the transaction yourself:
+  // const txBytes = bs58.decode(data.transaction);
+  // const tx = VersionedTransaction.deserialize(txBytes);
+  // tx.sign([yourKeypair]);
+  // const sig = await connection.sendTransaction(tx);
+}
+```
+  </Tab>
+  <Tab title="Developer SDK">
+```typescript
+import { Connection } from '@solana/web3.js';
+import { SwigClient, SwigError } from '@swig-wallet/developer';
+
+const client = new SwigClient({
+  apiKey: 'sk_your_api_key',
+  baseUrl: 'https://dashboard.onswig.com',
+});
+
+try {
+  // Create without paymaster — returns a VersionedTransaction object
+  const result = await client.createWallet({
+    policyId: 'clx1234567890abcdef',
+    network: 'devnet',
+    // No paymasterPubkey
+  });
+
+  if ('transaction' in result) {
+    console.log('Swig ID:', result.swigId);
+    console.log('Swig Address:', result.swigAddress);
+
+    // The SDK automatically reconstructs the VersionedTransaction
+    const tx = result.transaction; // VersionedTransaction object
+
+    // Sign with your keypair and send
+    tx.sign([yourKeypair]);
+    const connection = new Connection('https://api.devnet.solana.com');
+    const signature = await connection.sendTransaction(tx);
+    console.log('Transaction sent:', signature);
+  }
+} catch (error) {
+  if (error instanceof SwigError) {
+    console.error(`Error: ${error.code} - ${error.message}`);
+  }
+}
+```
+  </Tab>
+</Tabs>
+
+<Warning>
+  When using the no-paymaster flow, the returned transaction includes a recent blockhash. Blockhashes expire after approximately 60-90 seconds. You must sign and send the transaction promptly.
+</Warning>
 
 ## Examples
 
@@ -712,27 +845,65 @@ interface CreateWalletRequest {
   swigId?: string;
   /** Network to use */
   network: 'mainnet' | 'devnet';
-  /** Paymaster public key */
-  paymasterPubkey: string;
+  /** Paymaster public key (optional — omit for self-send flow) */
+  paymasterPubkey?: string;
 }
 
-interface CreateWalletResponse {
-  /** Swig ID (8-byte identifier) */
+/** Response when a paymaster is used */
+interface CreateWalletPaymasterResponse {
   swigId: string;
-  /** Swig wallet address */
   swigAddress: string;
-  /** Transaction signature */
   signature: string;
 }
+
+/** Response when no paymaster is provided */
+interface CreateWalletTransactionResponse {
+  swigId: string;
+  swigAddress: string;
+  /** Base58-encoded serialized VersionedTransaction (unsigned) */
+  transaction: string;
+}
+
+type CreateWalletResponse =
+  | CreateWalletPaymasterResponse
+  | CreateWalletTransactionResponse;
 ```
 
-## Comparison: API vs Direct SDK
+### Developer SDK Types
+
+The `@swig-wallet/developer` SDK provides higher-level types that automatically reconstruct the transaction:
+
+```typescript
+import type { VersionedTransaction } from '@solana/web3.js';
+
+/** Result when a paymaster was used */
+interface WalletCreatePaymasterResult {
+  swigId: string;
+  swigAddress: string;
+  signature: string;
+}
+
+/** Result when no paymaster was provided */
+interface WalletCreateTransactionResult {
+  swigId: string;
+  swigAddress: string;
+  /** Reconstructed VersionedTransaction ready for signing */
+  transaction: VersionedTransaction;
+}
+
+type WalletCreateResult =
+  | WalletCreatePaymasterResult
+  | WalletCreateTransactionResult;
+```
+
+## Comparison: Portal API vs Direct SDK
 
 | Feature | Portal API | Direct SDK |
 |---------|------------|------------|
 | Uses predefined policies | Yes | No |
 | Requires API key | Yes | No |
-| Paymaster sponsored | Yes | Optional |
+| Paymaster sponsored | Optional | Optional |
+| Self-send (no paymaster) | Yes — returns unsigned tx | Yes — you build the tx |
 | Full configuration control | Limited to policy | Full |
 | Best for | Backend services | Client apps |
 | Keypair management | Server-side | Client-side |

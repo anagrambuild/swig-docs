@@ -94,7 +94,7 @@ Content-Type: application/json
 |-------|------|----------|-------------|
 | `policyId` | string | Yes | Policy ID to use |
 | `network` | string | Yes | `"mainnet"` or `"devnet"` |
-| `paymasterPubkey` | string | Yes | Paymaster public key |
+| `paymasterPubkey` | string | No | Paymaster public key. When provided, the paymaster signs and sends the transaction. When omitted, an unsigned transaction is returned. |
 | `swigId` | string | No | Custom Swig ID (auto-generated if omitted) |
 | `signerId` | string | No | Signer ID from the dashboard (alternative to `walletAddress` + `walletType`) |
 | `walletAddress` | string | No | Wallet public key to use as the authority (alternative to `signerId`). Must be provided together with `walletType`. |
@@ -105,12 +105,20 @@ Content-Type: application/json
   You can specify the wallet authority in two ways: either by providing a `signerId` from the dashboard, or by supplying a `walletAddress` and `walletType` directly. See [Creating a Swig Wallet](./create-swig#specifying-the-wallet-authority) for details.
 </Info>
 
-**Request Example (with policy signer):**
+**Request Example (with paymaster):**
 ```json
 {
   "policyId": "clx1234567890abcdef",
   "network": "devnet",
   "paymasterPubkey": "A1dBRAaYUHyUzyQLGYzHrQzpYy9xTVXCaMnHx4RuEGY5"
+}
+```
+
+**Request Example (without paymaster — self-send flow):**
+```json
+{
+  "policyId": "clx1234567890abcdef",
+  "network": "devnet"
 }
 ```
 
@@ -125,16 +133,38 @@ Content-Type: application/json
 }
 ```
 
-**Response:**
+**Response (with paymaster):**
 ```json
 {
-  "swigId": "a1b2c3d4e5f67890",
-  "swigAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
-  "signature": "5wHu1qwD7g4p3zWxF..."
+  "data": {
+    "swigId": "a1b2c3d4e5f67890",
+    "swigAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+    "signature": "5wHu1qwD7g4p3zWxF..."
+  },
+  "error": null
 }
 ```
 
-**cURL Example:**
+**Response (without paymaster):**
+```json
+{
+  "data": {
+    "swigId": "a1b2c3d4e5f67890",
+    "swigAddress": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
+    "transaction": "BASE58_ENCODED_VERSIONED_TRANSACTION..."
+  },
+  "error": null
+}
+```
+
+| Response Field | Type | Present When | Description |
+|----------------|------|--------------|-------------|
+| `swigId` | string | Always | Swig wallet identifier |
+| `swigAddress` | string | Always | On-chain PDA address |
+| `signature` | string | With paymaster | Transaction signature |
+| `transaction` | string | Without paymaster | Base58-encoded unsigned `VersionedTransaction` |
+
+**cURL Example (with paymaster):**
 ```bash
 curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
   -H "Authorization: Bearer sk_your_api_key" \
@@ -143,6 +173,17 @@ curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
     "policyId": "clx1234567890abcdef",
     "network": "devnet",
     "paymasterPubkey": "A1dBRAaYUHyUzyQLGYzHrQzpYy9xTVXCaMnHx4RuEGY5"
+  }'
+```
+
+**cURL Example (without paymaster):**
+```bash
+curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
+  -H "Authorization: Bearer sk_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "policyId": "clx1234567890abcdef",
+    "network": "devnet"
   }'
 ```
 
@@ -335,7 +376,8 @@ type WalletType =
 interface CreateWalletRequest {
   policyId: string;
   network: 'mainnet' | 'devnet';
-  paymasterPubkey: string;
+  /** Optional — omit for self-send flow */
+  paymasterPubkey?: string;
   swigId?: string;
   signerId?: string;
   walletAddress?: string;
@@ -346,12 +388,27 @@ interface CreateWalletRequest {
 
 ### CreateWalletResponse
 
+The response is a union type — the shape depends on whether a paymaster was provided.
+
 ```typescript
-interface CreateWalletResponse {
+/** Returned when paymasterPubkey is provided */
+interface CreateWalletPaymasterResponse {
   swigId: string;
   swigAddress: string;
   signature: string;
 }
+
+/** Returned when paymasterPubkey is omitted */
+interface CreateWalletTransactionResponse {
+  swigId: string;
+  swigAddress: string;
+  /** Base58-encoded unsigned VersionedTransaction */
+  transaction: string;
+}
+
+type CreateWalletResponse =
+  | CreateWalletPaymasterResponse
+  | CreateWalletTransactionResponse;
 ```
 
 ## Error Responses
