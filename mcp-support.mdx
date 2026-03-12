@@ -1,15 +1,70 @@
 ---
 title: "Swig MCP Support"
-description: "\"Why build it yourself when AI can build it for you?\" - Albert Einstein from the grave"
+description: "\"Why build it yourself when AI can build it for you?\" - Albert Einstein"
 ---
 
 ## Overview
 
-The Model Context Protocol (MCP) is an open protocol that connects your functions to LLMs and AI applications. With Mintlify's integration, you can automatically generate an MCP server for Swig's docs, enabling seamless AI-powered interactions with your product.
+Swig offers two MCP servers:
 
-## Generating your MCP server
+1. **Swig Wallet MCP** — gives AI agents the ability to create and manage Swig smart wallets on Solana. Create wallets, set spending limits, manage authorities, transfer SOL, and execute arbitrary on-chain instructions.
+2. **Swig Docs MCP** — serves the Swig documentation to AI agents via Mintlify, so they can answer questions about Swig without leaving the conversation.
 
-Swig docs can be converted into an MCP server using the following command:
+## Swig Wallet MCP
+
+The Swig Wallet MCP server runs locally over stdio or remotely over Streamable HTTP. Full source and documentation: [github.com/anagrambuild/swig-ts/tree/main/packages/mcp-server](https://github.com/anagrambuild/swig-ts/tree/main/packages/mcp-server)
+
+### Step 1: Build the server
+
+```bash
+# From the swig-ts monorepo
+bun install
+bun run build -w @swig-wallet/mcp-server
+```
+
+### Step 2: Configure the MCP client
+
+Add the server to your AI agent:
+
+```bash
+# Claude Code (local/stdio)
+claude mcp add swig-wallet -- node /path/to/packages/mcp-server/dist/index.js
+
+# Claude Code (remote/HTTP)
+claude mcp add swig-wallet --transport http https://your-host.com/mcp
+```
+
+### Step 3: Configure RPC
+
+Call `configure_rpc` with your Solana network:
+- Mainnet: `https://api.mainnet-beta.solana.com`
+- Devnet: `https://api.devnet.solana.com`
+
+### Step 4: Set up the agent keypair
+
+Call `generate_agent_keypair` to create a new keypair (optionally save to file), or `configure_agent_keypair` to load an existing one.
+
+Fund this address with SOL — it pays the rent for Swig wallet creation.
+
+### Step 5: Create a Swig wallet
+
+Call `create_swig_wallet`. This creates:
+- A **Swig account** (the on-chain config holding roles/authorities)
+- A **wallet address** (PDA that holds funds)
+
+The agent keypair is the root authority by default with full permissions.
+
+### Step 6: Use the wallet
+
+- `fetch_swig_wallet` — view wallet details and authorities
+- `get_balance` — check SOL balance of the wallet or agent
+- `transact_sol_transfer` — send SOL from the wallet
+- `transact_custom` — execute any instruction through the wallet
+- `add_authority` / `remove_authority` / `update_authority` — manage permissions
+
+## Swig Docs MCP
+
+Generate an MCP server from the Swig documentation using Mintlify:
 
 ```bash
 npx mint-mcp add build.onswig.com
