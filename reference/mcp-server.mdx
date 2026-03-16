@@ -1,0 +1,294 @@
+---
+title: "Swig MCP Server"
+description: "Reference for the @swig-wallet/mcp-server package, including transports, tools, permissions, and deployment."
+---
+
+`@swig-wallet/mcp-server` is an MCP (Model Context Protocol) server that gives AI agents the ability to create and manage [Swig](https://swig.so) smart wallets on Solana. It can run locally over `stdio` or remotely over Streamable HTTP.
+
+<Note>
+  If you are setting this up for the first time, start with
+  [Getting Started with Swig MCP](/tutorials/mcp).
+</Note>
+
+## Quick Start
+
+### Local (`stdio`)
+
+```bash
+# From the swig-ts monorepo
+bun run build -w @swig-wallet/mcp-server
+
+# Add to Claude Code
+claude mcp add swig-wallet -- node packages/mcp-server/dist/index.js
+```
+
+### Remote (HTTP)
+
+```bash
+node packages/mcp-server/dist/index.js --http --port 3001 --api-key YOUR_SECRET
+
+# Add to Claude Code
+claude mcp add swig-wallet --transport http https://your-host.com/mcp
+```
+
+## Installation
+
+The server is part of the `swig-ts` monorepo.
+
+Build the full workspace:
+
+```bash
+bun install
+bun run build
+```
+
+Or build only the MCP server:
+
+```bash
+cd packages/mcp-server
+bun run build
+```
+
+The compiled output is a single file at `dist/index.js`.
+
+## Transport Modes
+
+### `stdio` (default)
+
+In `stdio` mode, the server reads JSON-RPC messages from `stdin` and writes responses to `stdout`. This is the standard local MCP pattern, where the AI client launches the server as a subprocess.
+
+```bash
+node dist/index.js
+```
+
+Agent configuration examples:
+
+Claude Code:
+
+```bash
+claude mcp add swig-wallet -- node /path/to/dist/index.js
+```
+
+Cursor, VS Code, or another MCP client:
+
+```json
+{
+  "mcpServers": {
+    "swig-wallet": {
+      "command": "node",
+      "args": ["/path/to/swig-ts/packages/mcp-server/dist/index.js"]
+    }
+  }
+}
+```
+
+### Streamable HTTP (`--http`)
+
+In HTTP mode, the server exposes the [MCP Streamable HTTP transport](https://modelcontextprotocol.io/docs/concepts/transports#streamable-http). Each connecting client gets its own stateful session, which makes this mode appropriate for shared or hosted deployments.
+
+```bash
+node dist/index.js --http
+```
+
+Endpoints:
+
+| Path | Methods | Description |
+| :--- | :--- | :--- |
+| `/mcp` | `POST`, `GET`, `DELETE` | MCP Streamable HTTP endpoint |
+| `/health` | `GET` | Health check that returns JSON status and session count |
+
+Agent configuration examples:
+
+Claude Code:
+
+```bash
+claude mcp add swig-wallet --transport http https://your-host.com/mcp
+```
+
+Cursor:
+
+```text
+Settings > MCP Servers > Add a server > URL: https://your-host.com/mcp
+```
+
+Any MCP-compatible client can connect by sending an `InitializeRequest` to `/mcp`.
+
+## CLI Options
+
+```text
+swig-mcp-server              Start in stdio mode (default)
+swig-mcp-server --http       Start as Streamable HTTP server
+```
+
+| Flag | Default | Description |
+| :--- | :--- | :--- |
+| `--http` | off | Enable HTTP mode instead of `stdio` |
+| `--port <n>` | `3001` | HTTP listen port |
+| `--host <addr>` | `0.0.0.0` | HTTP bind address |
+| `--api-key <key>` | none | Require `Authorization: Bearer <key>` on every request |
+| `--cors-origin <origin>` | `*` | Value for the `Access-Control-Allow-Origin` header |
+| `--help`, `-h` |  | Print help and exit |
+
+### Environment Variables
+
+| Variable | Description |
+| :--- | :--- |
+| `PORT` | HTTP port, overridden by `--port` |
+| `SWIG_MCP_API_KEY` | Bearer token for auth, overridden by `--api-key` |
+
+## Tools
+
+The server exposes 13 tools across configuration, wallet management, and transaction execution. In a fresh session, call `configure_rpc` first.
+
+### Configuration
+
+| Tool | Description |
+| :--- | :--- |
+| `configure_rpc` | Set the Solana RPC endpoint and commitment level |
+| `configure_paymaster` | Provide Swig Paymaster API credentials from [dashboard.onswig.com](https://dashboard.onswig.com) for gasless transactions |
+| `configure_gas_sponsor` | Provide a custom gas sponsorship server URL |
+| `generate_agent_keypair` | Generate a new Ed25519 keypair for the agent and optionally save it to a file |
+| `configure_agent_keypair` | Load an existing keypair from a JSON file or base58 secret key |
+| `get_balance` | Check the SOL balance of any address |
+
+### Wallet Management
+
+| Tool | Description |
+| :--- | :--- |
+| `create_swig_wallet` | Create a new Swig smart wallet on-chain with a root authority and permissions |
+| `fetch_swig_wallet` | Fetch wallet details, including account version, wallet address, and authorities |
+| `add_authority` | Add a new authority with specific permissions |
+| `remove_authority` | Remove an authority by role ID |
+| `update_authority` | Update an authority's permissions or configuration |
+
+For `add_authority`, the `newAuthorityPubkey` format depends on `authorityType`:
+
+- `ed25519` and `ed25519Session`: base58 public key
+- `secp256k1`: hex-encoded SEC1 public key
+- `secp256r1`: compressed hex-encoded P-256 public key
+
+### Transactions
+
+| Tool | Description |
+| :--- | :--- |
+| `transact_sol_transfer` | Transfer SOL from the Swig wallet to a recipient |
+| `transact_custom` | Execute arbitrary instructions through the Swig wallet, with the wallet as signer |
+
+## Gas and Fee Handling
+
+Configure one fee strategy before sending transactions.
+
+### 1. Swig Paymaster
+
+The [Swig Paymaster](https://dashboard.onswig.com) covers transaction fees. Call `configure_paymaster` with your API key and paymaster public key.
+
+For broader Paymaster setup details, see [Using Paymaster SDK](/examples/paymaster).
+
+### 2. Custom Gas Sponsor
+
+Your own sponsor service signs and sponsors transactions. Call `configure_gas_sponsor` with the service URL.
+
+The server sends a base64-encoded transaction to:
+
+```text
+<url>/sponsor
+```
+
+The sponsor service is expected to return JSON in this shape:
+
+```json
+{
+  "signature": "..."
+}
+```
+
+### 3. Self-Funded
+
+The agent can pay fees from its own SOL balance. Call `generate_agent_keypair` or `configure_agent_keypair`, then fund that address with SOL.
+
+## Permissions Reference
+
+When calling `create_swig_wallet`, `add_authority`, or `update_authority`, pass a `permissions` array where each object has a `type` field.
+
+| Type | Additional fields | Description |
+| :--- | :--- | :--- |
+| `all` | none | Full root permissions |
+| `manageAuthority` | none | Can add, remove, and update authorities |
+| `allButManageAuthority` | none | Everything except authority management |
+| `closeSwigAuthority` | none | Can close the Swig account |
+| `solLimit` | `amount` | One-time SOL spend limit in lamports, passed as a string |
+| `solRecurringLimit` | `recurringAmount`, `window` | Recurring SOL limit |
+| `solDestinationLimit` | `amount`, `destination` | SOL limit to a specific recipient |
+| `tokenLimit` | `mint`, `amount` | One-time token spend limit |
+| `tokenRecurringLimit` | `mint`, `recurringAmount`, `window` | Recurring token limit |
+| `programLimit` | `programId` | Access to a specific program |
+| `programAll` | none | Access to any program |
+| `programCurated` | none | Access to curated programs |
+| `subAccount` | none | Sub-account management |
+| `stakeAll` | none | Full staking permissions |
+| `stakeLimit` | `amount` | Staking with an amount limit |
+
+Example:
+
+```json
+[
+  { "type": "solLimit", "amount": "500000000" },
+  {
+    "type": "programLimit",
+    "programId": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+  }
+]
+```
+
+For more detail on how these actions map to the SDK, see [Swig Actions Documentation](/reference/typescript/actions).
+
+## Deployment
+
+### Docker
+
+```dockerfile
+FROM node:20-slim
+WORKDIR /app
+COPY packages/mcp-server/dist/index.js .
+COPY node_modules/ ./node_modules/
+ENV PORT=3001
+ENV SWIG_MCP_API_KEY=changeme
+EXPOSE 3001
+CMD ["node", "index.js", "--http"]
+```
+
+### Railway, Render, and Fly.io
+
+Use this start command:
+
+```bash
+node packages/mcp-server/dist/index.js --http
+```
+
+Set `PORT` and `SWIG_MCP_API_KEY` in your deployment environment.
+
+### Production Checklist
+
+- Require authentication with `--api-key` or `SWIG_MCP_API_KEY`
+- Put the server behind a reverse proxy with TLS termination
+- Set `--cors-origin` to your specific domain instead of `*`
+- Use a dedicated RPC endpoint such as Helius, Triton, or QuickNode instead of the public Solana RPC
+
+## Architecture
+
+```text
+Agent (Claude Code, Cursor, etc.)
+  |
+  |-- stdio -------- swig-mcp-server (local process)
+  |
+  '-- HTTP POST ---- swig-mcp-server --http (remote)
+                       |
+                       |-- /mcp     -> Streamable HTTP transport (per-session)
+                       '-- /health  -> health check
+```
+
+The server uses `@swig-wallet/classic` internally. Wallet creation, authority management, and transaction signing are handled through `@swig-wallet/classic` and `@swig-wallet/paymaster-classic`.
+
+## License
+
+`AGPL-3.0-only`
