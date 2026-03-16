@@ -34,6 +34,12 @@
             ]
           },
           {
+            "group": "Swig MCP",
+            "pages": [
+              "tutorials/mcp/index"
+            ]
+          },
+          {
             "group": "Embedded Wallets",
             "pages": [
               "tutorials/embeded_wallet_para/index"
@@ -153,7 +159,8 @@
           {
             "group": "General",
             "pages": [
-              "reference/index"
+              "reference/index",
+              "reference/mcp-server"
             ]
           },
            {

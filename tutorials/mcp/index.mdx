@@ -1,0 +1,108 @@
+---
+title: "Getting Started with Swig MCP"
+description: "Build, configure, and use the Swig MCP server with your AI agent."
+---
+
+The Swig MCP server exposes wallet creation, RPC configuration, authority management, and transaction execution tools to MCP-compatible AI agents.
+
+<Note>
+  This page covers the dedicated Swig wallet MCP server built from
+  <code>@swig-wallet/mcp-server</code>. If you want to expose the Swig docs
+  themselves as an MCP server, see [Swig Docs MCP Support](/mcp-support).
+</Note>
+
+## Prerequisites
+
+Before you begin, make sure you have:
+
+- Access to the `swig-ts` monorepo
+- `bun` installed
+- An MCP-compatible client such as Claude Code
+- SOL on your chosen network to fund wallet creation
+
+## Step 1: Build the server
+
+Build the MCP server from the `swig-ts` monorepo:
+
+```bash
+# From the swig-ts monorepo
+bun install
+bun run build -w @swig-wallet/mcp-server
+```
+
+This produces the compiled server entrypoint at `packages/mcp-server/dist/index.js`.
+
+## Step 2: Configure the MCP client
+
+Add the server to your AI agent:
+
+```bash
+# Claude Code (local/stdio)
+claude mcp add swig-wallet -- node /path/to/packages/mcp-server/dist/index.js
+
+# Claude Code (remote/HTTP)
+claude mcp add swig-wallet --transport http https://your-host.com/mcp
+```
+
+Use the local `stdio` option when running the built server on the same machine as your MCP client. Use the HTTP transport when you are hosting the server remotely.
+
+## Step 3: Configure RPC
+
+After the MCP server is connected, call `configure_rpc` with the Solana cluster you want the agent to use:
+
+- Mainnet: `https://api.mainnet-beta.solana.com`
+- Devnet: `https://api.devnet.solana.com`
+
+You can call `configure_rpc` again later if you need to switch networks.
+
+## Step 4: Set up the agent keypair
+
+Call `generate_agent_keypair` to create a new keypair, or `configure_agent_keypair` to load an existing one.
+
+Fund this address with SOL. The agent keypair pays the rent required to create the Swig wallet on-chain.
+
+## Step 5: Create a Swig wallet
+
+Call `create_swig_wallet` to create the wallet.
+
+This creates two related addresses:
+
+- A **Swig account**: the on-chain config account that stores roles and authorities
+- A **wallet address**: the PDA that holds funds and executes instructions
+
+The agent keypair is the root authority by default and starts with full permissions.
+
+## Step 6: Use the wallet
+
+Once the wallet exists, these are the primary tools you will use:
+
+| Tool | Purpose |
+| :--- | :--- |
+| `fetch_swig_wallet` | View wallet details and configured authorities |
+| `get_balance` | Check the SOL balance of the wallet or agent |
+| `transact_sol_transfer` | Send SOL from the wallet |
+| `transact_custom` | Execute arbitrary instructions through the wallet |
+| `add_authority` | Add a new authority with specific permissions |
+| `remove_authority` | Remove an authority from the wallet |
+| `update_authority` | Update an authority's permissions or configuration |
+
+## Recommended setup flow
+
+For a first-time setup, the usual sequence is:
+
+1. Build and connect the MCP server
+2. Call `configure_rpc`
+3. Call `generate_agent_keypair` or `configure_agent_keypair`
+4. Fund the agent keypair with SOL
+5. Call `create_swig_wallet`
+6. Use `fetch_swig_wallet` and `get_balance` to verify the wallet before sending transactions
+
+## Next Steps
+
+Once you have the server running, use [Swig MCP Server](/reference/mcp-server) for:
+
+- Transport and endpoint details
+- CLI flags and environment variables
+- Full tool list
+- Gas sponsorship options
+- Permissions and deployment guidance
