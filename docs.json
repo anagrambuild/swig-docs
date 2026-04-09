@@ -9,220 +9,155 @@
   },
   "favicon": "/favicon.png",
   "navigation": {
-    "tabs": [
+    "groups": [
       {
-        "tab": "Introduction",
+        "group": "Introduction",
+        "expanded": true,
         "pages": [
           "index",
+          "products-and-sdks",
           "deepdive",
-          "use-case-partners",
-          "use-case-customers",
-          "mcp-support"
+          {
+            "group": "Use Cases",
+            "pages": [
+              "use-case-customers",
+              "use-case-partners"
+            ]
+          }
         ]
       },
       {
-        "tab": "Tutorials",
-        "groups": [
+        "group": "Tutorials",
+        "pages": [
           {
-            "group": "Typescript Quickstart",
+            "group": "Swig Wallet",
             "pages": [
               "tutorials/typescript/index",
               "tutorials/typescript/env",
               "tutorials/typescript/create",
               "tutorials/typescript/managing_authorities",
-              "tutorials/typescript/sign"
-            ]
-          },
-          {
-            "group": "Swig MCP",
-            "pages": [
-              "tutorials/mcp/index"
-            ]
-          },
-          {
-            "group": "Embedded Wallets",
-            "pages": [
+              "tutorials/typescript/sign",
               "tutorials/embeded_wallet_para/index"
             ]
           },
           {
-            "group": "v1.0 Release",
+            "group": "Developer Portal / IdP",
             "pages": [
-              "tutorials/typescript/migration-v1"
+              "examples/dev-portal/index",
+              "examples/dev-portal/projects",
+              "examples/dev-portal/create-project",
+              "examples/dev-portal/manage-members",
+              "examples/dev-portal/subscriptions-billing",
+              "examples/dev-portal/create-api-key",
+              "examples/dev-portal/create-policy",
+              "examples/dev-portal/fetch-policy",
+              "examples/dev-portal/create-swig",
+              "examples/dev-portal/paymaster-overview",
+              "examples/dev-portal/create-paymaster",
+              "examples/dev-portal/manage-paymaster",
+              "examples/dev-portal/transaction-history",
+              "examples/dev-portal/error-codes"
             ]
           }
         ]
       },
       {
-        "tab": "How To",
-        "groups": [
+        "group": "Build with AI",
+        "pages": [
+          "build-with-ai",
           {
-            "group": "Basics",
+            "group": "Wallet Agents",
             "pages": [
-              "examples/index",
-              "examples/transfer",
-              "examples/swap"
+              "tutorials/mcp/index",
+              "reference/mcp-server"
             ]
           },
           {
-            "group": "Payments",
+            "group": "Docs for LLMs",
             "pages": [
-              "examples/subscription",
-              "examples/credit_card"
+              "mcp-support"
             ]
-          },
+          }
+        ]
+      },
+      {
+        "group": "Resources",
+        "pages": [
           {
-            "group": "Developer Portal",
+            "group": "SDK & API Reference",
             "pages": [
-              "examples/dev-portal/index",
+              "reference/index",
               {
-                "group": "Projects",
+                "group": "Swig Wallet SDKs",
                 "pages": [
-                  "examples/dev-portal/projects",
-                  "examples/dev-portal/create-project",
-                  "examples/dev-portal/manage-members",
-                  "examples/dev-portal/subscriptions-billing"
+                  "reference/typescript/index",
+                  "reference/typescript/kit",
+                  "reference/typescript/actions",
+                  "reference/rust/index",
+                  "reference/rust/instruction_builder",
+                  "reference/rust/rust_wallet",
+                  "reference/error-types/index"
                 ]
               },
               {
-                "group": "API Keys",
-                "pages": [
-                  "examples/dev-portal/create-api-key"
-                ]
-              },
-              {
-                "group": "Policies & Wallets",
-                "pages": [
-                  "examples/dev-portal/create-policy",
-                  "examples/dev-portal/fetch-policy",
-                  "examples/dev-portal/create-swig"
-                ]
-              },
-              {
-                "group": "Paymaster",
-                "pages": [
-                  "examples/dev-portal/paymaster-overview",
-                  "examples/dev-portal/create-paymaster",
-                  "examples/dev-portal/manage-paymaster",
-                  "examples/dev-portal/transaction-history"
-                ]
-              },
-              {
-                "group": "API Reference",
+                "group": "Developer Portal APIs",
                 "pages": [
                   "examples/dev-portal/api-reference"
-                ]
-              },
-              {
-                "group": "Troubleshooting",
-                "pages": [
-                  "examples/dev-portal/error-codes"
                 ]
               }
             ]
           },
           {
-            "group": "Paymaster",
+            "group": "Examples & Recipes",
             "pages": [
-              "examples/paymaster/index",
-              "examples/paymaster/sponsor-transactions",
-              "examples/paymaster/advanced-usage"
+              "examples/index",
+              {
+                "group": "Wallet Basics",
+                "pages": [
+                  "examples/transfer",
+                  "examples/swap",
+                  "examples/credit_card",
+                  "examples/subscription"
+                ]
+              },
+              {
+                "group": "Wallet Integrations",
+                "pages": [
+                  "examples/ethereum_keys",
+                  "examples/passkeys",
+                  "examples/paymaster/index",
+                  "examples/paymaster/sponsor-transactions",
+                  "examples/paymaster/advanced-usage"
+                ]
+              },
+              {
+                "group": "Advanced Wallet Patterns",
+                "pages": [
+                  "examples/secp256r1_authority",
+                  "examples/sessions",
+                  "examples/sub_accounts",
+                  "examples/v2_features",
+                  "examples/multi_authority",
+                  "examples/migrating-from-squads"
+                ]
+              }
             ]
           },
           {
-            "group": "Ethereum Onboarding",
+            "group": "Release Notes & Links",
             "pages": [
-              "examples/ethereum_keys"
-            ]
-          },
-          {
-            "group": "Passkeys",
-            "pages": [
-              "examples/passkeys"
-            ]
-          },
-          {
-            "group": "Advanced",
-            "pages": [
-              "examples/secp256r1_authority",
-              "examples/sessions",
-              "examples/sub_accounts",
-              "examples/v2_features",
-              "examples/multi_authority"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "Reference",
-        "groups": [
-          {
-            "group": "General",
-            "pages": [
-              "reference/index",
-              "reference/mcp-server"
-            ]
-          },
-           {
-             "group": "TypeScript",
-             "pages": [
-               "reference/typescript/index",
-               "reference/typescript/kit",
-               "reference/typescript/actions"
-             ]
-           },
-          {
-            "group": "Rust",
-            "pages": [
-              "reference/rust/index",
-              "reference/rust/instruction_builder",
-              "reference/rust/rust_wallet"
-            ]
-          },
-          {
-            "group": "Error Types",
-            "pages": [
-              "reference/error-types/index"
+              "v1-release-notes",
+              "tutorials/typescript/migration-v1",
+              "links-and-contact"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Awesome Swig",
-          "href": "https://github.com/anagrambuild/awesome-swig",
-          "icon": "globe"
-        },
-        {
-          "anchor": "Protocol/ Rust SDK",
-          "href": "https://github.com/anagrambuild/swig-wallet",
-          "icon": "github"
-        },
-        {
-          "anchor": "Typescript Sdk",
-          "href": "https://github.com/anagrambuild/swig-ts",
-          "icon": "github"
-        },
-        {
-          "anchor": "Telegram Group",
-          "href": "https://t.me/onswig",
-          "icon": "telegram"
-        }
-      ]
-    }
+    ]
   },
   "logo": {
     "light": "/swiglogodark.png",
     "dark": "/swiglogolight.png"
-  },
-  "navbar": {
-    "links": [],
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/anagrambuild/swig-wallet"
-    }
   },
   "footer": {
     "socials": {
