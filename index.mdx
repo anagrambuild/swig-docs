@@ -1,13 +1,12 @@
 ---
-title: "Get Started"
-description: "Swig is a powerful account abstraction toolkit that enables developers to create advanced, programmable Solana smart wallets with features like delegated access controls, fine-grained permissions, social recovery, and cross-chain compatibility."
+title: "About Swig"
 ---
 
-## **What is Swig?**
+# About Swig
 
-Swig is an account abstraction toolkit that empowers developers to create sophisticated, programmable smart wallets on Solana. It’s powerful, open-sourced, and fast to build on - most use cases can be built on Swig in \<30 minutes.
+Swig is an account abstraction toolkit that empowers developers to create sophisticated, programmable smart wallets on Solana. It is open source, fast to build on, and designed to make advanced wallet functionality feel practical in production applications.
 
-Smart wallet functionality has been popular on EVM chains, but less developed on Solana. Swig changes that. Developers can now build smarter on Solana with Swig. See how below.
+Smart wallet functionality has been popular on EVM chains, but much less developed on Solana. Swig brings that layer to Solana so developers can build better onboarding, better permissions, and more programmable transaction flows without giving up user control.
 
 ### **Current Market Problems**
 
@@ -57,3 +56,35 @@ The Swig protocol operates through a role-based system that enables seamless int
 - Optional session-based authentication for enhanced security
 
 This flexible architecture allows developers to create custom wallet solutions while maintaining security and user control. Whether you’re building DeFi apps, payment solutions, or next-generation consumer wallets, Swig provides the infrastructure needed to create powerful, user-friendly experiences.
+
+---
+
+## **Architecture Principles**
+
+Swig is designed around a few core implementation goals:
+
+- **High performance:** Transaction flows should stay fast enough for real applications, including high-frequency and consumer-facing use cases.
+- **Strong account validation:** Wallet operations should only run against the exact account shapes and ownership constraints the protocol expects.
+- **Extensible authority models:** New authority types and signing systems should be addable without forcing breaking changes to the rest of the platform.
+- **Practical permissions:** Permissions should be granular enough for real products, but still understandable to developers and auditors.
+
+### **Zero-Copy and Efficient Parsing**
+
+Swig minimizes unnecessary allocation and copying where possible so transaction handling can stay efficient. That matters for both raw performance and predictable execution when the wallet is validating permissions and instruction data.
+
+### **Account Classification and Safety**
+
+Before processing instructions, Swig validates what each account actually is. That includes ownership checks, structure validation, and PDA derivation checks where relevant. This helps the protocol avoid acting on malformed or unexpected accounts.
+
+### **Extensible Authorities**
+
+Today, Swig supports multiple authority patterns already, and the architecture is designed to grow over time. That makes it possible to support richer authentication systems, broader signature schemes, and more application-specific permission models without redesigning the core wallet flow.
+
+### **What Comes Next**
+
+Swig continues to evolve in a few important directions:
+
+- More authority types and signing options
+- Better support for AI-native transaction flows
+- Stronger paymaster and sponsored transaction infrastructure
+- Continued performance improvements as the protocol and SDKs mature
