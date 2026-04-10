@@ -1,0 +1,58 @@
+---
+title: "Products & SDKs"
+---
+
+Swig has two product surfaces, and the docs now reflect that split more clearly:
+
+1. **Swig Wallet** for onchain smart wallet functionality on Solana
+2. **Developer Portal** for hosted APIs, policies, paymasters, and managed wallet creation
+
+## Choose the right path
+
+| If you want to... | Start here |
+| :--- | :--- |
+| Build directly on the Swig wallet protocol | [Get Started](/) |
+| Create wallets and policies through a hosted backend | [Developer Portal](/examples/dev-portal) |
+| Let AI agents operate Swig wallets | [Build with AI](/build-with-ai) |
+
+## Product 1: Swig Wallet
+
+This is the onchain smart wallet layer. Use it when you want to work directly with wallet creation, authorities, sessions, permissions, and transaction execution.
+
+### Main SDKs
+
+- `@swig-wallet/classic` for Web3.js 1.x apps
+- `@swig-wallet/kit` for Solana Kit / Web3.js 2.0 apps
+- Rust SDKs for backend services, tooling, and CLIs
+- Paymaster SDKs for sponsored transaction flows
+
+### Best fit
+
+- consumer wallets
+- dApps with delegated permissions
+- passkeys and embedded wallet flows
+- advanced transaction automation
+
+## Product 2: Developer Portal
+
+This is the hosted platform layer. Use it when you want managed projects, API keys, policies, paymasters, billing, and REST-driven wallet creation.
+
+### Main SDKs
+
+- `@swig-wallet/api` for low-level REST API access
+- `@swig-wallet/developer` for higher-level developer workflows
+- Direct REST endpoints documented in the portal API reference
+
+### Best fit
+
+- server-side wallet provisioning
+- project and team management
+- policy-driven wallet creation
+- operational paymaster management
+
+## Recommended learning order
+
+1. Start with the product you are actually integrating.
+2. Use `Swig SDKs` or `Developer Portal APIs` for product-specific reference docs.
+3. Use `Tutorials` for guided setup flows and examples.
+4. Use `Build with AI` if you want LLMs or agents in the loop.
