@@ -16,29 +16,11 @@
         "description": "Use this section to choose the right Swig product and docs path",
         "groups": [
           {
-            "group": "Start Here",
+            "group": "Overview",
             "pages": [
               "index",
-              "products-and-sdks"
-            ]
-          },
-          {
-            "group": "Build with AI",
-            "pages": [
+              "products-and-sdks",
               "build-with-ai"
-            ]
-          },
-          {
-            "group": "Use Cases",
-            "pages": [
-              "use-case-customers",
-              "use-case-partners"
-            ]
-          },
-          {
-            "group": "Resources",
-            "pages": [
-              "links-and-contact"
             ]
           }
         ]
@@ -212,6 +194,7 @@
             "pages": [
               "developer-sdk/recovery-flows",
               "developer-sdk/recovery-setup",
+              "developer-sdk/add-guardian-after-creation",
               "developer-sdk/recovery-runtime"
             ]
           },
@@ -243,15 +226,6 @@
                   "examples/dev-portal/subscriptions-billing"
                 ]
               }
-            ]
-          },
-          {
-            "group": "Legacy & Raw APIs",
-            "pages": [
-              "developer-sdk/portal-clients",
-              "examples/dev-portal/create-swig",
-              "examples/dev-portal/api-reference",
-              "examples/dev-portal/error-codes"
             ]
           }
         ]

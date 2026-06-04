@@ -2,42 +2,45 @@
 title: "Protocol SDK Overview"
 ---
 
-# Swig Protocol SDK Overview
+This is the direct integration layer for teams building against Swig wallets
+without the hosted Developer SDK.
 
-The Swig Protocol SDK surface spans both `swig-ts` and `swig-wallet`.
+Use this section when your app or backend controls wallet authorities, signing,
+and protocol access directly.
 
-Use this section when you are integrating with the Swig protocol directly rather than going through the hosted developer SDK.
+## What lives here
 
-## TypeScript packages in `swig-ts`
+| Surface | Use it for |
+| :--- | :--- |
+| TypeScript packages in `swig-ts` | browser apps, backend services, and scripted integrations |
+| Rust packages in `swig-wallet` | backend services, CLI tooling, and lower-level protocol integrations |
+| MCP tooling | agent access to wallet operations |
+| examples and quickstarts | working reference flows for direct protocol usage |
 
-The main protocol-facing TypeScript packages are:
+## Main packages
 
-- `@swig-wallet/classic` for Web3.js 1.x integrations
-- `@swig-wallet/kit` for Solana Kit / Web3.js 2.0 integrations
-- `@swig-wallet/lib` for shared core logic
+### TypeScript
+
+- `@swig-wallet/classic` for Web3.js 1.x
+- `@swig-wallet/kit` for Solana Kit / Web3.js 2.0
+- `@swig-wallet/lib` for shared protocol logic
 - `@swig-wallet/coder` for lower-level encoding and decoding
-- `@swig-wallet/mcp-server` for MCP-based agent access to Swig wallets
+- `@swig-wallet/mcp-server` for MCP-based agent access
 
-## Rust packages in `swig-wallet`
-
-On the Rust side, the protocol-adjacent packages live beside the protocol itself:
+### Rust
 
 - `swig-sdk` for Rust integrations
-- `swig-cli` for command-line operations
-- protocol-support crates such as `swig-interface`, `swig-state`, and `swig-compact-instructions`
+- `swig-cli` for command-line flows
+- support crates such as `swig-interface`, `swig-state`, and
+  `swig-compact-instructions`
 
-## How to think about this layer
+## Start in the right place
 
-This section is for engineers who want direct protocol access.
-
-Typical use cases:
-
-- wallet-authority management
-- transaction signing and execution
-- protocol-aware client integrations
-- agent tooling via MCP
-- backend or CLI tooling against Swig wallets
+- Use the quickstarts if you are new to the direct SDK path.
+- Use the TypeScript or Rust package sections if you already know your stack.
+- Use examples and recipes if you want working end-to-end patterns.
 
 ## What this section does not cover
 
-This section does not cover the hosted, API-key-based Swig Developer SDK. That product family is documented separately under [Swig Developer SDK](/developer-sdk).
+This section does not cover the hosted, API-key-based
+[Developer SDK](/developer-sdk).

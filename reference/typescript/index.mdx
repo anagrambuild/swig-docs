@@ -1,124 +1,41 @@
 ---
-title: "Swig TypeScript SDK"
+title: "TypeScript Packages"
 ---
 
-The Swig TypeScript SDK provides a robust interface for interacting with Solana smart contracts and wallets. Built on top of the Web3.js 1.0 line of Solana SDK, it offers developers a streamlined experience for building decentralized applications on Solana.
+The TypeScript protocol SDK surface is split by runtime and abstraction level.
 
-## Architecture Overview
+## Choose a package
 
-The v1.0 SDK has been completely refactored with a modular architecture:
+| Package | Use it when |
+| :--- | :--- |
+| `@swig-wallet/classic` | you are on Web3.js 1.x |
+| `@swig-wallet/kit` | you are on Solana Kit / Web3.js 2.0 |
+| `@swig-wallet/lib` | you need shared protocol logic and lower-level helpers |
+| `@swig-wallet/coder` | you need account or instruction encoding and decoding |
 
-- **`@swig-wallet/coder`** - Low-level encoding/decoding utilities
-- **`@swig-wallet/lib`** - Core functionality
-- **`@swig-wallet/classic`** - High-level wrapper functions for Web3.js 1.x compatibility
-- **`@swig-wallet/kit`** - High-level wrapper functions for Web3.js 2.0 (Solana Kit) compatibility
+## What these packages cover
 
-## API Reference
+- instruction building
+- wallet account fetching
+- PDA derivation
+- authority and action helpers
+- version-aware handling for v1 and v2 Swig accounts
 
-The canonical source for the Swig TypeScript SDK API documentation can be found at:
-[https://anagrambuild.github.io/swig-ts/modules.html](https://anagrambuild.github.io/swig-ts/modules.html)
+## Classic vs Kit
 
-### Key Packages
+`@swig-wallet/classic` and `@swig-wallet/kit` cover the same product area, but
+they target different Solana client stacks.
 
-#### `@swig-wallet/classic`
+- `classic` returns `TransactionInstruction[]` and works with `Connection`
+- `kit` returns Kit instructions and works with `Rpc<GetAccountInfoApi>`
 
-For Web3.js 1.x applications, providing:
+## API reference
 
-- Instruction builders returning `TransactionInstruction[]`
-- Account fetching utilities using `Connection`
-- PDA derivation functions (synchronous)
-- Re-exports of core functionality from `@swig-wallet/lib`
+The generated API docs live here:
 
-#### `@swig-wallet/kit`
+[anagrambuild.github.io/swig-ts/modules.html](https://anagrambuild.github.io/swig-ts/modules.html)
 
-For Web3.js 2.0 (Solana Kit) applications, providing:
+## Related pages
 
-- Instruction builders returning `KitInstruction[]`
-- Account fetching utilities using `Rpc<GetAccountInfoApi>`
-- PDA derivation functions (asynchronous)
-- Same API surface as classic but with Web3.js 2.0 types
-
-#### `@swig-wallet/lib`
-
-Core logic including:
-
-- `Actions` class for permission management
-- `Swig` class for wallet representation
-- Authority management utilities
-- Instruction context builders
-
-#### `@swig-wallet/coder`
-
-Low-level utilities for:
-
-- Account data encoding/decoding
-- Instruction data serialization
-- Type definitions
-
-## Migration from Beta Versions
-
-**Breaking Changes in v1.0:**
-
-- Complete API restructure - most function signatures have changed
-- Functions now return `TransactionInstruction[]` instead of single instructions
-- Authority and Actions classes moved to `@swig-wallet/lib`
-- New dependency on `@solana-program/token` instead of `@solana/spl-token`
-
-## Web3.js Version Support
-
-The Swig SDK supports both major versions of the Solana Web3.js library:
-
-### Web3.js 1.x (`@swig-wallet/classic`)
-
-- Uses `Connection`, `PublicKey`, `TransactionInstruction`
-- Synchronous PDA derivation
-- Compatible with existing Web3.js 1.x applications
-- Stable and production-ready
-
-### Web3.js 2.0 (`@swig-wallet/kit`)
-
-- Uses `Rpc`, `Address`, `KitInstruction`
-- Asynchronous PDA derivation
-- Built for the new Solana Kit architecture
-- Future-ready with enhanced type safety
-
-## V2 Protocol Features
-
-The SDK now supports both v1 and v2 Swig accounts with automatic version detection:
-
-### Automatic Version Detection
-```typescript
-const swig = await fetchSwigAccount(swigAddress);
-const version = swig.accountVersion(); // 'v1' | 'v2'
-const walletAddress = await getSwigWalletAddress(swig); // Auto-resolves correct address
-```
-
-### Enhanced Account Structure
-- **V1 Accounts**: Traditional structure with rent exempt lamports
-- **V2 Accounts**: Optimized structure using PDA bump seeds and system-derived wallet addresses
-
-### SignV2 Instruction
-New instruction type optimized for v2 accounts with automatic selection based on account version.
-
-### Program Action Management
-Automatic program permission handling with `ensureProgramAction` for streamlined authority management.
-
-## Future Development
-
-We are actively working on expanding the SDK's capabilities. Recent v2 improvements include:
-
-- ✅ Automatic version detection and handling
-- ✅ Enhanced account structure with PDA-based addressing
-- ✅ SignV2 instruction for improved performance
-- ✅ Automatic program action management
-
-Upcoming features include:
-
-- Enhanced session management
-- Additional authority types
-- Integration with Gill
-- Performance optimizations
-
-These additions will provide developers with even more flexibility and enhanced capabilities for building on Solana.
-
-Stay tuned for updates as we continue to evolve the SDK to meet the growing needs of the Solana development community.
+- Use [Kit Package](/reference/typescript/kit) for the Solana Kit-specific path
+- Use [Action Helpers](/reference/typescript/actions) for action and permission helpers

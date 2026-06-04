@@ -1,8 +1,9 @@
 ---
-title: "2. Managing Authorities and Actions"
+title: "Manage Authorities and Actions"
 ---
 
-In this tutorial, we'll learn how to add multiple authorities to a Swig account with different permission sets. We'll create a root authority that can manage other authorities, then add two specialized authorities: one for SOL spending and another for token management.
+This tutorial adds multiple authorities to a Swig wallet and assigns each one a
+different permission set.
 
 ## Prerequisites
 
@@ -15,13 +16,14 @@ Before starting this tutorial:
 
 ## Quick Review
 
-In [Tutorial 1](./tutorial-1.md), we learned how to create a basic Swig account. Now we'll expand on that by managing multiple authorities with different permissions.
+In [Create a Wallet](./create), you created a basic Swig wallet. This page
+builds on that by adding multiple authorities with different permissions.
 
 ```bash
 mkdir tutorial && touch tutorial-2.ts
 ```
 
-Open that file up in your favorite editor, or AI overlord super virtual reality goggles. Lets make a function called `addNewAuthority`
+Create the file and implement an `addNewAuthority` helper.
 
 ## Example
 

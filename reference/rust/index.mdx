@@ -1,48 +1,34 @@
 ---
-title: "Rust SDK"
+title: "Rust Packages"
 ---
 
-The Rust SDK is a powerful toolkit designed for backend use cases, providing developers with robust tools for blockchain interaction and wallet management. The SDK is built on three main pillars:
+The Rust side of the Protocol SDK is for backend services, CLI tooling, and
+lower-level protocol integrations.
 
-## Instruction Builder
+## Main surfaces
 
-The Instruction Builder is a core component that helps developers construct and manage blockchain instructions. It provides a type-safe and intuitive way to build transaction instructions, making it easier to interact with the blockchain while maintaining security and reliability.
+| Surface | Use it for |
+| :--- | :--- |
+| `swig-sdk` | Rust integrations that need direct wallet and instruction access |
+| instruction builders | constructing protocol instructions in typed Rust code |
+| `swig-cli` | terminal workflows, testing, and automation |
 
-Key features:
-- Type-safe instruction building
-- Transaction composition
-- Built-in validation
+## What you can do here
 
-## Swig Rust Wallet
+- build protocol instructions in Rust
+- compose and sign wallet transactions
+- inspect wallet state and account data
+- automate protocol operations from a CLI or backend service
 
-The Swig Rust Wallet component provides comprehensive wallet management capabilities. It handles key management, transaction signing, and account operations with a focus on security and performance.
+## Code references
 
-Key features:
-- Secure key management
-- Transaction signing
-- Account operations
-- Balance tracking
-
-## Swig CLI
-
-The Swig CLI is a command-line interface tool that provides direct access to wallet functionality from the terminal. It's built on top of the Rust SDK and offers a convenient way to interact with the blockchain for testing, development, and automation purposes.
-
-Key features:
-- Command-line wallet management
-- Transaction creation and signing
-- Account information retrieval
-- Network interaction utilities
-
-## Code References
-
-The SDK's source code can be found in the following locations:
-
-- [Instruction Builder/Rust Wallet Source](https://github.com/anagrambuild/swig-wallet/tree/main/rust-sdk)
+- [Instruction Builder and Rust Wallet Source](https://github.com/anagrambuild/swig-wallet/tree/main/rust-sdk)
 - [Swig CLI Documentation](https://github.com/anagrambuild/swig-wallet/blob/main/cli-x/README.md)
 - [Rust SDK Documentation](https://github.com/anagrambuild/swig-wallet/tree/main/docs/rust-sdk)
 
-## Getting Started
+## Start in the right place
 
-To start using the Rust SDK, you'll need to add it as a dependency to your Rust project. The SDK provides a modular architecture allowing you to use only the components you need for your specific use case.
-
-For detailed implementation examples and API documentation, please refer to the individual component documentation linked above.
+- Use [Instruction Builder](/reference/rust/instruction_builder) if you need to
+  construct protocol instructions directly.
+- Use [Rust Wallet](/reference/rust/rust_wallet) if you need wallet-oriented
+  Rust flows.
