@@ -9,34 +9,63 @@
   },
   "favicon": "/favicon.png",
   "navigation": {
-    "groups": [
+    "products": [
       {
-        "group": "Getting Started",
-        "expanded": true,
-        "pages": [
-          "index",
-          "products-and-sdks",
-          "build-with-ai",
+        "product": "overview",
+        "name": "Getting Started",
+        "icon": "book-open",
+        "description": "High-level product context and entry points",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "index",
+              "products-and-sdks",
+              "build-with-ai"
+            ]
+          },
           {
             "group": "Use Cases",
             "pages": [
               "use-case-customers",
               "use-case-partners"
             ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "links-and-contact"
+            ]
           }
         ]
       },
       {
-        "group": "Swig Protocol",
-        "pages": [
-          "protocol/index",
-          "protocol/security-and-audits"
+        "product": "protocol",
+        "name": "Swig Protocol",
+        "icon": "shield",
+        "description": "The onchain protocol in swig-wallet",
+        "groups": [
+          {
+            "group": "Protocol",
+            "pages": [
+              "protocol/index",
+              "protocol/security-and-audits"
+            ]
+          }
         ]
       },
       {
-        "group": "Swig Protocol SDK",
-        "pages": [
-          "reference/index",
+        "product": "protocol-sdk",
+        "name": "Swig Protocol SDK",
+        "icon": "terminal",
+        "description": "Direct TypeScript and Rust integrations",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "reference/index"
+            ]
+          },
           {
             "group": "Quickstarts",
             "pages": [
@@ -108,7 +137,12 @@
               }
             ]
           },
-          "reference/error-types/index",
+          {
+            "group": "Error Types",
+            "pages": [
+              "reference/error-types/index"
+            ]
+          },
           {
             "group": "Migration & Releases",
             "pages": [
@@ -119,10 +153,18 @@
         ]
       },
       {
-        "group": "Swig Developer SDK",
-        "pages": [
-          "developer-sdk/index",
-          "developer-sdk/portal-clients",
+        "product": "developer-sdk",
+        "name": "Swig Developer SDK",
+        "icon": "building",
+        "description": "Hosted API-key-based transaction preparation",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "developer-sdk/index",
+              "developer-sdk/portal-clients"
+            ]
+          },
           {
             "group": "Developer Portal Setup",
             "pages": [
@@ -161,17 +203,18 @@
         ]
       },
       {
-        "group": "Swig IDP SDK",
-        "pages": [
-          "idp-sdk/index",
-          "idp-sdk/web-and-mobile"
-        ]
-      },
-      {
-        "group": "Resources",
-        "pages": [
-          "protocol/security-and-audits",
-          "links-and-contact"
+        "product": "idp-sdk",
+        "name": "Swig IDP SDK",
+        "icon": "fingerprint",
+        "description": "Login-provider SDK for web and Expo flows",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "idp-sdk/index",
+              "idp-sdk/web-and-mobile"
+            ]
+          }
         ]
       }
     ]
