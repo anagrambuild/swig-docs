@@ -1,0 +1,79 @@
+---
+title: "Recovery Model"
+sidebarTitle: "Recovery"
+---
+
+Recovery is a dedicated protocol path. It is not the same thing as generic
+authority management.
+
+## What recovery is designed to do
+
+`RecoverAuthorityV1` rotates the authority on one existing role while keeping
+that role's identity and permissions intact.
+
+That means recovery is for:
+
+- replacing the signer behind a role
+- preserving the role's existing action set
+- avoiding a broader authority-management rewrite
+
+## What the acting role must have
+
+The acting role must:
+
+1. authenticate successfully
+2. carry the `RecoveryAuthority` action
+
+The code comments and flow are designed around a narrowly scoped recovery role,
+typically driven through program-execution-style control rather than a fully
+privileged admin role.
+
+## What else recovery verifies
+
+The recovery path also verifies a pending recovery binding before rotating the
+target role.
+
+That binding ties together:
+
+- the wallet
+- the target `role_id`
+- the authority type
+- the old authority hash
+- the new authority hash
+
+This is what keeps recovery constrained instead of letting any authorized role
+arbitrarily rewrite any signer.
+
+## What changes during recovery
+
+When recovery succeeds:
+
+- the target role keeps the same `role_id`
+- the target role keeps the same action set
+- the authority bytes are rotated to the new signer
+
+For session-based authorities, the session key and expiration are cleared. For
+secp authorities, signature counters are reset as part of the rotation logic.
+
+## Why this is different from `ManageAuthority`
+
+`ManageAuthority` is broader. It is for adding, removing, and updating
+authorities more generally.
+
+`RecoveryAuthority` is narrower by design:
+
+- it only unlocks the dedicated recovery instruction
+- it preserves the target role rather than rebuilding the role graph
+- it is intended for constrained recovery policies
+
+## What this means for integrators
+
+If your product offers recovery, the important product decision is not just
+"can we rotate a signer." It is:
+
+- which role is recoverable
+- who is allowed to trigger recovery
+- how the pending recovery binding is created and approved
+
+That policy lives above the protocol, but the protocol enforces the final
+rotation boundary.

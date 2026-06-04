@@ -1,109 +1,94 @@
 ---
-title: "Concepts and Permissions"
+title: "Authorities and Permissions"
+sidebarTitle: "Permissions & Authorities"
 ---
 
-The Swig program is role-based. The main mental model is:
+The Swig program is role-based. Each role has:
 
-- one Swig config account
-- one wallet-address PDA used during execution
-- one or more roles
-- each role binds a `role_id`, one authority, and one or more actions
+- one authority
+- one stable `role_id`
+- one or more permission actions
 
-If you are trying to understand why a wallet operation succeeds or fails, these
-are the concepts that matter.
-
-## Swig account vs wallet address
-
-The config account stores protocol state:
-
-- the wallet ID
-- the account bump
-- the wallet-address bump
-- the current role count
-- the role counter used to assign new `role_id` values
-
-The wallet-address PDA is the address used in execution flows. Higher-level
-SDKs usually hand you both the config address and the wallet address because
-the program needs both pieces.
-
-## Roles and `role_id`
-
-A role is the core authorization unit.
-
-Each role stores:
-
-- a stable `role_id`
-- one authority type and its authority payload
-- one or more typed actions
-
-`role_id` matters because execution and recovery do not identify a signer only
-by public key. They authenticate a specific role and then evaluate that role's
-actions.
+If an operation succeeds or fails, these are the fields that decide it.
 
 ## Authority types
 
-The current on-chain authority enum supports:
+Swig currently supports these authority families:
 
-- `Ed25519`
-- `Ed25519Session`
-- `Secp256k1`
-- `Secp256k1Session`
-- `Secp256r1`
-- `Secp256r1Session`
-- `ProgramExec`
-- `ProgramExecSession`
+| Authority type | Typical use |
+|----------------|-------------|
+| `Ed25519` | standard Solana-key authorization |
+| `Ed25519Session` | temporary delegated Ed25519 execution |
+| `Secp256k1` | external EVM-style signer integration |
+| `Secp256k1Session` | temporary delegated Secp256k1 execution |
+| `Secp256r1` | passkey-style authorization |
+| `Secp256r1Session` | temporary delegated Secp256r1 execution |
+| `ProgramExec` | instruction-based authorization driven by another program |
+| `ProgramExecSession` | temporary delegated program-driven execution |
 
-Session authorities are temporary forms of the base authority types. They carry
-session-specific state and are authenticated through the session path rather
-than the standard path.
+Session-based authorities keep the same role and permission model, but switch
+authentication to a time-bounded session key or session rule.
+
+## What `ProgramExec` means
+
+`ProgramExec` is the least familiar authority type, but it matters for recovery
+and other protocol-controlled flows.
+
+Instead of authenticating a user signature directly, it authenticates against
+another instruction in the same transaction. The configured authority stores:
+
+- the expected program ID
+- an instruction-prefix match
+- optional instruction-index targeting through the authority payload
+
+This makes it useful when a separate program is allowed to trigger a narrow
+wallet behavior without becoming a general-purpose signer.
 
 ## Permission families
 
 Actions are typed permission records attached to roles.
 
 | Family | Permissions | What they control |
-|------|-------------|-------------------|
+|--------|-------------|-------------------|
 | Broad access | `All`, `AllButManageAuthority`, `ManageAuthority` | root-like access, broad execution, and authority management |
 | SOL limits | `SolLimit`, `SolRecurringLimit`, destination variants | lamport spending ceilings |
 | Token limits | `TokenLimit`, `TokenRecurringLimit`, destination variants | SPL token spending ceilings |
 | Program access | `Program`, `ProgramAll`, `ProgramCurated`, `ProgramScope` | CPI access from the wallet |
 | Staking | `StakeLimit`, `StakeRecurringLimit`, `StakeAll` | stake-related execution |
-| Sub-accounts | `SubAccount` | sub-account creation and use |
+| Sub-accounts | `SubAccount` | sub-account creation, signing, and control |
 | Lifecycle and recovery | `CloseSwigAuthority`, `RecoveryAuthority` | closing wallets and constrained recovery |
 
-## Common role patterns
-
-Most integrations reason about a few recurring role shapes:
-
-- a root or admin role with broad authority-management access
-- an execution role with spend and program permissions
-- an optional recovery role with `RecoveryAuthority`
-- optional session roles for shorter-lived delegated access
-
-## Important permission distinctions
-
-Some permissions are easy to confuse:
+## Permission distinctions that matter
 
 - `All` is the broadest role marker.
 - `AllButManageAuthority` still allows broad execution, but excludes authority
   and sub-account management.
-- `ManageAuthority` is for adding, removing, and updating authorities.
-- `RecoveryAuthority` is intentionally narrower than `ManageAuthority`. It only
-  grants access to the dedicated recovery path.
-- `ProgramAll` grants unrestricted CPI access and should be treated as highly
-  privileged.
-- `ProgramScope` is the most specialized program permission. It binds a program,
-  target account, and numeric field layout so the program can enforce scoped
-  limits.
+- `ManageAuthority` is for adding, removing, or updating authorities.
+- `RecoveryAuthority` is narrower than `ManageAuthority`. It only grants access
+  to the dedicated recovery path.
+- `ProgramAll` grants effectively unrestricted CPI access and should be treated
+  as highly privileged.
+- `ProgramCurated` is looser than per-program rules, but still not fully open.
+- `ProgramScope` is the narrowest program control. It binds a program, a target
+  account, and numeric field offsets so the program can enforce scoped limits.
 
-## How higher-level SDKs map onto this
+## Common role shapes
 
-Higher-level SDKs often hide the storage details, but they still rely on this
-same model:
+Most real integrations end up with some mix of:
 
-- a wallet operation eventually names a role
-- that role authenticates one authority
-- the role's actions decide whether the operation is allowed
+- an admin role that can manage authorities
+- an execution role that carries spend and program permissions
+- one or more session-capable roles for short-lived delegated access
+- an optional recovery role with `RecoveryAuthority`
 
-If you need the exhaustive TypeScript action builder surface, use
+## How this maps to higher-level SDKs
+
+Higher-level SDKs may hide the byte layout, but they still depend on the same
+rules:
+
+- a wallet operation eventually targets one role
+- that role authenticates through one authority type
+- that role's actions decide whether execution is allowed
+
+If you need the full instruction-builder surface, use
 [TypeScript Actions](/reference/typescript/actions).

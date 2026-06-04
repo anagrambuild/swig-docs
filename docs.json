@@ -44,11 +44,30 @@
         "description": "The on-chain wallet protocol in swig-wallet",
         "groups": [
           {
-            "group": "Protocol",
+            "group": "Getting Started",
             "pages": [
-              "protocol/index",
-              "protocol/concepts-and-permissions",
+              "protocol/index"
+            ]
+          },
+          {
+            "group": "Authorization Model",
+            "pages": [
+              "protocol/account-model",
+              "protocol/concepts-and-permissions"
+            ]
+          },
+          {
+            "group": "Execution Model",
+            "pages": [
               "protocol/program-walkthrough",
+              "protocol/signing-and-execution",
+              "protocol/sessions-and-subaccounts",
+              "protocol/recovery-model"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
               "protocol/security-and-audits"
             ]
           }

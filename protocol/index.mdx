@@ -1,62 +1,67 @@
 ---
-title: "Protocol Overview"
+title: "What the Swig Protocol Is"
+sidebarTitle: "What It Is"
 ---
 
-The Swig protocol lives in the `swig-wallet` repo. It is the on-chain wallet
-system that the higher-level SDKs build on.
+The Swig protocol is the on-chain wallet layer in `swig-wallet`. Every higher
+level SDK eventually maps back to this program model.
 
 ## Read this section when
 
-- you need to understand how wallet authorization actually works
-- you are debugging a permission or signer issue
-- you are working directly in the Rust crates
-- you want to map hosted SDK behavior back to the program
+- you need to understand how a Swig wallet is represented on-chain
+- you are debugging a permission, signer, or `role_id` issue
+- you are integrating directly through the TypeScript or Rust protocol SDKs
+- you want to map hosted SDK behavior back to the underlying program
 
-## What lives in `swig-wallet`
+## What this layer owns
 
-The repository is a Rust workspace with separate packages for the program,
-interfaces, instructions, state handling, assertions, SDK, and CLI.
+At the protocol layer, Swig defines:
 
-### Core workspace members
+- the config account that stores wallet state
+- the wallet-address PDA that signs execution
+- the role graph for authorities and permissions
+- the instruction set for creation, signing, sessions, sub-accounts, recovery,
+  and closure
+- the permission checks that gate execution inside `SignV2`
 
-- `swig` in `program/`: the Solana program for the protocol
-- `swig-interface` in `interface/`: shared protocol-facing types and interfaces
-- `swig-compact-instructions` in `instructions/`: protocol instruction handling
-- `swig-state` in `state/`: account state structures
-- `swig-assertions` in `assertions/`: reusable assertion utilities
-- `swig-sdk` in `rust-sdk/`: the Rust SDK surface
-- `swig-cli` in `cli/`: command-line tooling for operating against the protocol
+## The mental model
 
-## What this layer is responsible for
+At this layer, a wallet is not just one signer.
 
-This layer defines:
+- one Swig config account stores identity and role data
+- one wallet-address PDA is the signer used for normal execution
+- each role has a stable `role_id`
+- each role binds one authority and one or more permission actions
+- most wallet execution flows pass through `SignV2`
 
-- how a Swig wallet is represented on-chain
-- how the config account and wallet-address PDA work together
-- how authorities and permissions are encoded
-- how roles are keyed by `role_id`
-- how sessions and wallet actions are validated
-- how transactions are executed by the protocol
+That means most debugging questions reduce to three checks:
 
-## Core mental model
+- which `role_id` is being used
+- how that role authenticates
+- whether that role's actions allow the requested instruction shape
 
-At the program level, a Swig wallet is not just one signer.
+## How to read this section
 
-- The main Swig config account stores the wallet ID, bump seeds, role count, and
-  role counter.
-- A separate wallet-address PDA is the address used during execution and
-  signing flows.
-- Each role binds a `role_id`, one authority, and one or more permission
-  actions.
-- `SignV2` is the general execution path that authenticates a role, checks its
-  actions, and signs CPI execution through the wallet-address PDA.
+Use the rest of the Protocol section in this order:
 
-## Where to go next
+1. [Account Model](/protocol/account-model) for the config account, wallet PDA,
+   sub-account PDA, and role layout.
+2. [Permissions & Authorities](/protocol/concepts-and-permissions) for the
+   authority types and permission families.
+3. [Instruction Map](/protocol/program-walkthrough) for the major instruction
+   families.
+4. [SignV2 Execution](/protocol/signing-and-execution) for the main execution
+   path.
+5. [Sessions & Sub-Accounts](/protocol/sessions-and-subaccounts) for delegated
+   execution flows.
+6. [Recovery](/protocol/recovery-model) for constrained authority rotation.
+7. [Security & Audits](/protocol/security-and-audits) for attached audit
+   material.
 
-- Use [Concepts and Permissions](/protocol/concepts-and-permissions) for the
-  role, authority, and permission model
-- Use [Program Walkthrough](/protocol/program-walkthrough) for the major
-  instruction families and execution path
-- Use [Swig Protocol SDK](/reference) if you are integrating from TypeScript or Rust
-- Use [Security & Audits](/protocol/security-and-audits) for the attached protocol audit report
-- Use [About Swig](/) for the high-level product context
+## Where `swig-wallet` fits
+
+The `swig-wallet` workspace includes the Solana program plus the protocol-facing
+Rust crates, instruction builders, state types, assertions, and CLI. If you are
+working above this layer, you usually do not need to understand every Rust
+module. You do need to understand the account model, `role_id`, and the
+execution rules.
