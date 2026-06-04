@@ -12,9 +12,10 @@
     "products": [
       {
         "product": "overview",
-        "name": "Getting Started",
+        "name": "Overview",
         "icon": "book-open",
-        "description": "High-level product context and entry points",
+        "color": "#111111",
+        "description": "Start here to understand the product map and where each SDK fits",
         "groups": [
           {
             "group": "Overview",
@@ -41,9 +42,10 @@
       },
       {
         "product": "protocol",
-        "name": "Swig Protocol",
+        "name": "Protocol",
         "icon": "shield",
-        "description": "The onchain protocol in swig-wallet",
+        "color": "#0F766E",
+        "description": "The on-chain wallet protocol in swig-wallet",
         "groups": [
           {
             "group": "Protocol",
@@ -56,9 +58,10 @@
       },
       {
         "product": "protocol-sdk",
-        "name": "Swig Protocol SDK",
+        "name": "Direct SDK",
         "icon": "terminal",
-        "description": "Direct TypeScript and Rust integrations",
+        "color": "#1D4ED8",
+        "description": "Direct TypeScript and Rust integrations with the protocol",
         "groups": [
           {
             "group": "Overview",
@@ -154,9 +157,10 @@
       },
       {
         "product": "developer-sdk",
-        "name": "Swig Developer SDK",
+        "name": "Hosted SDK",
         "icon": "building",
-        "description": "Hosted API-key-based transaction preparation",
+        "color": "#B45309",
+        "description": "API-key-based transaction preparation through the developer portal",
         "groups": [
           {
             "group": "Overview",
@@ -204,9 +208,10 @@
       },
       {
         "product": "idp-sdk",
-        "name": "Swig IDP SDK",
+        "name": "Auth SDK",
         "icon": "fingerprint",
-        "description": "Login-provider SDK for web and Expo flows",
+        "color": "#7C3AED",
+        "description": "Login-provider and identity flows for web and Expo apps",
         "groups": [
           {
             "group": "Overview",
