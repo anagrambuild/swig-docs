@@ -22,6 +22,15 @@
               "products-and-sdks",
               "build-with-ai"
             ]
+          },
+          {
+            "group": "Product Areas",
+            "pages": [
+              "overview/protocol",
+              "overview/protocol-sdk",
+              "overview/developer-sdk",
+              "overview/idp-sdk"
+            ]
           }
         ]
       },
