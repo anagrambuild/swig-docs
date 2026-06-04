@@ -1,12 +1,20 @@
 ---
-title: "Web and Mobile Flows"
+title: "OAuth, OTP, Web, and Mobile Flows"
+sidebarTitle: "Auth Flows"
 ---
 
-The IDP SDK has two main consumption models: Expo-native and web.
+The IDP SDK supports the same authentication outcome across two app shapes:
+
+- Expo / React Native apps through the provider and hook API
+- browser apps through the `/web` client
+
+In both cases, the goal is the same: finish authentication and persist a Swig
+session.
 
 ## Expo-native flow
 
-In Expo or React Native apps, the main integration surface is `SwigIdpProvider` plus the `useSwigIdp()` hook.
+In Expo or React Native apps, the main integration surface is
+`SwigIdpProvider` plus the `useSwigIdp()` hook.
 
 The current high-level methods are:
 
@@ -21,7 +29,8 @@ completes.
 
 ## Web flow
 
-In browser apps, use the `/web` entry point and create a web client with `createSwigWebClient()`.
+In browser apps, use the `/web` entry point and create a web client with
+`createSwigWebClient()`.
 
 That client supports:
 
@@ -46,9 +55,11 @@ Important constraints from the source package:
 
 ## Default backend assumptions
 
-By default the SDK expects Swig backend and isolated-host endpoints unless you override them in config.
+By default the SDK expects Swig backend and isolated-host endpoints unless you
+override them in config.
 
-That means the SDK is not just a UI helper. It assumes the Swig identity backend is part of the architecture.
+That means the SDK is not just a UI helper. It assumes the Swig identity
+backend is part of the architecture.
 
 ## Integration boundary
 

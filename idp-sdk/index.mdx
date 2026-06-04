@@ -1,14 +1,32 @@
 ---
-title: "IDP SDK Overview"
+title: "What the IDP SDK Does"
+sidebarTitle: "What It Does"
 ---
 
-The Swig IDP SDK is the authentication-side SDK for apps that need to bootstrap
-Swig sessions from user login flows.
+The Swig IDP SDK is for apps that want users to sign in first, then continue
+with a Swig session.
 
 It lives in the separate `swig-idp-sdk` repo and currently ships as
 `@swig-wallet/expo-idp-sdk`.
 
-## Current public surface
+## Use this SDK when
+
+- users should sign in with OAuth, email OTP, or SMS OTP
+- your app needs a Swig session after authentication
+- you are building a web app or an Expo / React Native app
+- authentication should stay inside Swig's isolated-host flow
+
+## Do not use this SDK for
+
+- transaction preparation
+- paymaster operations
+- direct protocol instruction building
+- developer-portal policy management
+
+Use [Swig Developer SDK](/developer-sdk) for hosted wallet operations after
+login, or [Swig Protocol SDK](/reference) for direct protocol integration.
+
+## Main API surface
 
 Expo and React Native apps use:
 
@@ -30,7 +48,17 @@ Browser apps use the `/web` entry point:
 - `logout()`
 - `listProviders()`
 
-## What it talks to
+## What happens after login
+
+The output of these flows is a Swig session your app can use in the next layer
+of the product:
+
+- continue into the **Swig Developer SDK** if your backend will prepare wallet
+  actions
+- continue into the **Swig Protocol SDK** if your app talks to the protocol
+  directly
+
+## Backend dependencies
 
 The SDK is backed by Swig identity endpoints such as:
 
@@ -51,11 +79,8 @@ session. The host app should not embed these flows in a `WebView`.
 This boundary matters because the isolated host owns the OAuth redirect, OTP
 entry, verification code handling, and callback JWT exchange.
 
-## When to use this section
-
-Use the IDP SDK docs when your integration problem is primarily authentication and login-provider orchestration rather than direct wallet protocol integration.
-
 ## Where to go next
 
-- Use [Web and Mobile Flows](/idp-sdk/web-and-mobile) for the public flow model
+- Use [OAuth, OTP, Web, and Mobile Flows](/idp-sdk/web-and-mobile) for the
+  actual auth models
 - Use [Swig Developer SDK](/developer-sdk) if your next step is backend transaction preparation

@@ -203,12 +203,12 @@
         ]
       },
       {
-        "product": "Auth SDK",
+        "product": "IDP SDK",
         "icon": "fingerprint",
-        "description": "Login-provider and identity flows for web and Expo apps",
+        "description": "OAuth and OTP sign-in flows that create Swig sessions for web and Expo apps",
         "groups": [
           {
-            "group": "Overview",
+            "group": "Getting Started",
             "pages": [
               "idp-sdk/index",
               "idp-sdk/web-and-mobile"
