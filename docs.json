@@ -13,13 +13,18 @@
       {
         "product": "Overview",
         "icon": "book-open",
-        "description": "Start here to understand the product map and where each SDK fits",
+        "description": "Use this section to choose the right Swig product and docs path",
         "groups": [
           {
-            "group": "Overview",
+            "group": "Start Here",
             "pages": [
               "index",
-              "products-and-sdks",
+              "products-and-sdks"
+            ]
+          },
+          {
+            "group": "Build with AI",
+            "pages": [
               "build-with-ai"
             ]
           },
