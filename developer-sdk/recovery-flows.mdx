@@ -1,128 +1,38 @@
 ---
-title: "Guardian Recovery"
-sidebarTitle: "Recovery"
+title: "Recovery Overview"
+sidebarTitle: "Recovery Overview"
 ---
 
-Guardian recovery is an add-on flow around wallet creation. It is not part of a
-plain no-policy wallet create.
+Guardian recovery is an add-on flow around wallet creation.
 
-## The important model
+## Use recovery when
 
-Recovery in this SDK is policy-backed:
+- the wallet should support a guardian-triggered authority change
+- you want a delay before the recovered authority takes effect
+- you want the hosted SDK to prepare both setup and runtime recovery actions
 
-- create the wallet from a recovery-enabled policy
-- let `swig.wallets.create(...)` return a `recoverySetup` plan
-- submit wallet creation
-- call `wallet.recovery.prepareSetup(...)`
-- submit the recovery setup transactions in order
-- later use `start`, `cancel`, and `execute` for the live recovery lifecycle
+## The recovery lifecycle
 
-If the policy is not recovery-enabled, you should treat the result as a normal
-wallet create flow and expect `recoverySetup` to be absent.
+The SDK breaks recovery into three stages:
 
-## Create from a recovery-enabled policy
+- create a recovery-enabled wallet
+- prepare and submit recovery setup
+- later start, cancel, or execute a recovery
 
-```typescript
-const created = await swig.wallets.create({
-  feePayer,
-  policyId,
-  initialUser: {
-    secp256r1: {
-      publicKey: passkeyPublicKey,
-    },
-  },
-  recovery: {
-    guardianPubkey: guardianPublicKey,
-    delaySeconds: 86_400,
-  },
-});
-```
+If the policy is not recovery-enabled, treat the result as a normal wallet
+create flow and expect `recoverySetup` to be absent.
 
-The `recovery` object is used to help build the returned setup plan. Recovery
-is still completed as a follow-up flow. Wallet creation itself does not finish
-recovery setup.
+## Main SDK entrypoints
 
-## What `create(...)` gives you
+- `swig.wallets.create(...)`
+- `wallet.recovery.prepareSetup(...)`
+- `wallet.recovery.start(...)`
+- `wallet.recovery.cancel(...)`
+- `wallet.recovery.execute(...)`
 
-For a recovery-enabled create flow, the returned categories matter:
+## Read next
 
-- `creationTransaction` creates the wallet
-- `clientAuthorityTransactions` are the transactions the current wallet
-  authority must sign
-- `operatorSignedTransactions` are already signed by the backend recovery
-  operator
-- `recoverySetup` is the plan you feed into `prepareSetup(...)`
-
-## Recovery setup
-
-After wallet creation is submitted, prepare the follow-up recovery setup:
-
-```typescript
-const wallet = swig.wallets.use(created.wallet);
-
-const setup = await wallet.recovery.prepareSetup({
-  feePayer,
-  ...created.recoverySetup!,
-});
-```
-
-That returns two main prepared transactions:
-
-- `addAuthorityTransaction`
-- `configureRecoveryTransaction`
-
-## Who signs what
-
-The setup path is intentionally split:
-
-| Transaction | Who signs |
-|-------------|-----------|
-| `creationTransaction` | fee payer or sponsor path |
-| `addAuthorityTransaction` | current wallet authority |
-| `configureRecoveryTransaction` | backend recovery operator already signs it |
-
-Do not authority-sign `operatorSignedTransactions` again.
-
-## Ongoing recovery lifecycle
-
-After setup:
-
-- the guardian starts recovery with `wallet.recovery.start(...)`
-- the current wallet authority can cancel with `wallet.recovery.cancel(...)`
-- the guardian executes with `wallet.recovery.execute(...)` after the delay
-
-```typescript
-const start = await wallet.recovery.start({
-  feePayer,
-  guardianPubkey: guardianPublicKey,
-  newAuthority: newAuthorityPublicKey,
-});
-
-const cancel = await wallet.recovery.cancel({
-  feePayer,
-});
-
-const execute = await wallet.recovery.execute({
-  feePayer,
-  newAuthority: newAuthorityPublicKey,
-});
-```
-
-The guardian signs `start` and `execute`. The current wallet authority signs
-`cancel`.
-
-## Policy metadata and `targetRoleId`
-
-The SDK also reads policy metadata through `swig.wallets.getPolicy(policyId)`.
-That is where it finds fields such as:
-
-- `guardianEnabled`
-- `guardianAuthority`
-- `guardianDelaySeconds`
-
-Most apps should let `created.recoverySetup` be the source of truth for the
-follow-up setup flow.
-
-`targetRoleId` is an advanced option. Most integrations omit it and recover the
-main user role. Only set it when you are intentionally binding recovery to a
-specific non-default role.
+- Use [Set Up Recovery](/developer-sdk/recovery-setup) for the wallet creation
+  and setup sequence
+- Use [Run Recovery](/developer-sdk/recovery-runtime) for start, cancel, and
+  execute

@@ -14,7 +14,8 @@ You can create a wallet either:
 - from an inline `initialUser`
 
 If `policyId` is omitted, the backend can create a no-recovery wallet from the
-inline authority you provide.
+inline authority you provide. Common authority shapes are `ed25519`,
+`secp256k1`, and `secp256r1`.
 
 ## Basic create flow
 
@@ -37,6 +38,19 @@ const created = await swig.wallets.create({
   initialUser: {
     secp256r1: {
       publicKey: passkeyPublicKey,
+    },
+  },
+});
+```
+
+EVM-backed creation works the same way with `secp256k1`:
+
+```typescript
+const created = await swig.wallets.create({
+  feePayer,
+  initialUser: {
+    secp256k1: {
+      publicKey: evmPublicKey,
     },
   },
 });
@@ -83,5 +97,7 @@ authority signature.
   wallet actions after create
 - Use [Recovery](/developer-sdk/recovery-flows) if the created wallet should
   support a guardian flow
+- Use [Client Signing](/developer-sdk/client-signing) for Ed25519, passkey, and
+  EVM client signatures
 - Use [Sponsor & Submit](/developer-sdk/sponsor-and-submit) if your app wants
   Swig-backed fee sponsorship

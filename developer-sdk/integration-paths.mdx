@@ -1,0 +1,46 @@
+---
+title: "Choose an Integration Path"
+sidebarTitle: "Choose a Path"
+---
+
+There are three normal ways to use the Developer SDK.
+
+## 1. Server SDK
+
+Use the server SDK when you want full control over your backend route shape,
+auth checks, request validation, and response format.
+
+Main entrypoint:
+
+```typescript
+import { SwigClient } from '@swig-wallet/developer-sdk/server/typescript';
+```
+
+## 2. Next.js or NestJS proxy helpers
+
+Use the framework helpers when you want the API key to stay on the server, but
+you do not want to implement each prepare route yourself.
+
+Main entrypoints:
+
+```typescript
+import { createSwigRouteHandlers } from '@swig-wallet/developer-sdk/next';
+import { createSwigNestHandler } from '@swig-wallet/developer-sdk/nest';
+```
+
+## 3. Browser client against your own proxy
+
+Use the browser client when your frontend should work with wallet handles and
+prepared results, while still calling only your own app routes.
+
+Main entrypoint:
+
+```typescript
+import { SwigBrowserClient } from '@swig-wallet/developer-sdk/browser';
+```
+
+## Practical rule
+
+- choose the server SDK if you want maximum control
+- choose the framework helpers if you want the fastest route-based setup
+- choose the browser client only together with one of the server-side options

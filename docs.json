@@ -176,29 +176,44 @@
         "description": "Prepare wallet creation, transfers, swaps, recovery, and sponsored submission on your server",
         "groups": [
           {
-            "group": "Build With the SDK",
+            "group": "Start Here",
             "pages": [
               "developer-sdk/index",
+              "developer-sdk/integration-paths",
               "developer-sdk/server-and-client",
-              "developer-sdk/framework-proxies",
-              {
-                "group": "Wallet Flows",
-                "pages": [
-                  "developer-sdk/create-wallets",
-                  "developer-sdk/transfers-swaps-and-signing",
-                  "developer-sdk/custom-execution",
-                  "developer-sdk/recovery-flows",
-                  "developer-sdk/sponsor-and-submit"
-                ]
-              }
+              "developer-sdk/framework-proxies"
             ]
           },
           {
-            "group": "Portal Access",
+            "group": "Set Up Access",
             "pages": [
               "examples/dev-portal/create-api-key",
               "examples/dev-portal/create-policy",
-              "examples/dev-portal/fetch-policy",
+              "examples/dev-portal/fetch-policy"
+            ]
+          },
+          {
+            "group": "Build Wallet Flows",
+            "pages": [
+              "developer-sdk/create-wallets",
+              "developer-sdk/client-signing",
+              "developer-sdk/transfers-swaps-and-signing",
+              "developer-sdk/swaps-and-batches",
+              "developer-sdk/custom-execution"
+            ]
+          },
+          {
+            "group": "Add Recovery",
+            "pages": [
+              "developer-sdk/recovery-flows",
+              "developer-sdk/recovery-setup",
+              "developer-sdk/recovery-runtime"
+            ]
+          },
+          {
+            "group": "Operate in Production",
+            "pages": [
+              "developer-sdk/sponsor-and-submit",
               "examples/dev-portal/paymaster-overview",
               {
                 "group": "Paymaster Admin",
@@ -207,9 +222,14 @@
                   "examples/dev-portal/manage-paymaster",
                   "examples/dev-portal/transaction-history"
                 ]
-              },
+              }
+            ]
+          },
+          {
+            "group": "Workspace Admin",
+            "pages": [
               {
-                "group": "Workspace Admin",
+                "group": "Workspace",
                 "pages": [
                   "examples/dev-portal/index",
                   "examples/dev-portal/projects",

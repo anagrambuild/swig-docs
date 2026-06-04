@@ -1,10 +1,9 @@
 ---
-title: "Transfers, Swaps, and Client Signing"
-sidebarTitle: "Transfers and Swaps"
+title: "Transfer SOL and Tokens"
+sidebarTitle: "Transfer SOL and Tokens"
 ---
 
-Most day-to-day app flows use one wallet handle plus a prepared transaction
-result.
+Most app flows start with a wallet handle, then prepare one movement at a time.
 
 ## Start from a wallet handle
 
@@ -23,17 +22,10 @@ const wallet = swig.wallets.use({
 });
 ```
 
+The same handle shape works for `secp256k1` and `secp256r1` authorities too.
+
 If you already have an IDP session, the same model works through
 `swig.wallets.fromIdpSession(session)`.
-
-## Main prepared flows
-
-The SDK's built-in wallet actions are:
-
-- `wallet.transfer.sol(...)`
-- `wallet.transfer.token(...)`
-- `wallet.swap.jupiter(...)`
-- `wallet.prepare(...)` for grouped operations
 
 ## SOL transfer
 
@@ -59,47 +51,6 @@ const preparedTokenTransfer = await wallet.transfer.token({
 });
 ```
 
-## Jupiter swap
-
-```typescript
-const preparedSwap = await wallet.swap.jupiter({
-  feePayer,
-  inputMint,
-  outputMint,
-  amount: 10_000n,
-  slippageBps: 100,
-  destinationAccount,
-  wrapAndUnwrapSol: true,
-});
-```
-
-`destinationAccount` is the recipient owner. The backend resolves the output
-ATA for SPL outputs or the native destination for unwrapped SOL.
-
-## Grouped operations
-
-Use `wallet.prepare(...)` when you want the backend to shape a batch instead of
-calling single-operation helpers one by one.
-
-```typescript
-const prepared = await wallet.prepare({
-  feePayer,
-  operations: [
-    {
-      type: 'transferSol',
-      destination,
-      amount: 1_000_000n,
-    },
-    {
-      type: 'transferToken',
-      mint,
-      destinationOwner,
-      amount: 10_000n,
-    },
-  ],
-});
-```
-
 ## How to read the result
 
 Prepared results are intentionally split:
@@ -109,62 +60,10 @@ Prepared results are intentionally split:
 | `transactions` | ordered transactions to submit |
 | `clientAuthorityTransactions` | transactions that still need client authority |
 | `feePayerOnlyTransactions` | transactions that only need fee payer or sponsor submission |
-| `signatureRequests` | per-transaction signature metadata for client signing |
-
-## Client signing
-
-### Ed25519
-
-For normal Solana-key signing, use `signPreparedTransaction(...)`:
-
-```typescript
-import {
-  signPreparedTransaction,
-  type PreparedTransaction,
-} from '@swig-wallet/developer-sdk/client';
-import { VersionedTransaction } from '@solana/web3.js';
-
-declare const prepared: PreparedTransaction;
-
-const signed = await signPreparedTransaction(prepared, {
-  signTransaction: async (transaction) => {
-    const versioned = VersionedTransaction.deserialize(
-      Buffer.from(transaction, 'base64'),
-    );
-    versioned.sign([userKeypair]);
-    return Buffer.from(versioned.serialize()).toString('base64');
-  },
-});
-```
-
-### Secp256r1 / passkeys
-
-For passkey-backed prepared transactions, use the Swig signing helpers:
-
-```typescript
-import {
-  createSecp256r1PasskeySigningFn,
-  signPreparedSwigTransaction,
-} from '@swig-wallet/developer-sdk/client';
-
-const passkeySigningFn = createSecp256r1PasskeySigningFn({
-  allowCredentials: [{ id: credentialId, type: 'public-key' }],
-  userVerification: 'preferred',
-});
-
-const signed = await signPreparedSwigTransaction(prepared, {
-  secp256r1: passkeySigningFn,
-});
-```
-
-### Secp256k1
-
-The SDK accepts `secp256k1` as a wallet authority type, but it does not
-currently ship a dedicated client signing helper for `secp256k1` prepared Swig
-transactions. In that case, your app must handle the returned
-`signatureRequests` itself.
+| `signatureRequests` | per-transaction signature metadata |
 
 ## Submission
 
-After client signing, either send directly through your own RPC path or hand
-the signed transaction to [Sponsor & Submit](/developer-sdk/sponsor-and-submit).
+Use [Client Signing](/developer-sdk/client-signing) for the signing step, then
+use [Sponsor & Submit](/developer-sdk/sponsor-and-submit) or your own send path
+to finish submission.

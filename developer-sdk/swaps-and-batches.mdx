@@ -1,0 +1,57 @@
+---
+title: "Prepare Swaps and Batches"
+sidebarTitle: "Swaps and Batches"
+---
+
+Use the built-in helpers when your app needs more than one simple transfer.
+
+## Jupiter swaps
+
+```typescript
+const preparedSwap = await wallet.swap.jupiter({
+  feePayer,
+  inputMint,
+  outputMint,
+  amount: 10_000n,
+  slippageBps: 100,
+  destinationAccount,
+  wrapAndUnwrapSol: true,
+});
+```
+
+`destinationAccount` is the recipient owner. The backend resolves the output
+ATA for SPL outputs or the native destination for unwrapped SOL.
+
+## Grouped operations
+
+Use `wallet.prepare(...)` when you want the backend to shape a batch instead of
+calling single-operation helpers one by one.
+
+```typescript
+const prepared = await wallet.prepare({
+  feePayer,
+  operations: [
+    {
+      type: 'transferSol',
+      destination,
+      amount: 1_000_000n,
+    },
+    {
+      type: 'transferToken',
+      mint,
+      destinationOwner,
+      amount: 10_000n,
+    },
+  ],
+});
+```
+
+## When to use this page
+
+Use swaps when the action is explicitly a Jupiter route.
+
+Use grouped operations when:
+
+- you want the backend to return one ordered plan
+- your app already knows several actions should happen together
+- you want one preparation response instead of several separate ones
