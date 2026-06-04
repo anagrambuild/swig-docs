@@ -1,0 +1,44 @@
+---
+title: "Protocol Overview"
+---
+
+The Swig protocol lives in the `swig-wallet` repo. This is the onchain foundation for Swig wallets on Solana.
+
+## What lives in `swig-wallet`
+
+The repository is not just one crate. It is a Rust workspace with separate packages for the program, interfaces, instructions, state handling, assertions, SDK, and CLI.
+
+### Core workspace members
+
+- `swig` in `program/`: the Solana program for the protocol
+- `swig-interface` in `interface/`: shared protocol-facing types and interfaces
+- `swig-compact-instructions` in `instructions/`: protocol instruction handling
+- `swig-state` in `state/`: account state structures
+- `swig-assertions` in `assertions/`: reusable assertion utilities
+- `swig-sdk` in `rust-sdk/`: the Rust SDK surface
+- `swig-cli` in `cli/`: command-line tooling for operating against the protocol
+
+## What this layer is responsible for
+
+This layer defines:
+
+- how a Swig wallet is represented on-chain
+- how authorities and permissions are encoded
+- how sessions and wallet actions are validated
+- how transactions are executed by the protocol
+
+## When to read this section
+
+Use the protocol docs when you need to understand the system itself rather than just consume an SDK.
+
+Typical reasons:
+
+- you are auditing or reasoning about the protocol model
+- you are working on the Rust crates in `swig-wallet`
+- you need to understand how higher-level SDK behavior maps to the underlying program
+
+## Where to go next
+
+- Use [Swig Protocol SDK](/reference) if you are integrating from TypeScript or Rust
+- Use [Security & Audits](/protocol/security-and-audits) for the attached protocol audit report
+- Use [About Swig](/) for the high-level product context

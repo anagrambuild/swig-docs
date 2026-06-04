@@ -1,0 +1,46 @@
+---
+title: "Legacy and Low-Level Clients"
+---
+
+Swig currently has three TypeScript client surfaces related to the developer portal. They are not interchangeable.
+
+## Client comparison
+
+| Package | Repo location | Best use | Response model |
+| :--- | :--- | :--- | :--- |
+| `@swig-wallet/developer-sdk` | `swig-ts/packages/developer-sdk` | Prepare-first transaction flows behind an API key | returns prepared transaction payloads and signing metadata |
+| `@swig-wallet/developer` | `swig-ts/packages/developer` | Legacy developer SDK for existing portal integrations | throws `SwigError` |
+| `@swig-wallet/api` | `swig-ts/packages/api` | Low-level direct API access to portal and paymaster services | returns `{ data, error }` |
+
+## Which one should you start with
+
+Use `@swig-wallet/developer-sdk` first if your goal is to:
+
+- create wallets through backend-prepared transactions
+- keep the API key on the server
+- return prepared transactions to browser or mobile clients
+- build Next.js or NestJS proxy routes around Swig actions
+
+## `@swig-wallet/developer` status
+
+Treat `@swig-wallet/developer` as the legacy developer SDK.
+
+For new work, prefer `@swig-wallet/developer-sdk`.
+
+## When to use `@swig-wallet/developer`
+
+Use `@swig-wallet/developer` when you want a higher-level portal client with richer SDK models and helper methods around policies, authorities, and actions.
+
+This is still portal-centric, but it is not the same prepare-first flow as `developer-sdk`, and it should be treated as deprecated for new integrations.
+
+## When to use `@swig-wallet/api`
+
+Use `@swig-wallet/api` when you want low-level control over direct HTTP-backed interactions with portal and paymaster services and prefer the `{ data, error }` style.
+
+## Practical rule
+
+If you are deciding what to teach first in the docs, treat:
+
+- `developer-sdk` as the primary Swig Developer SDK
+- `developer` as the legacy developer SDK
+- `api` as the low-level portal client

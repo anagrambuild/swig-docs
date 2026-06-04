@@ -16,15 +16,7 @@
         "pages": [
           "index",
           "products-and-sdks",
-          {
-            "group": "Build with AI",
-            "pages": [
-              "build-with-ai",
-              "tutorials/mcp/index",
-              "reference/mcp-server",
-              "mcp-support"
-            ]
-          },
+          "build-with-ai",
           {
             "group": "Use Cases",
             "pages": [
@@ -35,83 +27,16 @@
         ]
       },
       {
-        "group": "Swig SDKs",
+        "group": "Swig Protocol",
+        "pages": [
+          "protocol/index",
+          "protocol/security-and-audits"
+        ]
+      },
+      {
+        "group": "Swig Protocol SDK",
         "pages": [
           "reference/index",
-          {
-            "group": "TypeScript",
-            "pages": [
-              "reference/typescript/index",
-              "reference/typescript/kit",
-              "reference/typescript/actions"
-            ]
-          },
-          {
-            "group": "Rust",
-            "pages": [
-              "reference/rust/index",
-              "reference/rust/instruction_builder",
-              "reference/rust/rust_wallet"
-            ]
-          },
-          "reference/error-types/index",
-          {
-            "group": "Migration & Release Notes",
-            "pages": [
-              "tutorials/typescript/migration-v1",
-              "v1-release-notes"
-            ]
-          }
-        ]
-      },
-      {
-        "group": "Developer Portal APIs",
-        "pages": [
-          {
-            "group": "Overview",
-            "pages": [
-              "examples/dev-portal/index",
-              "examples/dev-portal/api-reference"
-            ]
-          },
-          {
-            "group": "Projects & Access",
-            "pages": [
-              "examples/dev-portal/projects",
-              "examples/dev-portal/create-project",
-              "examples/dev-portal/manage-members",
-              "examples/dev-portal/subscriptions-billing",
-              "examples/dev-portal/create-api-key"
-            ]
-          },
-          {
-            "group": "Policies & Wallets",
-            "pages": [
-              "examples/dev-portal/create-policy",
-              "examples/dev-portal/fetch-policy",
-              "examples/dev-portal/create-swig"
-            ]
-          },
-          {
-            "group": "Paymaster",
-            "pages": [
-              "examples/dev-portal/paymaster-overview",
-              "examples/dev-portal/create-paymaster",
-              "examples/dev-portal/manage-paymaster",
-              "examples/dev-portal/transaction-history"
-            ]
-          },
-          {
-            "group": "Troubleshooting",
-            "pages": [
-              "examples/dev-portal/error-codes"
-            ]
-          }
-        ]
-      },
-      {
-        "group": "Tutorials",
-        "pages": [
           {
             "group": "Quickstarts",
             "pages": [
@@ -121,6 +46,30 @@
               "tutorials/typescript/managing_authorities",
               "tutorials/typescript/sign",
               "tutorials/embeded_wallet_para/index"
+            ]
+          },
+          {
+            "group": "TypeScript Packages",
+            "pages": [
+              "reference/typescript/index",
+              "reference/typescript/kit",
+              "reference/typescript/actions"
+            ]
+          },
+          {
+            "group": "Rust Packages",
+            "pages": [
+              "reference/rust/index",
+              "reference/rust/instruction_builder",
+              "reference/rust/rust_wallet"
+            ]
+          },
+          {
+            "group": "AI & MCP",
+            "pages": [
+              "tutorials/mcp/index",
+              "reference/mcp-server",
+              "mcp-support"
             ]
           },
           {
@@ -158,12 +107,70 @@
                 ]
               }
             ]
+          },
+          "reference/error-types/index",
+          {
+            "group": "Migration & Releases",
+            "pages": [
+              "tutorials/typescript/migration-v1",
+              "v1-release-notes"
+            ]
           }
+        ]
+      },
+      {
+        "group": "Swig Developer SDK",
+        "pages": [
+          "developer-sdk/index",
+          "developer-sdk/portal-clients",
+          {
+            "group": "Developer Portal Setup",
+            "pages": [
+              "examples/dev-portal/index",
+              "examples/dev-portal/projects",
+              "examples/dev-portal/create-project",
+              "examples/dev-portal/manage-members",
+              "examples/dev-portal/subscriptions-billing",
+              "examples/dev-portal/create-api-key"
+            ]
+          },
+          {
+            "group": "Wallet and Policy Flows",
+            "pages": [
+              "examples/dev-portal/create-policy",
+              "examples/dev-portal/fetch-policy",
+              "examples/dev-portal/create-swig"
+            ]
+          },
+          {
+            "group": "Paymaster and Operations",
+            "pages": [
+              "examples/dev-portal/paymaster-overview",
+              "examples/dev-portal/create-paymaster",
+              "examples/dev-portal/manage-paymaster",
+              "examples/dev-portal/transaction-history"
+            ]
+          },
+          {
+            "group": "API Reference and Errors",
+            "pages": [
+              "examples/dev-portal/api-reference",
+              "examples/dev-portal/error-codes"
+            ]
+          }
+        ]
+      },
+      {
+        "group": "Swig IDP SDK",
+        "pages": [
+          "idp-sdk/index",
+          "idp-sdk/web-and-mobile"
         ]
       },
       {
         "group": "Resources",
         "pages": [
+          "protocol/security-and-audits",
           "links-and-contact"
         ]
       }

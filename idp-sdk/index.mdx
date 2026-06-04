@@ -1,0 +1,53 @@
+---
+title: "IDP SDK Overview"
+---
+
+The Swig IDP SDK is the identity-focused SDK for login providers and authenticated session bootstrap.
+
+It lives in the separate `swig-idp-sdk` repo and currently ships as `@swig-wallet/expo-idp-sdk`.
+
+## What it does
+
+This SDK handles end-user authentication flows that lead into Swig identity and session creation.
+
+Its public API centers on:
+
+- `SwigIdpProvider`
+- `useSwigIdp()`
+- `createSwigWebClient()` from the `/web` entry point
+
+## Supported auth flows
+
+The current SDK surface supports:
+
+- OAuth
+- email OTP
+- SMS OTP
+- provider discovery with `listProviders`
+
+## Runtime targets
+
+The package supports both:
+
+- Expo / React Native flows through the provider and hooks API
+- browser flows through the `/web` entry point
+
+## What it talks to
+
+The SDK is backed by Swig identity endpoints such as:
+
+- `/identity/api/providers`
+- `/identity/api/auth/start`
+- `/identity/api/signup`
+- `/identity/api/session`
+
+It also relies on isolated-host redirect flows for secure auth handoff.
+
+## When to use this section
+
+Use the IDP SDK docs when your integration problem is primarily authentication and login-provider orchestration rather than direct wallet protocol integration.
+
+## Where to go next
+
+- Use [Web and Mobile Flows](/idp-sdk/web-and-mobile) for the public flow model
+- Use [Swig Developer SDK](/developer-sdk) if your next step is backend transaction preparation

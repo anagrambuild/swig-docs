@@ -1,0 +1,53 @@
+---
+title: "Web and Mobile Flows"
+---
+
+The IDP SDK has two main consumption models: Expo-native and web.
+
+## Expo-native flow
+
+In Expo or React Native apps, the main integration surface is `SwigIdpProvider` plus the `useSwigIdp()` hook.
+
+The primary auth methods are:
+
+- `startOAuth()`
+- `startEmailOtp()`
+- `startSmsOtp()`
+- `listProviders()`
+
+These flows open system auth sessions and return a persisted Swig session once authentication completes.
+
+## Web flow
+
+In browser apps, use the `/web` entry point and create a web client with `createSwigWebClient()`.
+
+That client supports:
+
+- building OAuth start URLs
+- redirecting the browser into auth
+- completing auth from the callback URL
+- loading and clearing persisted sessions
+- listing configured providers
+
+## Security model
+
+The SDK is designed around redirected auth and isolated-host flows.
+
+Important constraints from the source package:
+
+- mobile auth is routed through system auth sessions
+- embedded `WebView` auth is not supported for production security guarantees
+- session persistence is handled by platform-specific storage
+
+## Default backend assumptions
+
+By default the SDK expects Swig backend and isolated-host endpoints unless you override them in config.
+
+That means the SDK is not just a UI helper. It assumes the Swig identity backend is part of the architecture.
+
+## Integration boundary
+
+After authentication succeeds, the next step usually shifts into one of two other product families:
+
+- the **Swig Developer SDK** if your app will prepare wallet actions through hosted backend services
+- the **Swig Protocol SDK** if your app will integrate with the protocol directly
