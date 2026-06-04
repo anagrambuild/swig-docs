@@ -1,0 +1,131 @@
+---
+title: "Guardian and Recovery Flows"
+---
+
+Recovery is optional in the current developer SDK. A wallet without a guardian
+is just a prepared-wallet flow. A guardian-enabled wallet adds recovery setup
+and later recovery execution.
+
+## Non-guardian wallets
+
+If you create a wallet with only an `initialUser` or with a policy that does
+not enable guardian recovery, treat the response as a normal prepared create
+flow:
+
+```typescript
+const created = await swig.wallets.create({
+  feePayer,
+  initialUser: {
+    ed25519: {
+      publicKey: userPublicKey,
+    },
+  },
+});
+```
+
+In this mode:
+
+- `created.transactions` is the main submission list
+- `created.clientAuthorityTransactions` contains anything the user still needs
+  to sign
+- `created.recoverySetup` is absent
+- there is no guardian start, cancel, or execute path
+
+## Guardian-enabled wallets
+
+Use a recovery-enabled policy when you want recovery. The guardian can already
+be present in policy metadata, or you can provide it at create time:
+
+```typescript
+const created = await swig.wallets.create({
+  feePayer,
+  policyId,
+  initialUser: {
+    secp256r1: {
+      publicKey: passkeyPublicKey,
+    },
+  },
+  recovery: {
+    guardianPubkey: guardianPublicKey,
+    delaySeconds: 86_400,
+  },
+});
+```
+
+The important handoff is `created.recoverySetup`. Treat that as the canonical
+plan for configuring recovery on the wallet after creation.
+
+## Setup phase
+
+Once the wallet exists, prepare the recovery setup explicitly:
+
+```typescript
+const wallet = swig.wallets.use(created.wallet);
+
+const setup = await wallet.recovery.prepareSetup({
+  feePayer,
+  ...created.recoverySetup!,
+});
+```
+
+The setup result is split into two prepared transactions:
+
+- `addAuthorityTransaction` adds the recovery authority to the target role
+- `configureRecoveryTransaction` configures the guardian and delay
+
+The signing model is intentionally asymmetric:
+
+| Transaction | Who signs |
+|------|---------|
+| `creationTransaction` | fee payer or sponsor path |
+| `addAuthorityTransaction` | current wallet authority |
+| `configureRecoveryTransaction` | backend recovery operator already signs it; your app only submits it |
+
+`operatorSignedTransactions` contains transactions that already include the
+backend operator signature. Do not authority-sign those again.
+
+## Ongoing recovery flow
+
+After setup:
+
+- the guardian starts recovery with `wallet.recovery.start(...)`
+- the current wallet authority can cancel it with `wallet.recovery.cancel(...)`
+- the guardian executes it with `wallet.recovery.execute(...)` after the delay
+
+```typescript
+const start = await wallet.recovery.start({
+  feePayer,
+  guardianPubkey: guardianPublicKey,
+  newAuthority: newAuthorityPublicKey,
+});
+
+const cancel = await wallet.recovery.cancel({
+  feePayer,
+});
+
+const execute = await wallet.recovery.execute({
+  feePayer,
+  newAuthority: newAuthorityPublicKey,
+});
+```
+
+The guardian signs both `start` and `execute`. The current wallet authority
+signs `cancel`.
+
+## Policy-driven recovery metadata
+
+The current SDK can also read raw policy metadata through
+`swig.wallets.getPolicy(policyId)`. That metadata includes fields such as:
+
+- `guardianEnabled`
+- `guardianAuthority`
+- `guardianDelaySeconds`
+
+Most apps should use that metadata to decide whether a wallet needs recovery
+setup, then rely on `created.recoverySetup` for the actual prepared flow.
+
+## Advanced option: `targetRoleId`
+
+The recovery setup types also support `targetRoleId`. Most app flows omit it
+and recover the main user role. Only set it when you intentionally want the
+guardian flow bound to a specific non-default role.

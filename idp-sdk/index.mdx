@@ -2,35 +2,33 @@
 title: "IDP SDK Overview"
 ---
 
-The Swig IDP SDK is the identity-focused SDK for login providers and authenticated session bootstrap.
+The Swig IDP SDK is the authentication-side SDK for apps that need to bootstrap
+Swig sessions from user login flows.
 
-It lives in the separate `swig-idp-sdk` repo and currently ships as `@swig-wallet/expo-idp-sdk`.
+It lives in the separate `swig-idp-sdk` repo and currently ships as
+`@swig-wallet/expo-idp-sdk`.
 
-## What it does
+## Current public surface
 
-This SDK handles end-user authentication flows that lead into Swig identity and session creation.
-
-Its public API centers on:
+Expo and React Native apps use:
 
 - `SwigIdpProvider`
 - `useSwigIdp()`
-- `createSwigWebClient()` from the `/web` entry point
+- `startOAuth()`
+- `startEmailOtp()`
+- `startSmsOtp()`
+- `listProviders()`
 
-## Supported auth flows
+Browser apps use the `/web` entry point:
 
-The current SDK surface supports:
-
-- OAuth
-- email OTP
-- SMS OTP
-- provider discovery with `listProviders`
-
-## Runtime targets
-
-The package supports both:
-
-- Expo / React Native flows through the provider and hooks API
-- browser flows through the `/web` entry point
+- `createSwigWebClient()`
+- `getOAuthStartUrl()`
+- `redirectToOAuth()`
+- `completeOAuthFromUrl()`
+- `getSession()`
+- `getPersistedSession()`
+- `logout()`
+- `listProviders()`
 
 ## What it talks to
 
@@ -38,10 +36,20 @@ The SDK is backed by Swig identity endpoints such as:
 
 - `/identity/api/providers`
 - `/identity/api/auth/start`
+- `/identity/api/auth/email/start`
+- `/identity/api/auth/sms/start`
 - `/identity/api/signup`
 - `/identity/api/session`
 
 It also relies on isolated-host redirect flows for secure auth handoff.
+
+## Security boundary
+
+The supported mobile auth paths open the isolated host in a system auth
+session. The host app should not embed these flows in a `WebView`.
+
+This boundary matters because the isolated host owns the OAuth redirect, OTP
+entry, verification code handling, and callback JWT exchange.
 
 ## When to use this section
 

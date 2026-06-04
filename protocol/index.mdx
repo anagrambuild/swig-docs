@@ -23,9 +23,24 @@ The repository is not just one crate. It is a Rust workspace with separate packa
 This layer defines:
 
 - how a Swig wallet is represented on-chain
+- how the config account and wallet-address PDA work together
 - how authorities and permissions are encoded
+- how roles are keyed by `role_id`
 - how sessions and wallet actions are validated
 - how transactions are executed by the protocol
+
+## Core mental model
+
+At the program level, a Swig wallet is not just one signer.
+
+- The main Swig config account stores the wallet ID, bump seeds, role count, and
+  role counter.
+- A separate wallet-address PDA is the address used during execution and
+  signing flows.
+- Each role binds a `role_id`, one authority, and one or more permission
+  actions.
+- `SignV2` is the general execution path that authenticates a role, checks its
+  actions, and signs CPI execution through the wallet-address PDA.
 
 ## When to read this section
 
@@ -39,6 +54,10 @@ Typical reasons:
 
 ## Where to go next
 
+- Use [Concepts and Permissions](/protocol/concepts-and-permissions) for the
+  role, authority, and permission model
+- Use [Program Walkthrough](/protocol/program-walkthrough) for the major
+  instruction families and execution path
 - Use [Swig Protocol SDK](/reference) if you are integrating from TypeScript or Rust
 - Use [Security & Audits](/protocol/security-and-audits) for the attached protocol audit report
 - Use [About Swig](/) for the high-level product context

@@ -2,15 +2,16 @@
 title: "Legacy and Low-Level Clients"
 ---
 
-Swig currently has three TypeScript client surfaces related to the developer portal. They are not interchangeable.
+Swig currently has three TypeScript surfaces related to the developer portal.
+They overlap, but they are not the same product.
 
 ## Client comparison
 
-| Package | Repo location | Best use | Response model |
-| :--- | :--- | :--- | :--- |
-| `@swig-wallet/developer-sdk` | `swig-ts/packages/developer-sdk` | Prepare-first transaction flows behind an API key | returns prepared transaction payloads and signing metadata |
-| `@swig-wallet/developer` | `swig-ts/packages/developer` | Legacy developer SDK for existing portal integrations | throws `SwigError` |
-| `@swig-wallet/api` | `swig-ts/packages/api` | Low-level direct API access to portal and paymaster services | returns `{ data, error }` |
+| Package | Status | Best use | Policy access | Transaction access | Response model |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `@swig-wallet/developer-sdk` | current | prepare-first hosted wallet flows | `swig.wallets.getPolicy()` returns raw policy metadata | wallet creation, transfers, swaps, recovery, sponsor flow | prepared transactions and signing metadata |
+| `@swig-wallet/developer` | legacy | existing portal integrations that depend on rich helper models | `client.getPolicy()` returns `Policy`, `Actions`, and `AuthorityInfo` helpers | `createWallet()` only | throws `SwigError` |
+| `@swig-wallet/api` | low-level | direct portal and paymaster endpoint access | `client.policies.get()` returns raw policy JSON | `wallet.create()`, `paymaster.sign()`, `paymaster.sponsor()` | returns `{ data, error }` |
 
 ## Which one should you start with
 
@@ -21,26 +22,25 @@ Use `@swig-wallet/developer-sdk` first if your goal is to:
 - return prepared transactions to browser or mobile clients
 - build Next.js or NestJS proxy routes around Swig actions
 
-## `@swig-wallet/developer` status
+## Important nuance
 
-Treat `@swig-wallet/developer` as the legacy developer SDK.
+`@swig-wallet/developer-sdk` does expose `swig.wallets.getPolicy(policyId)` and
+the exported `Policy` type because wallet creation and recovery flows depend on
+policy metadata.
 
-For new work, prefer `@swig-wallet/developer-sdk`.
+That still does not make it the rich policy-helper SDK. If you need
+`Actions.canSpendSol()`, `AuthorityInfo.isSession()`, or a portal-centric
+policy client, that is still legacy `@swig-wallet/developer` territory.
 
-## When to use `@swig-wallet/developer`
+## Package fit
 
-Use `@swig-wallet/developer` when you want a higher-level portal client with richer SDK models and helper methods around policies, authorities, and actions.
+- Use `@swig-wallet/developer-sdk` for new hosted wallet integrations.
+- Use `@swig-wallet/api` when you want raw portal and paymaster endpoints.
+- Keep `@swig-wallet/developer` for existing integrations that already depend on
+  its richer policy models and helper methods.
 
-This is still portal-centric, but it is not the same prepare-first flow as `developer-sdk`, and it should be treated as deprecated for new integrations.
+Treat `@swig-wallet/developer` as deprecated for new integrations.
 
-## When to use `@swig-wallet/api`
-
-Use `@swig-wallet/api` when you want low-level control over direct HTTP-backed interactions with portal and paymaster services and prefer the `{ data, error }` style.
-
-## Practical rule
-
-If you are deciding what to teach first in the docs, treat:
-
-- `developer-sdk` as the primary Swig Developer SDK
-- `developer` as the legacy developer SDK
-- `api` as the low-level portal client
+If you are deciding what to teach first in the docs, treat `developer-sdk` as
+the primary Swig Developer SDK, `developer` as the legacy developer SDK, and
+`api` as the low-level portal client.

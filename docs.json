@@ -11,10 +11,8 @@
   "navigation": {
     "products": [
       {
-        "product": "overview",
-        "name": "Overview",
+        "product": "Overview",
         "icon": "book-open",
-        "color": "#111111",
         "description": "Start here to understand the product map and where each SDK fits",
         "groups": [
           {
@@ -41,26 +39,24 @@
         ]
       },
       {
-        "product": "protocol",
-        "name": "Protocol",
+        "product": "Protocol",
         "icon": "shield",
-        "color": "#0F766E",
         "description": "The on-chain wallet protocol in swig-wallet",
         "groups": [
           {
             "group": "Protocol",
             "pages": [
               "protocol/index",
+              "protocol/concepts-and-permissions",
+              "protocol/program-walkthrough",
               "protocol/security-and-audits"
             ]
           }
         ]
       },
       {
-        "product": "protocol-sdk",
-        "name": "Direct SDK",
+        "product": "Direct SDK",
         "icon": "terminal",
-        "color": "#1D4ED8",
         "description": "Direct TypeScript and Rust integrations with the protocol",
         "groups": [
           {
@@ -156,16 +152,16 @@
         ]
       },
       {
-        "product": "developer-sdk",
-        "name": "Hosted SDK",
+        "product": "Hosted SDK",
         "icon": "building",
-        "color": "#B45309",
         "description": "API-key-based transaction preparation through the developer portal",
         "groups": [
           {
             "group": "Overview",
             "pages": [
               "developer-sdk/index",
+              "developer-sdk/transfers-swaps-and-signing",
+              "developer-sdk/recovery-flows",
               "developer-sdk/portal-clients"
             ]
           },
@@ -207,10 +203,8 @@
         ]
       },
       {
-        "product": "idp-sdk",
-        "name": "Auth SDK",
+        "product": "Auth SDK",
         "icon": "fingerprint",
-        "color": "#7C3AED",
         "description": "Login-provider and identity flows for web and Expo apps",
         "groups": [
           {

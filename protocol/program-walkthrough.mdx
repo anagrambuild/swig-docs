@@ -1,0 +1,74 @@
+---
+title: "Program Walkthrough"
+---
+
+Most of the protocol can be understood as a small set of instruction families.
+
+## Instruction families
+
+| Instruction family | On-chain instructions | Purpose |
+|------|-----------------------|---------|
+| Wallet lifecycle | `CreateV1`, `MigrateToWalletAddressV1`, `TransferAssetsV1`, `CloseTokenAccountV1`, `CloseSwigV1` | create, migrate, move assets, and close wallets |
+| Role management | `AddAuthorityV1`, `RemoveAuthorityV1`, `UpdateAuthorityV1` | add, remove, or edit roles and their permissions |
+| Session management | `CreateSessionV1` | bootstrap temporary session authorities |
+| General execution | `SignV2` | authenticate a role and execute wallet instructions |
+| Sub-accounts | `CreateSubAccountV1`, `WithdrawFromSubAccountV1`, `SubAccountSignV1`, `ToggleSubAccountV1` | manage segregated balances and sub-account execution |
+| Recovery | `RecoverAuthorityV1` | rotate one signer authority through the constrained recovery path |
+
+## `SignV2` is the main execution path
+
+`SignV2` is the instruction that turns a Swig wallet into an execution layer.
+
+At a high level it:
+
+1. loads the target role by `role_id`
+2. authenticates the role authority or session authority
+3. parses the instruction payload to be executed
+4. checks the role's actions and spending limits
+5. signs execution through the wallet-address PDA
+
+This is why the protocol docs talk so much about roles and actions. Most real
+wallet behavior eventually passes through `SignV2`.
+
+## What permissions affect in execution
+
+During `SignV2`, the program is not only checking that a signer is valid. It is
+also checking the shape of the transaction against the role's permissions.
+
+Examples:
+
+- SOL and token limit actions bound how much value can move
+- destination-limited actions constrain where assets can go
+- `Program`, `ProgramCurated`, `ProgramAll`, and `ProgramScope` control CPI
+  access
+- `All` and `AllButManageAuthority` represent broader execution roles
+
+That is why a role with a valid signature can still fail with a permission
+error.
+
+## Recovery is a dedicated path
+
+Recovery is not modeled as generic authority management.
+
+`RecoverAuthorityV1`:
+
+- authenticates an acting recovery role
+- requires the dedicated `RecoveryAuthority` action
+- verifies a pending recovery binding
+- rotates the target role's authority while preserving that role's `role_id`
+  and action set
+
+This is narrower than `ManageAuthority`, which is intentional. Recovery is
+supposed to be constrained.
+
+## Why SDKs feel simpler than the program
+
+The higher-level SDKs package these concepts into friendlier APIs:
+
+- protocol SDKs build instructions directly
+- developer-sdk prepares hosted transactions around the same role and action
+  model
+- IDP and portal products sit even further upstream
+
+When you need to debug a permission failure or understand how a transaction is
+authorized, come back to this instruction-level view.

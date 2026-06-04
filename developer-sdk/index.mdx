@@ -2,9 +2,11 @@
 title: "Developer SDK Overview"
 ---
 
-The Swig Developer SDK is the hosted, API-key-based SDK surface for preparing wallet operations on a server and signing only the required transactions on the client.
+The Swig Developer SDK is the current hosted SDK surface in
+`swig-ts/packages/developer-sdk`.
 
-It lives in `swig-ts/packages/developer-sdk` and ships as `@swig-wallet/developer-sdk`.
+It uses an API key on your server to prepare wallet operations, then hands only
+the prepared transactions to a browser or mobile client for signing.
 
 ## Access model
 
@@ -19,15 +21,13 @@ In practice that means:
 
 ## Core model
 
-The SDK is prepare-first.
-
-### Typical flow
+The SDK is prepare-first:
 
 1. Your server creates a `SwigClient` with an API key
 2. The server prepares a wallet operation
-3. The backend returns one or more unsigned transactions
-4. The client signs the transactions that require client authority
-5. The app submits them directly or through a sponsor flow
+3. The backend returns one or more prepared transactions plus signing metadata
+4. The client signs only the transactions listed in `clientAuthorityTransactions`
+5. The app submits the ordered transactions directly or through a sponsor flow
 
 ## Package surface
 
@@ -39,13 +39,18 @@ The package exposes multiple entry points for different runtime roles:
 - `@swig-wallet/developer-sdk/next` for Next.js route helpers
 - `@swig-wallet/developer-sdk/nest` for NestJS route helpers
 
-## What it is good for
+## Main operations
 
-- API-key-backed wallet creation
-- server-side preparation of transfers and swaps
-- keeping backend credentials out of the browser
-- controlled client signing flows
-- building app-specific proxy routes around Swig transactions
+The current server SDK exposes:
+
+- `swig.wallets.create(...)` for prepared wallet creation
+- `swig.wallets.use(...)` for working with an existing wallet
+- `wallet.prepare(...)` for grouped operations
+- `wallet.transfer.sol(...)` and `wallet.transfer.token(...)`
+- `wallet.swap.jupiter(...)`
+- `wallet.recovery.prepareSetup(...)`, `start(...)`, `cancel(...)`, and `execute(...)`
+- `swig.transactions.sponsor(...)` for paymaster-backed submission
+- `swig.wallets.getPolicy(policyId)` for raw policy metadata used in prepared flows
 
 ## What it is not
 
@@ -55,7 +60,14 @@ Those SDKs integrate with the protocol directly.
 
 This SDK integrates with hosted Swig backend services and depends on developer-portal provisioning.
 
+It is also not the rich policy-helper client from `@swig-wallet/developer`.
+The current SDK can read raw policy metadata, but if your job is primarily
+policy inspection or direct portal endpoint access, use
+[Legacy and Low-Level Clients](/developer-sdk/portal-clients).
+
 ## Where to go next
 
+- Use [Transfers, Swaps, and Signing](/developer-sdk/transfers-swaps-and-signing) for prepared operation flows
+- Use [Guardian and Recovery Flows](/developer-sdk/recovery-flows) for guardian-enabled wallets
 - Use [Legacy and Low-Level Clients](/developer-sdk/portal-clients) to compare `developer-sdk`, the legacy `developer` client, and `api`
 - Use the developer portal setup guides to create projects and API keys

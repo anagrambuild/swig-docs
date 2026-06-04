@@ -8,14 +8,16 @@ The IDP SDK has two main consumption models: Expo-native and web.
 
 In Expo or React Native apps, the main integration surface is `SwigIdpProvider` plus the `useSwigIdp()` hook.
 
-The primary auth methods are:
+The current high-level methods are:
 
 - `startOAuth()`
 - `startEmailOtp()`
 - `startSmsOtp()`
 - `listProviders()`
 
-These flows open system auth sessions and return a persisted Swig session once authentication completes.
+All three auth entrypoints open the isolated host in a system auth session and
+resolve to the same persisted Swig session shape after authentication
+completes.
 
 ## Web flow
 
@@ -23,11 +25,12 @@ In browser apps, use the `/web` entry point and create a web client with `create
 
 That client supports:
 
-- building OAuth start URLs
-- redirecting the browser into auth
-- completing auth from the callback URL
-- loading and clearing persisted sessions
-- listing configured providers
+- `getOAuthStartUrl()` for building the isolated-host start URL
+- `redirectToOAuth()` for full-page auth redirects
+- `completeOAuthFromUrl()` for callback parsing and session persistence
+- `getSession()` and `getPersistedSession()` for loading session state
+- `logout()` for clearing stored state
+- `listProviders()` for provider discovery
 
 ## Security model
 
@@ -35,9 +38,11 @@ The SDK is designed around redirected auth and isolated-host flows.
 
 Important constraints from the source package:
 
-- mobile auth is routed through system auth sessions
+- mobile auth is routed through system auth sessions via `expo-web-browser`
 - embedded `WebView` auth is not supported for production security guarantees
 - session persistence is handled by platform-specific storage
+- Expo defaults to `expo-secure-store`
+- web defaults to `window.localStorage`
 
 ## Default backend assumptions
 
