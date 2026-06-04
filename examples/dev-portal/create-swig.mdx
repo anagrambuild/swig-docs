@@ -1,5 +1,6 @@
 ---
-title: "Creating a Swig Wallet"
+title: "Legacy Wallet Create API"
+sidebarTitle: "Wallet Create API"
 ---
 
 This guide shows how to create Swig wallets programmatically using the Developer Portal API. This approach is ideal for applications that need to create wallets on behalf of users with predefined policies.
@@ -9,7 +10,7 @@ This guide shows how to create Swig wallets programmatically using the Developer
   <code>@swig-wallet/api</code> and <code>@swig-wallet/developer</code>. If you
   want the newer prepare-first SDK in
   <code>swig-ts/packages/developer-sdk</code>, start with
-  [Developer SDK Overview](/developer-sdk).
+  [What the Developer SDK Does](/developer-sdk).
   Treat <code>@swig-wallet/developer</code> as the legacy developer SDK for
   existing integrations.
 </Note>
@@ -104,12 +105,12 @@ return {
 ```
 
 Use this page when you specifically want the developer-portal create-wallet
-endpoint or its older portal clients. Use [Developer SDK Overview](/developer-sdk)
+endpoint or its older portal clients. Use [What the Developer SDK Does](/developer-sdk)
 for the current product surface.
 
 For the current hosted operation flows after wallet creation, see
-[Transfers, Swaps, and Signing](/developer-sdk/transfers-swaps-and-signing) and
-[Guardian and Recovery Flows](/developer-sdk/recovery-flows).
+[Transfers and Swaps](/developer-sdk/transfers-swaps-and-signing) and
+[Recovery](/developer-sdk/recovery-flows).
 
 ## Specifying the Wallet Authority
 

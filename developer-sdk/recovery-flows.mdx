@@ -1,44 +1,26 @@
 ---
-title: "Guardian and Recovery Flows"
+title: "Guardian Recovery"
+sidebarTitle: "Recovery"
 ---
 
-Recovery is optional in the current developer SDK.
+Guardian recovery is an add-on flow around wallet creation. It is not part of a
+plain no-policy wallet create.
 
-There are two modes:
+## The important model
 
-- non-guardian wallets: standard prepared wallet flows
-- guardian-enabled wallets: standard flows plus recovery setup, start, cancel,
-  and execute
+Recovery in this SDK is policy-backed:
 
-## Non-guardian wallets
+- create the wallet from a recovery-enabled policy
+- let `swig.wallets.create(...)` return a `recoverySetup` plan
+- submit wallet creation
+- call `wallet.recovery.prepareSetup(...)`
+- submit the recovery setup transactions in order
+- later use `start`, `cancel`, and `execute` for the live recovery lifecycle
 
-If you create a wallet with only an `initialUser` or with a policy that does
-not enable guardian recovery, treat the response as a normal prepared create
-flow:
+If the policy is not recovery-enabled, you should treat the result as a normal
+wallet create flow and expect `recoverySetup` to be absent.
 
-```typescript
-const created = await swig.wallets.create({
-  feePayer,
-  initialUser: {
-    ed25519: {
-      publicKey: userPublicKey,
-    },
-  },
-});
-```
-
-In this mode:
-
-- `created.transactions` is the main submission list
-- `created.clientAuthorityTransactions` contains anything the user still needs
-  to sign
-- `created.recoverySetup` is absent
-- there is no guardian start, cancel, or execute path
-
-## Guardian-enabled wallets
-
-Use a recovery-enabled policy when you want recovery. The guardian can already
-be present in policy metadata, or you can provide it at create time:
+## Create from a recovery-enabled policy
 
 ```typescript
 const created = await swig.wallets.create({
@@ -56,22 +38,24 @@ const created = await swig.wallets.create({
 });
 ```
 
-The important handoff is `created.recoverySetup`. Treat that as the canonical
-plan for configuring recovery on the wallet after creation.
+The `recovery` object is used to help build the returned setup plan. Recovery
+is still completed as a follow-up flow. Wallet creation itself does not finish
+recovery setup.
 
-## Recovery setup sequence
+## What `create(...)` gives you
 
-For guardian-enabled wallets, the normal developer flow is:
+For a recovery-enabled create flow, the returned categories matter:
 
-1. call `swig.wallets.create(...)`
-2. submit the create transaction
-3. call `wallet.recovery.prepareSetup(...)` using `created.recoverySetup`
-4. have the current wallet authority sign `addAuthorityTransaction`
-5. submit the already operator-signed `configureRecoveryTransaction`
+- `creationTransaction` creates the wallet
+- `clientAuthorityTransactions` are the transactions the current wallet
+  authority must sign
+- `operatorSignedTransactions` are already signed by the backend recovery
+  operator
+- `recoverySetup` is the plan you feed into `prepareSetup(...)`
 
-## Setup phase
+## Recovery setup
 
-Once the wallet exists, prepare the recovery setup explicitly:
+After wallet creation is submitted, prepare the follow-up recovery setup:
 
 ```typescript
 const wallet = swig.wallets.use(created.wallet);
@@ -82,29 +66,30 @@ const setup = await wallet.recovery.prepareSetup({
 });
 ```
 
-The setup result is split into two prepared transactions:
+That returns two main prepared transactions:
 
-- `addAuthorityTransaction` adds the recovery authority to the target role
-- `configureRecoveryTransaction` configures the guardian and delay
+- `addAuthorityTransaction`
+- `configureRecoveryTransaction`
 
-The signing model is intentionally asymmetric:
+## Who signs what
+
+The setup path is intentionally split:
 
 | Transaction | Who signs |
-|------|---------|
+|-------------|-----------|
 | `creationTransaction` | fee payer or sponsor path |
 | `addAuthorityTransaction` | current wallet authority |
-| `configureRecoveryTransaction` | backend recovery operator already signs it; your app only submits it |
+| `configureRecoveryTransaction` | backend recovery operator already signs it |
 
-`operatorSignedTransactions` contains transactions that already include the
-backend operator signature. Do not authority-sign those again.
+Do not authority-sign `operatorSignedTransactions` again.
 
-## Ongoing recovery flow
+## Ongoing recovery lifecycle
 
 After setup:
 
 - the guardian starts recovery with `wallet.recovery.start(...)`
-- the current wallet authority can cancel it with `wallet.recovery.cancel(...)`
-- the guardian executes it with `wallet.recovery.execute(...)` after the delay
+- the current wallet authority can cancel with `wallet.recovery.cancel(...)`
+- the guardian executes with `wallet.recovery.execute(...)` after the delay
 
 ```typescript
 const start = await wallet.recovery.start({
@@ -123,23 +108,21 @@ const execute = await wallet.recovery.execute({
 });
 ```
 
-The guardian signs both `start` and `execute`. The current wallet authority
-signs `cancel`.
+The guardian signs `start` and `execute`. The current wallet authority signs
+`cancel`.
 
-## Policy metadata
+## Policy metadata and `targetRoleId`
 
-The current SDK can also read raw policy metadata through
-`swig.wallets.getPolicy(policyId)`. That metadata includes fields such as:
+The SDK also reads policy metadata through `swig.wallets.getPolicy(policyId)`.
+That is where it finds fields such as:
 
 - `guardianEnabled`
 - `guardianAuthority`
 - `guardianDelaySeconds`
 
-Most apps should use that metadata to decide whether a wallet needs recovery
-setup, then rely on `created.recoverySetup` for the actual prepared flow.
+Most apps should let `created.recoverySetup` be the source of truth for the
+follow-up setup flow.
 
-## Advanced option: `targetRoleId`
-
-The recovery setup types also support `targetRoleId`. Most app flows omit it
-and recover the main user role. Only set it when you intentionally want the
-guardian flow bound to a specific non-default role.
+`targetRoleId` is an advanced option. Most integrations omit it and recover the
+main user role. Only set it when you are intentionally binding recovery to a
+specific non-default role.

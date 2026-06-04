@@ -1,22 +1,15 @@
 ---
-title: "Transfers, Swaps, and Signing"
+title: "Transfers, Swaps, and Client Signing"
+sidebarTitle: "Transfers and Swaps"
 ---
 
-The current developer SDK uses the same prepared-transaction model for wallet
-operations after creation.
-
-## Typical sequence
-
-1. Create or load a wallet handle on the server
-2. Prepare a transfer, swap, or grouped operation
-3. Return the prepared transaction payload to the client
-4. Have the client sign only the transactions that require authority signatures
-5. Submit directly or through `swig.transactions.sponsor(...)`
+Most day-to-day app flows use one wallet handle plus a prepared transaction
+result.
 
 ## Start from a wallet handle
 
 Attach to an existing wallet with the config address, wallet address, and the
-requester authority that should sign client-side transactions:
+authority that should sign on the client:
 
 ```typescript
 const wallet = swig.wallets.use({
@@ -30,15 +23,19 @@ const wallet = swig.wallets.use({
 });
 ```
 
-The same pattern works for passkey and secp256k1 authorities.
+If you already have an IDP session, the same model works through
+`swig.wallets.fromIdpSession(session)`.
 
-## Prepared operations
+## Main prepared flows
 
-Use the single-operation methods when your app already knows the exact action.
-Use `wallet.prepare(...)` when you want the backend to shape a batch of
-operations together.
+The SDK's built-in wallet actions are:
 
-### SOL transfer
+- `wallet.transfer.sol(...)`
+- `wallet.transfer.token(...)`
+- `wallet.swap.jupiter(...)`
+- `wallet.prepare(...)` for grouped operations
+
+## SOL transfer
 
 ```typescript
 const preparedTransfer = await wallet.transfer.sol({
@@ -48,10 +45,10 @@ const preparedTransfer = await wallet.transfer.sol({
 });
 ```
 
-### Token transfer
+## Token transfer
 
-Token transfers are wallet-owner based. The backend derives the token program,
-source ATA, destination ATA, and any destination ATA creation that is needed.
+Token transfers are owner-based. The backend derives the token program, source
+ATA, destination ATA, and any destination ATA creation it needs.
 
 ```typescript
 const preparedTokenTransfer = await wallet.transfer.token({
@@ -62,7 +59,7 @@ const preparedTokenTransfer = await wallet.transfer.token({
 });
 ```
 
-### Jupiter swap
+## Jupiter swap
 
 ```typescript
 const preparedSwap = await wallet.swap.jupiter({
@@ -76,10 +73,13 @@ const preparedSwap = await wallet.swap.jupiter({
 });
 ```
 
-### Grouped operations
+`destinationAccount` is the recipient owner. The backend resolves the output
+ATA for SPL outputs or the native destination for unwrapped SOL.
 
-Use `wallet.prepare(...)` when your app wants one backend-shaped transaction
-plan for multiple operations:
+## Grouped operations
+
+Use `wallet.prepare(...)` when you want the backend to shape a batch instead of
+calling single-operation helpers one by one.
 
 ```typescript
 const prepared = await wallet.prepare({
@@ -100,23 +100,22 @@ const prepared = await wallet.prepare({
 });
 ```
 
-## Reading the result
+## How to read the result
 
-Prepared operation results are intentionally categorized:
+Prepared results are intentionally split:
 
 | Field | Meaning |
-|------|---------|
-| `transactions` | ordered prepared transactions to submit |
-| `clientAuthorityTransactions` | transactions that still need a client authority signature |
-| `feePayerOnlyTransactions` | transactions that only need fee-payer or sponsor submission |
-| `signatureRequests` | per-transaction metadata describing the required client signature scheme |
-
-If `signatureRequests.length > 0`, your client still needs to sign that
-transaction before submission.
+|-------|---------|
+| `transactions` | ordered transactions to submit |
+| `clientAuthorityTransactions` | transactions that still need client authority |
+| `feePayerOnlyTransactions` | transactions that only need fee payer or sponsor submission |
+| `signatureRequests` | per-transaction signature metadata for client signing |
 
 ## Client signing
 
-Ed25519 flows can use `signPreparedTransaction(...)`:
+### Ed25519
+
+For normal Solana-key signing, use `signPreparedTransaction(...)`:
 
 ```typescript
 import {
@@ -138,21 +137,34 @@ const signed = await signPreparedTransaction(prepared, {
 });
 ```
 
-For passkey or secp256k1 flows, use the client helpers that match the
-`signatureRequests` scheme, such as `signPreparedSwigTransaction(...)`.
+### Secp256r1 / passkeys
 
-## Submission
-
-After client signing, your app can either submit directly or use the hosted
-sponsor path:
+For passkey-backed prepared transactions, use the Swig signing helpers:
 
 ```typescript
-await swig.transactions.sponsor({
-  transaction: signed.transaction,
-  transactionEncoding: signed.transactionEncoding,
-  network: signed.network,
+import {
+  createSecp256r1PasskeySigningFn,
+  signPreparedSwigTransaction,
+} from '@swig-wallet/developer-sdk/client';
+
+const passkeySigningFn = createSecp256r1PasskeySigningFn({
+  allowCredentials: [{ id: credentialId, type: 'public-key' }],
+  userVerification: 'preferred',
+});
+
+const signed = await signPreparedSwigTransaction(prepared, {
+  secp256r1: passkeySigningFn,
 });
 ```
 
-The API key stays on the server. Client code should only ever see prepared
-transactions and signing requests.
+### Secp256k1
+
+The SDK accepts `secp256k1` as a wallet authority type, but it does not
+currently ship a dedicated client signing helper for `secp256k1` prepared Swig
+transactions. In that case, your app must handle the returned
+`signatureRequests` itself.
+
+## Submission
+
+After client signing, either send directly through your own RPC path or hand
+the signed transaction to [Sponsor & Submit](/developer-sdk/sponsor-and-submit).

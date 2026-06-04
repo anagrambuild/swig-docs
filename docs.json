@@ -173,48 +173,58 @@
       {
         "product": "Developer SDK",
         "icon": "building",
-        "description": "API-key-based transaction preparation through the developer portal",
+        "description": "Prepare wallet creation, transfers, swaps, recovery, and sponsored submission on your server",
         "groups": [
           {
-            "group": "Overview",
+            "group": "Build With the SDK",
             "pages": [
               "developer-sdk/index",
-              "developer-sdk/transfers-swaps-and-signing",
-              "developer-sdk/recovery-flows",
-              "developer-sdk/portal-clients"
+              "developer-sdk/server-and-client",
+              "developer-sdk/framework-proxies",
+              {
+                "group": "Wallet Flows",
+                "pages": [
+                  "developer-sdk/create-wallets",
+                  "developer-sdk/transfers-swaps-and-signing",
+                  "developer-sdk/custom-execution",
+                  "developer-sdk/recovery-flows",
+                  "developer-sdk/sponsor-and-submit"
+                ]
+              }
             ]
           },
           {
-            "group": "Developer Portal Setup",
+            "group": "Portal Access",
             "pages": [
-              "examples/dev-portal/index",
-              "examples/dev-portal/projects",
-              "examples/dev-portal/create-project",
-              "examples/dev-portal/manage-members",
-              "examples/dev-portal/subscriptions-billing",
-              "examples/dev-portal/create-api-key"
-            ]
-          },
-          {
-            "group": "Wallet and Policy Flows",
-            "pages": [
+              "examples/dev-portal/create-api-key",
               "examples/dev-portal/create-policy",
               "examples/dev-portal/fetch-policy",
-              "examples/dev-portal/create-swig"
-            ]
-          },
-          {
-            "group": "Paymaster and Operations",
-            "pages": [
               "examples/dev-portal/paymaster-overview",
-              "examples/dev-portal/create-paymaster",
-              "examples/dev-portal/manage-paymaster",
-              "examples/dev-portal/transaction-history"
+              {
+                "group": "Paymaster Admin",
+                "pages": [
+                  "examples/dev-portal/create-paymaster",
+                  "examples/dev-portal/manage-paymaster",
+                  "examples/dev-portal/transaction-history"
+                ]
+              },
+              {
+                "group": "Workspace Admin",
+                "pages": [
+                  "examples/dev-portal/index",
+                  "examples/dev-portal/projects",
+                  "examples/dev-portal/create-project",
+                  "examples/dev-portal/manage-members",
+                  "examples/dev-portal/subscriptions-billing"
+                ]
+              }
             ]
           },
           {
-            "group": "API Reference and Errors",
+            "group": "Legacy & Raw APIs",
             "pages": [
+              "developer-sdk/portal-clients",
+              "examples/dev-portal/create-swig",
               "examples/dev-portal/api-reference",
               "examples/dev-portal/error-codes"
             ]

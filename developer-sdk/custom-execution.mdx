@@ -1,0 +1,58 @@
+---
+title: "Run Custom Instructions"
+sidebarTitle: "Custom Execution"
+---
+
+The built-in helpers cover common flows. `wallet.execute(...)` is the escape
+hatch when you still want hosted preparation but need your own instruction set.
+
+## What it does
+
+`wallet.execute(...)` prepares a transaction for an existing Swig wallet from a
+list of Solana instructions you provide.
+
+Use it when:
+
+- the transfer and swap helpers are not enough
+- you already know the exact instruction bundle you want to run
+- you still want the backend to prepare the final wallet transaction
+
+## Example
+
+```typescript
+const prepared = await wallet.execute({
+  instructions: [
+    {
+      programId: targetProgramId,
+      accounts: [
+        {
+          pubkey: writableAccount,
+          isWritable: true,
+        },
+        {
+          pubkey: readonlyAccount,
+        },
+      ],
+      data: Buffer.from(instructionData).toString('base64'),
+    },
+  ],
+  addressLookupTableAccounts: [lookupTableAddress],
+});
+```
+
+The SDK normalizes the instruction input and sends it to the hosted execute
+endpoint for preparation.
+
+## What still applies
+
+This is still a prepared transaction result. That means:
+
+- your app still checks `signatureRequests`
+- the client still signs if required
+- your app still chooses direct submission or sponsor submission
+
+## When not to use it
+
+If you want full protocol control, custom role or action construction, or
+instruction-by-instruction authoring without the hosted backend, use the
+[Protocol SDK](/reference) instead.
