@@ -1,0 +1,43 @@
+---
+title: "Authority and Agent Flows"
+sidebarTitle: "Authority & Agents"
+---
+
+The browser client also includes helpers for authority-management flows that go
+beyond basic sign-in.
+
+## Add an authority to a role
+
+Use:
+
+- `getAddAuthorityStartUrl()`
+- `redirectToAddAuthority()`
+
+These start the same isolated-host redirect pattern, but the goal is to add an
+authority to a Swig role instead of starting a plain user sign-in flow.
+
+## Revoke an agent role
+
+Use:
+
+- `getRevokeAgentStartUrl()`
+- `redirectToRevokeAgent()`
+- `completeAgentRevokeFromUrl()`
+
+The revoke flow is a direct isolated-host action. It does not begin with a new
+provider-auth redirect.
+
+## Inspect or update agents
+
+Use:
+
+- `listAgents()`
+- `updateAgentReputation()`
+
+These methods let a browser app inspect the configured agents on a Swig config
+and update agent reputation metadata through the backend API.
+
+## When to use this page
+
+Use these helpers when your app needs identity-linked authority management in
+addition to basic login.

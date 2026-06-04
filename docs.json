@@ -259,13 +259,33 @@
       {
         "product": "IDP SDK",
         "icon": "fingerprint",
-        "description": "OAuth and OTP sign-in flows that create Swig sessions for web and Expo apps",
+        "description": "Sign users in and return a Swig session for the wallet layer that follows",
         "groups": [
           {
             "group": "Getting Started",
             "pages": [
               "idp-sdk/index",
+              "idp-sdk/auth-methods",
               "idp-sdk/web-and-mobile"
+            ]
+          },
+          {
+            "group": "Expo & React Native",
+            "pages": [
+              "idp-sdk/expo-and-react-native"
+            ]
+          },
+          {
+            "group": "Browser Apps",
+            "pages": [
+              "idp-sdk/web-apps",
+              "idp-sdk/authority-and-agents"
+            ]
+          },
+          {
+            "group": "Sessions & Security",
+            "pages": [
+              "idp-sdk/sessions-and-security"
             ]
           }
         ]

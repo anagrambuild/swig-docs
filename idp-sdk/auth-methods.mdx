@@ -1,0 +1,46 @@
+---
+title: "Choose an Auth Method"
+sidebarTitle: "Auth Methods"
+---
+
+The IDP SDK supports three end-user sign-in channels, but not every channel is
+exposed the same way on every platform.
+
+## OAuth
+
+Use OAuth when users should sign in with a provider such as Google or another
+configured IdP.
+
+- available in Expo / React Native through `startOAuth()`
+- available in browser apps through `createSwigWebClient()` and `redirectToOAuth()`
+- supports provider discovery through `listProviders({ clientId })`
+
+## Email OTP
+
+Use email OTP when users should verify ownership of an email address without a
+separate OAuth provider flow.
+
+- available in Expo / React Native through `startEmailOtp()`
+- the user enters the address and verification code inside the isolated host
+- the host app does not receive the email address, OTP code, or callback JWT
+
+## SMS OTP
+
+Use SMS OTP when users should verify ownership of a phone number.
+
+- available in Expo / React Native through `startSmsOtp()`
+- the user enters the phone number and verification code inside the isolated host
+- the host app does not receive the phone number, OTP code, or callback JWT
+
+## Inputs you will see most often
+
+Most auth starts are built around:
+
+- `clientId`
+- `policyId`
+- `provider`
+- `flow`
+
+Most product flows use `flow: "role"` because the resulting callback carries
+the Swig wallet and role context. The web start API also exposes
+`flow: "session"`, but the primary documented path here is role-based auth.

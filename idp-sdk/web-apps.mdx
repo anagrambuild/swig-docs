@@ -1,0 +1,65 @@
+---
+title: "Browser Apps"
+sidebarTitle: "Web Apps"
+---
+
+For browser apps, use the `/web` entry point. This is the browser-safe surface
+that does not depend on Expo or React Native modules.
+
+## Main integration surface
+
+Use:
+
+- `createSwigWebClient()`
+- `getOAuthStartUrl()`
+- `redirectToOAuth()`
+- `completeOAuthFromUrl()`
+- `getSession()`
+- `getPersistedSession()`
+- `logout()`
+- `listProviders()`
+
+## Basic shape
+
+```ts
+import { Network, createSwigWebClient } from "@swig-wallet/expo-idp-sdk/web";
+
+const swig = createSwigWebClient({
+  redirectUri: `${window.location.origin}/auth/callback`,
+  network: Network.Devnet,
+});
+
+await swig.redirectToOAuth({
+  provider: "google",
+  clientId: "your-client-id",
+  policyId: "your-policy-id",
+  flow: "role",
+});
+```
+
+In your callback route:
+
+```ts
+import { createSwigWebClient } from "@swig-wallet/expo-idp-sdk/web";
+
+const swig = createSwigWebClient({
+  redirectUri: `${window.location.origin}/auth/callback`,
+});
+
+const session = await swig.completeOAuthFromUrl(window.location.href);
+```
+
+## What this path is best for
+
+- browser-based OAuth redirects
+- apps that want full control over callback routes
+- apps that need custom browser storage adapters
+
+## Storage and callback behavior
+
+- session persistence defaults to `window.localStorage`
+- you can pass a custom `storage` adapter
+- `completeOAuthFromUrl()` parses the callback and saves the session
+
+The documented web path today centers on OAuth redirects. Email and SMS OTP
+convenience methods are part of the mobile provider API.

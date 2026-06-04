@@ -1,86 +1,59 @@
 ---
-title: "What the IDP SDK Does"
-sidebarTitle: "What It Does"
+title: "IDP SDK Overview"
+sidebarTitle: "Overview"
 ---
 
-The Swig IDP SDK is for apps that want users to sign in first, then continue
-with a Swig session.
+The Swig IDP SDK is the sign-in layer for Swig apps.
 
-It lives in the separate `swig-idp-sdk` repo and currently ships as
+Use it when your product needs to authenticate a user first, then continue with
+a persisted Swig session that another Swig product can use.
+
+It lives in `swig-idp-sdk` and currently ships as
 `@swig-wallet/expo-idp-sdk`.
 
-## Use this SDK when
+## What this SDK is for
 
-- users should sign in with OAuth, email OTP, or SMS OTP
-- your app needs a Swig session after authentication
-- you are building a web app or an Expo / React Native app
-- authentication should stay inside Swig's isolated-host flow
+- user sign-in with OAuth, email OTP, or SMS OTP
+- browser or Expo-native auth flows
+- isolated-host redirects that return a Swig session
+- handing that session off to wallet or policy flows afterward
 
-## Do not use this SDK for
+## What this SDK is not for
 
 - transaction preparation
 - paymaster operations
+- policy management in the developer portal
 - direct protocol instruction building
-- developer-portal policy management
 
-Use [Swig Developer SDK](/developer-sdk) for hosted wallet operations after
-login, or [Swig Protocol SDK](/reference) for direct protocol integration.
+Use [Developer SDK](/developer-sdk) for hosted wallet operations after login,
+or [Protocol SDK](/reference) for direct protocol integration.
 
-## Main API surface
+## Choose your path
 
-Expo and React Native apps use:
+| If you are building... | Start here |
+| :--- | :--- |
+| an Expo or React Native app | [Expo and React Native Apps](/idp-sdk/expo-and-react-native) |
+| a browser app with redirect-based auth | [Browser Apps](/idp-sdk/web-apps) |
+| the sign-in entrypoint itself | [Choose an Auth Method](/idp-sdk/auth-methods) |
+| the session and security boundary | [Sessions and Security](/idp-sdk/sessions-and-security) |
 
-- `SwigIdpProvider`
-- `useSwigIdp()`
-- `startOAuth()`
-- `startEmailOtp()`
-- `startSmsOtp()`
-- `listProviders()`
+## What you get back
 
-Browser apps use the `/web` entry point:
+Every successful auth flow ends with a persisted Swig session. The session
+contains:
 
-- `createSwigWebClient()`
-- `getOAuthStartUrl()`
-- `redirectToOAuth()`
-- `completeOAuthFromUrl()`
-- `getSession()`
-- `getPersistedSession()`
-- `logout()`
-- `listProviders()`
+- `configAddress`
+- `walletAddress`
+- `roleId`
+- `authFlow`
 
-## What happens after login
+That session is the bridge into the next layer of the stack.
 
-The output of these flows is a Swig session your app can use in the next layer
-of the product:
-
-- continue into the **Swig Developer SDK** if your backend will prepare wallet
-  actions
-- continue into the **Swig Protocol SDK** if your app talks to the protocol
-  directly
-
-## Backend dependencies
-
-The SDK is backed by Swig identity endpoints such as:
-
-- `/identity/api/providers`
-- `/identity/api/auth/start`
-- `/identity/api/auth/email/start`
-- `/identity/api/auth/sms/start`
-- `/identity/api/signup`
-- `/identity/api/session`
-
-It also relies on isolated-host redirect flows for secure auth handoff.
-
-## Security boundary
-
-The supported mobile auth paths open the isolated host in a system auth
-session. The host app should not embed these flows in a `WebView`.
-
-This boundary matters because the isolated host owns the OAuth redirect, OTP
-entry, verification code handling, and callback JWT exchange.
-
-## Where to go next
-
-- Use [OAuth, OTP, Web, and Mobile Flows](/idp-sdk/web-and-mobile) for the
-  actual auth models
-- Use [Swig Developer SDK](/developer-sdk) if your next step is backend transaction preparation
+<CardGroup cols={2}>
+  <Card title="Developer SDK" icon="building" href="/developer-sdk">
+    Use the session to continue into hosted wallet creation and transaction flows
+  </Card>
+  <Card title="Protocol SDK" icon="terminal" href="/reference">
+    Use the session if your app will integrate with Swig wallets directly
+  </Card>
+</CardGroup>

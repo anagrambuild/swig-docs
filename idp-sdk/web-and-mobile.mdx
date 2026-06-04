@@ -1,69 +1,42 @@
 ---
-title: "OAuth, OTP, Web, and Mobile Flows"
-sidebarTitle: "Auth Flows"
+title: "Choose a Platform"
+sidebarTitle: "Platform Paths"
 ---
 
-The IDP SDK supports the same authentication outcome across two app shapes:
+The IDP SDK has two distinct integration surfaces.
 
-- Expo / React Native apps through the provider and hook API
-- browser apps through the `/web` client
+## Expo and React Native
 
-In both cases, the goal is the same: finish authentication and persist a Swig
-session.
+Use the provider and hook API:
 
-## Expo-native flow
-
-In Expo or React Native apps, the main integration surface is
-`SwigIdpProvider` plus the `useSwigIdp()` hook.
-
-The current high-level methods are:
-
+- `SwigIdpProvider`
+- `useSwigIdp()`
 - `startOAuth()`
 - `startEmailOtp()`
 - `startSmsOtp()`
-- `listProviders()`
 
-All three auth entrypoints open the isolated host in a system auth session and
-resolve to the same persisted Swig session shape after authentication
-completes.
+This path opens the isolated host in a system auth session and persists the
+resulting Swig session in app storage.
 
-## Web flow
+Start with [Expo and React Native Apps](/idp-sdk/expo-and-react-native).
 
-In browser apps, use the `/web` entry point and create a web client with
-`createSwigWebClient()`.
+## Browser apps
 
-That client supports:
+Use the `/web` entry point:
 
-- `getOAuthStartUrl()` for building the isolated-host start URL
-- `redirectToOAuth()` for full-page auth redirects
-- `completeOAuthFromUrl()` for callback parsing and session persistence
-- `getSession()` and `getPersistedSession()` for loading session state
-- `logout()` for clearing stored state
-- `listProviders()` for provider discovery
+- `createSwigWebClient()`
+- `redirectToOAuth()`
+- `completeOAuthFromUrl()`
+- `getSession()`
+- `logout()`
 
-## Security model
+This path uses full-page redirects and persists the Swig session in browser
+storage.
 
-The SDK is designed around redirected auth and isolated-host flows.
+Start with [Browser Apps](/idp-sdk/web-apps).
 
-Important constraints from the source package:
+## The practical difference
 
-- mobile auth is routed through system auth sessions via `expo-web-browser`
-- embedded `WebView` auth is not supported for production security guarantees
-- session persistence is handled by platform-specific storage
-- Expo defaults to `expo-secure-store`
-- web defaults to `window.localStorage`
-
-## Default backend assumptions
-
-By default the SDK expects Swig backend and isolated-host endpoints unless you
-override them in config.
-
-That means the SDK is not just a UI helper. It assumes the Swig identity
-backend is part of the architecture.
-
-## Integration boundary
-
-After authentication succeeds, the next step usually shifts into one of two other product families:
-
-- the **Swig Developer SDK** if your app will prepare wallet actions through hosted backend services
-- the **Swig Protocol SDK** if your app will integrate with the protocol directly
+- mobile apps get OAuth plus email and SMS OTP convenience methods
+- browser apps get the browser-safe redirect client and authority-management helpers
+- both paths end with the same Swig session shape
