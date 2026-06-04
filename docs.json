@@ -55,7 +55,7 @@
         ]
       },
       {
-        "product": "Direct SDK",
+        "product": "Protocol SDK",
         "icon": "terminal",
         "description": "Direct TypeScript and Rust integrations with the protocol",
         "groups": [
@@ -152,7 +152,7 @@
         ]
       },
       {
-        "product": "Hosted SDK",
+        "product": "Developer SDK",
         "icon": "building",
         "description": "API-key-based transaction preparation through the developer portal",
         "groups": [
