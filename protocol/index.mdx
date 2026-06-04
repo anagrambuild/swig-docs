@@ -2,11 +2,20 @@
 title: "Protocol Overview"
 ---
 
-The Swig protocol lives in the `swig-wallet` repo. This is the onchain foundation for Swig wallets on Solana.
+The Swig protocol lives in the `swig-wallet` repo. It is the on-chain wallet
+system that the higher-level SDKs build on.
+
+## Read this section when
+
+- you need to understand how wallet authorization actually works
+- you are debugging a permission or signer issue
+- you are working directly in the Rust crates
+- you want to map hosted SDK behavior back to the program
 
 ## What lives in `swig-wallet`
 
-The repository is not just one crate. It is a Rust workspace with separate packages for the program, interfaces, instructions, state handling, assertions, SDK, and CLI.
+The repository is a Rust workspace with separate packages for the program,
+interfaces, instructions, state handling, assertions, SDK, and CLI.
 
 ### Core workspace members
 
@@ -41,16 +50,6 @@ At the program level, a Swig wallet is not just one signer.
   actions.
 - `SignV2` is the general execution path that authenticates a role, checks its
   actions, and signs CPI execution through the wallet-address PDA.
-
-## When to read this section
-
-Use the protocol docs when you need to understand the system itself rather than just consume an SDK.
-
-Typical reasons:
-
-- you are auditing or reasoning about the protocol model
-- you are working on the Rust crates in `swig-wallet`
-- you need to understand how higher-level SDK behavior maps to the underlying program
 
 ## Where to go next
 

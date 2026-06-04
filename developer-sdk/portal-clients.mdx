@@ -22,7 +22,7 @@ Use `@swig-wallet/developer-sdk` first if your goal is to:
 - return prepared transactions to browser or mobile clients
 - build Next.js or NestJS proxy routes around Swig actions
 
-## Important nuance
+## Policy nuance
 
 `@swig-wallet/developer-sdk` does expose `swig.wallets.getPolicy(policyId)` and
 the exported `Policy` type because wallet creation and recovery flows depend on
@@ -32,7 +32,7 @@ That still does not make it the rich policy-helper SDK. If you need
 `Actions.canSpendSol()`, `AuthorityInfo.isSession()`, or a portal-centric
 policy client, that is still legacy `@swig-wallet/developer` territory.
 
-## Package fit
+## Practical rule
 
 - Use `@swig-wallet/developer-sdk` for new hosted wallet integrations.
 - Use `@swig-wallet/api` when you want raw portal and paymaster endpoints.
@@ -40,7 +40,3 @@ policy client, that is still legacy `@swig-wallet/developer` territory.
   its richer policy models and helper methods.
 
 Treat `@swig-wallet/developer` as deprecated for new integrations.
-
-If you are deciding what to teach first in the docs, treat `developer-sdk` as
-the primary Swig Developer SDK, `developer` as the legacy developer SDK, and
-`api` as the low-level portal client.

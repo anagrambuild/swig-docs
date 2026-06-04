@@ -2,9 +2,13 @@
 title: "Guardian and Recovery Flows"
 ---
 
-Recovery is optional in the current developer SDK. A wallet without a guardian
-is just a prepared-wallet flow. A guardian-enabled wallet adds recovery setup
-and later recovery execution.
+Recovery is optional in the current developer SDK.
+
+There are two modes:
+
+- non-guardian wallets: standard prepared wallet flows
+- guardian-enabled wallets: standard flows plus recovery setup, start, cancel,
+  and execute
 
 ## Non-guardian wallets
 
@@ -54,6 +58,16 @@ const created = await swig.wallets.create({
 
 The important handoff is `created.recoverySetup`. Treat that as the canonical
 plan for configuring recovery on the wallet after creation.
+
+## Recovery setup sequence
+
+For guardian-enabled wallets, the normal developer flow is:
+
+1. call `swig.wallets.create(...)`
+2. submit the create transaction
+3. call `wallet.recovery.prepareSetup(...)` using `created.recoverySetup`
+4. have the current wallet authority sign `addAuthorityTransaction`
+5. submit the already operator-signed `configureRecoveryTransaction`
 
 ## Setup phase
 
@@ -112,7 +126,7 @@ const execute = await wallet.recovery.execute({
 The guardian signs both `start` and `execute`. The current wallet authority
 signs `cancel`.
 
-## Policy-driven recovery metadata
+## Policy metadata
 
 The current SDK can also read raw policy metadata through
 `swig.wallets.getPolicy(policyId)`. That metadata includes fields such as:

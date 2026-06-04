@@ -4,6 +4,16 @@ title: "Program Walkthrough"
 
 Most of the protocol can be understood as a small set of instruction families.
 
+## Typical lifecycle
+
+In practice, most wallets move through this path:
+
+1. create the wallet with `CreateV1`
+2. add or update roles with the authority-management instructions
+3. execute wallet actions through `SignV2`
+4. optionally create sessions, sub-accounts, or recovery bindings
+5. eventually migrate, transfer assets, or close the wallet
+
 ## Instruction families
 
 | Instruction family | On-chain instructions | Purpose |

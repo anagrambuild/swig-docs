@@ -9,6 +9,9 @@ The Swig program is role-based. The main mental model is:
 - one or more roles
 - each role binds a `role_id`, one authority, and one or more actions
 
+If you are trying to understand why a wallet operation succeeds or fails, these
+are the concepts that matter.
+
 ## Swig account vs wallet address
 
 The config account stores protocol state:
@@ -67,6 +70,15 @@ Actions are typed permission records attached to roles.
 | Staking | `StakeLimit`, `StakeRecurringLimit`, `StakeAll` | stake-related execution |
 | Sub-accounts | `SubAccount` | sub-account creation and use |
 | Lifecycle and recovery | `CloseSwigAuthority`, `RecoveryAuthority` | closing wallets and constrained recovery |
+
+## Common role patterns
+
+Most integrations reason about a few recurring role shapes:
+
+- a root or admin role with broad authority-management access
+- an execution role with spend and program permissions
+- an optional recovery role with `RecoveryAuthority`
+- optional session roles for shorter-lived delegated access
 
 ## Important permission distinctions
 

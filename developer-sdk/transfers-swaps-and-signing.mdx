@@ -5,6 +5,14 @@ title: "Transfers, Swaps, and Signing"
 The current developer SDK uses the same prepared-transaction model for wallet
 operations after creation.
 
+## Typical sequence
+
+1. Create or load a wallet handle on the server
+2. Prepare a transfer, swap, or grouped operation
+3. Return the prepared transaction payload to the client
+4. Have the client sign only the transactions that require authority signatures
+5. Submit directly or through `swig.transactions.sponsor(...)`
+
 ## Start from a wallet handle
 
 Attach to an existing wallet with the config address, wallet address, and the
@@ -25,6 +33,10 @@ const wallet = swig.wallets.use({
 The same pattern works for passkey and secp256k1 authorities.
 
 ## Prepared operations
+
+Use the single-operation methods when your app already knows the exact action.
+Use `wallet.prepare(...)` when you want the backend to shape a batch of
+operations together.
 
 ### SOL transfer
 

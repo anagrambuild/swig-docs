@@ -8,26 +8,29 @@ The Swig Developer SDK is the current hosted SDK surface in
 It uses an API key on your server to prepare wallet operations, then hands only
 the prepared transactions to a browser or mobile client for signing.
 
-## Access model
+## Use this when
 
-This SDK requires developer-portal access.
+- your backend should keep the Swig API key
+- your client should only sign prepared transactions
+- you want hosted wallet creation, transfers, swaps, or recovery
+- you want a Next.js or NestJS proxy route instead of direct browser access
 
-In practice that means:
-
-1. Sign up through the Swig developer portal
-2. Create an API key
-3. Use that API key on your server
-4. Return prepared transactions to the client for signing
-
-## Core model
-
-The SDK is prepare-first:
+## Typical flow
 
 1. Your server creates a `SwigClient` with an API key
 2. The server prepares a wallet operation
 3. The backend returns one or more prepared transactions plus signing metadata
 4. The client signs only the transactions listed in `clientAuthorityTransactions`
 5. The app submits the ordered transactions directly or through a sponsor flow
+
+## Access model
+
+This SDK requires developer-portal access:
+
+1. Sign up through the Swig developer portal
+2. Create an API key
+3. Use that API key on your server
+4. Return prepared transactions to the client for signing
 
 ## Package surface
 
@@ -39,7 +42,7 @@ The package exposes multiple entry points for different runtime roles:
 - `@swig-wallet/developer-sdk/next` for Next.js route helpers
 - `@swig-wallet/developer-sdk/nest` for NestJS route helpers
 
-## Main operations
+## Main APIs
 
 The current server SDK exposes:
 
@@ -52,18 +55,14 @@ The current server SDK exposes:
 - `swig.transactions.sponsor(...)` for paymaster-backed submission
 - `swig.wallets.getPolicy(policyId)` for raw policy metadata used in prepared flows
 
-## What it is not
+## Not this package
 
-This is not the same thing as the direct protocol SDKs in `@swig-wallet/classic`, `@swig-wallet/kit`, or `swig-sdk`.
-
-Those SDKs integrate with the protocol directly.
-
-This SDK integrates with hosted Swig backend services and depends on developer-portal provisioning.
-
-It is also not the rich policy-helper client from `@swig-wallet/developer`.
-The current SDK can read raw policy metadata, but if your job is primarily
-policy inspection or direct portal endpoint access, use
-[Legacy and Low-Level Clients](/developer-sdk/portal-clients).
+- It is not the direct protocol SDK. Use `@swig-wallet/classic`,
+  `@swig-wallet/kit`, or `swig-sdk` when you want direct protocol integration.
+- It is not the richer legacy policy-helper client in `@swig-wallet/developer`.
+  This SDK can read raw policy metadata, but if your job is mainly policy
+  inspection or direct portal endpoint access, use
+  [Legacy and Low-Level Clients](/developer-sdk/portal-clients).
 
 ## Where to go next
 
