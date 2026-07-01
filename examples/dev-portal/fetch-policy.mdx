@@ -1,8 +1,24 @@
 ---
-title: "Fetching Policies"
+title: "Read Policies"
+sidebarTitle: "Read Policies"
 ---
 
-Once you've created policies in the Developer Portal, you can fetch their details programmatically. This guide shows how to retrieve policy information using the REST API and TypeScript SDKs.
+Once you've created policies in the Developer Portal, you can fetch their
+details programmatically. This guide shows the current package choices for
+policy reads and how to retrieve policy information through the REST API and
+TypeScript clients.
+
+<Note>
+  This page covers the portal-facing clients
+  <code>@swig-wallet/api</code> and <code>@swig-wallet/developer</code>. For the
+  primary prepare-first Swig Developer SDK, see
+  [What the Developer SDK Does](/developer-sdk).
+  Treat <code>@swig-wallet/developer</code> as the legacy SDK for new
+  integrations. The current <code>@swig-wallet/developer-sdk</code> package is
+  optimized for prepared wallet operations. It does expose
+  <code>swig.wallets.getPolicy(policyId)</code>, but it returns raw policy
+  metadata rather than the richer helper surface from the legacy SDK.
+</Note>
 
 ## Prerequisites
 
@@ -12,7 +28,7 @@ Before fetching policies, ensure you have:
 - A [policy](./create-policy) created that you want to fetch
 - The policy ID (visible in the portal's policy details)
 
-## Installing the SDK
+## Choose the Right Package
 
 <Tabs>
   <Tab title="API SDK">
@@ -22,7 +38,14 @@ npm install @swig-wallet/api
 bun add @swig-wallet/api
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Current SDK">
+```bash
+npm install @swig-wallet/developer-sdk
+# or
+bun add @swig-wallet/developer-sdk
+```
+  </Tab>
+  <Tab title="Legacy SDK">
 ```bash
 npm install @swig-wallet/developer
 # or
@@ -62,7 +85,7 @@ Replace `{policyId}` with your actual policy ID (e.g., `clx1234567890abcdef`).
 }
 ```
 
-### Using the SDK
+### Using a Portal Client
 
 <Tabs>
   <Tab title="API SDK">
@@ -104,7 +127,7 @@ async function getPolicy(policyId: string) {
 const policy = await getPolicy('clx1234567890abcdef');
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 import { SwigClient, SwigError } from '@swig-wallet/developer';
 
@@ -163,15 +186,46 @@ const policy = await getPolicy('clx1234567890abcdef');
   </Tab>
 </Tabs>
 
-## SDK Comparison
+### If You're Already Using the Current SDK
 
-| Feature | @swig-wallet/api | @swig-wallet/developer |
-|---------|------------------|------------------------|
-| Error handling | Returns `{ data, error }` | Throws `SwigError` |
-| Policy type | Basic `Policy` interface | Rich `Policy` class with methods |
-| Authority info | Raw config object | `AuthorityInfo` with `isSession()`, `isEd25519()`, etc. |
-| Actions | Raw array | `Actions` with `canSpendSol()`, `solSpendLimit()`, etc. |
-| Best for | Low-level control | Developer convenience |
+If your app already uses `@swig-wallet/developer-sdk` for prepared wallet
+operations, you can read the same raw policy metadata the SDK uses during
+wallet creation and recovery flows:
+
+```typescript
+import { SwigClient } from '@swig-wallet/developer-sdk/server/typescript';
+
+const swig = new SwigClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  network: 'devnet',
+});
+
+const policy = await swig.wallets.getPolicy('clx1234567890abcdef');
+
+console.log(policy.name);
+console.log(policy.guardianEnabled);
+console.log(policy.guardianDelaySeconds);
+console.log(policy.actions);
+```
+
+Use this when policy lookup is part of a prepared-wallet flow. For standalone
+policy inspection, prefer `@swig-wallet/api`. For richer helper methods around
+actions and authorities, use the legacy `@swig-wallet/developer` client.
+
+## Package Fit
+
+| Package | Primary job | Policy surface |
+|---------|-------------|----------------|
+| `@swig-wallet/api` | Raw portal endpoint access | `client.policies.get()` returns raw policy JSON |
+| `@swig-wallet/developer-sdk` | Prepared wallet operations | `swig.wallets.getPolicy()` returns raw policy metadata used by hosted flows |
+| `@swig-wallet/developer` (legacy) | Existing rich portal integrations | `client.getPolicy()` returns richer helper types and query methods |
+
+<Tip>
+  If you are starting fresh and only need to fetch policies, prefer
+  <code>@swig-wallet/api</code>. If you are starting fresh and need hosted
+  wallet operations, use <code>@swig-wallet/developer-sdk</code> and treat
+  policy reads as a supporting detail rather than the primary interface.
+</Tip>
 
 ## Response Types
 
@@ -276,7 +330,7 @@ if (error) {
 }
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 import { SwigClient, SwigError } from '@swig-wallet/developer';
 
@@ -338,7 +392,7 @@ const client = new SwigApiClient({
 });
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 const client = new SwigClient({
   apiKey: 'sk_your_api_key',
@@ -403,7 +457,7 @@ async function main() {
 main();
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 import { SwigClient, SwigError } from '@swig-wallet/developer';
 

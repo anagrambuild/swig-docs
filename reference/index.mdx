@@ -1,55 +1,46 @@
 ---
-title: "Swig SDK Overview"
+title: "Protocol SDK Overview"
 ---
 
-# SWIG SDKs: TypeScript and Rust
+This is the direct integration layer for teams building against Swig wallets
+without the hosted Developer SDK.
 
-SWIG provides powerful SDKs in both TypeScript and Rust, each optimized for different use cases in the blockchain development ecosystem. Let's explore how these SDKs can enhance your development experience.
+Use this section when your app or backend controls wallet authorities, signing,
+and protocol access directly.
 
-## TypeScript SDK
+## What lives here
 
-The TypeScript SDK is specifically designed for frontend applications and wallet integrations. It excels in:
+| Surface | Use it for |
+| :--- | :--- |
+| TypeScript packages in `swig-ts` | browser apps, backend services, and scripted integrations |
+| Rust packages in `swig-wallet` | backend services, CLI tooling, and lower-level protocol integrations |
+| MCP tooling | agent access to wallet operations |
+| examples and quickstarts | working reference flows for direct protocol usage |
 
-- **Wallet Integration**: Seamlessly connect with web-based wallets and handle user interactions
-- **Frontend Development**: Build responsive and interactive dApp interfaces
-- **Browser Compatibility**: Optimized for web environments and modern browsers
-- **User Experience**: Provides smooth, asynchronous operations for blockchain interactions
+## Main packages
 
-Perfect for:
-- Web-based dApps
-- Wallet interfaces
-- User-facing blockchain applications
-- Interactive frontend experiences
+### TypeScript
 
-## Rust SDK
+- `@swig-wallet/classic` for Web3.js 1.x
+- `@swig-wallet/kit` for Solana Kit / Web3.js 2.0
+- `@swig-wallet/lib` for shared protocol logic
+- `@swig-wallet/coder` for lower-level encoding and decoding
+- `@swig-wallet/mcp-server` for MCP-based agent access
 
-The Rust SDK is engineered for high-performance backend applications and command-line tools. Its strengths include:
+### Rust
 
-- **Server Applications**: Build robust backend services with native performance
-- **CLI Tools**: Create powerful command-line interfaces for blockchain interactions
-- **Performance**: Leverage Rust's zero-cost abstractions and memory safety
-- **System Integration**: Deep integration with system-level resources
+- `swig-sdk` for Rust integrations
+- `swig-cli` for command-line flows
+- support crates such as `swig-interface`, `swig-state`, and
+  `swig-compact-instructions`
 
-Ideal for:
-- Backend services
-- Command-line tools
-- High-performance applications
-- System-level blockchain integration
+## Start in the right place
 
-## Choosing the Right SDK
+- Use the quickstarts if you are new to the direct SDK path.
+- Use the TypeScript or Rust package sections if you already know your stack.
+- Use examples and recipes if you want working end-to-end patterns.
 
-When building your blockchain application:
+## What this section does not cover
 
-- Choose the **TypeScript SDK** when you need to:
-  - Build user interfaces
-  - Integrate with web wallets
-  - Create frontend applications
-  - Handle user interactions
-
-- Choose the **Rust SDK** when you need to:
-  - Develop backend services
-  - Create CLI tools
-  - Optimize for performance
-  - Build system-level applications
-
-Both SDKs provide comprehensive tooling for blockchain development, allowing you to choose the best tool for your specific use case while maintaining full compatibility with the SWIG ecosystem.
+This section does not cover the hosted, API-key-based
+[Developer SDK](/developer-sdk).

@@ -1,0 +1,88 @@
+---
+title: "Use Next.js or NestJS"
+sidebarTitle: "Use Next.js or NestJS"
+---
+
+If your app only needs a safe server-side proxy around transaction preparation,
+the SDK already ships it.
+
+## Use this path when
+
+- you want the API key to stay on the server
+- you do not want to wire each prepare route by hand
+- you still want browser code to work with wallet handles and prepared results
+
+## Next.js
+
+Create one catch-all route:
+
+```typescript
+// app/api/swig/[...swig]/route.ts
+import { createSwigRouteHandlers } from '@swig-wallet/developer-sdk/next';
+
+export const { POST } = createSwigRouteHandlers();
+```
+
+## NestJS
+
+Create one controller mounted at your Swig proxy prefix:
+
+```typescript
+import { Controller, Post, Req, Res } from '@nestjs/common';
+import { createSwigNestHandler } from '@swig-wallet/developer-sdk/nest';
+import type { Request, Response } from 'express';
+
+const swigHandler = createSwigNestHandler();
+
+@Controller('swig')
+export class SwigController {
+  @Post('*')
+  handle(@Req() request: Request, @Res() response: Response) {
+    return swigHandler(request, response);
+  }
+}
+```
+
+## Routes the helpers cover
+
+The framework helpers cover:
+
+- `POST /wallet/create`
+- `POST /prepare`
+- `POST /transfer/sol`
+- `POST /transfer/spl-token`
+- `POST /swap/jupiter`
+
+## Browser-side usage
+
+Once your proxy exists, browser code can use `SwigBrowserClient` and call only
+your local app routes:
+
+```typescript
+import { SwigBrowserClient } from '@swig-wallet/developer-sdk/browser';
+
+const swig = new SwigBrowserClient({ network: 'devnet' });
+const wallet = swig.wallets.fromIdpSession(session);
+
+const prepared = await wallet.transfer.sol({
+  destination,
+  amount: 1_000_000n,
+});
+```
+
+Then sign the returned prepared payload with the client helpers.
+
+## Server-side requester resolution
+
+If your app does not include `requesterAuthority` in the browser request, the
+helpers let you resolve it server-side:
+
+```typescript
+createSwigRouteHandlers({
+  resolveRequesterAuthority: async ({ wallet }) => {
+    return wallet?.requesterAuthority ?? lookupRequesterForRole(wallet?.roleId);
+  },
+});
+```
+
+Use this when auth context or role mapping should stay on the server.

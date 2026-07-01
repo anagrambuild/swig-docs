@@ -1,8 +1,19 @@
 ---
-title: "Creating a Swig Wallet"
+title: "Legacy Wallet Create API"
+sidebarTitle: "Wallet Create API"
 ---
 
 This guide shows how to create Swig wallets programmatically using the Developer Portal API. This approach is ideal for applications that need to create wallets on behalf of users with predefined policies.
+
+<Note>
+  This page covers the direct developer-portal API clients
+  <code>@swig-wallet/api</code> and <code>@swig-wallet/developer</code>. If you
+  want the newer prepare-first SDK in
+  <code>swig-ts/packages/developer-sdk</code>, start with
+  [What the Developer SDK Does](/developer-sdk).
+  Treat <code>@swig-wallet/developer</code> as the legacy developer SDK for
+  existing integrations.
+</Note>
 
 ## When to Use the API
 
@@ -13,7 +24,7 @@ This guide shows how to create Swig wallets programmatically using the Developer
 - You want to build the transaction server-side but sign and send it client-side
 - Managing wallets at scale
 
-**Use the SDK directly when:**
+**Use the direct protocol SDKs when:**
 - Building client-side applications
 - Users control their own keypairs
 - You need full control over wallet configuration
@@ -35,7 +46,7 @@ Before creating wallets via the API, ensure you have:
   A paymaster is **optional**. When you omit `paymasterPubkey`, the API returns an unsigned transaction instead of submitting it on-chain. You can then sign and send the transaction yourself. See [Creating Without a Paymaster](#creating-without-a-paymaster) below.
 </Info>
 
-## Installing the SDK
+## Installing a Portal Client
 
 <Tabs>
   <Tab title="API SDK">
@@ -45,7 +56,7 @@ npm install @swig-wallet/api
 bun add @swig-wallet/api
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```bash
 npm install @swig-wallet/developer
 # or
@@ -53,6 +64,53 @@ bun add @swig-wallet/developer
 ```
   </Tab>
 </Tabs>
+
+## Current Swig Developer SDK
+
+If you are starting a new server-assisted integration, prefer
+<code>@swig-wallet/developer-sdk</code> over
+<code>@swig-wallet/developer</code>.
+
+The current package is prepare-first:
+
+1. your server uses an API key
+2. the server prepares wallet transactions
+3. the client signs only the required transactions
+4. your app submits them directly or through a sponsor flow
+
+Minimal server-side example:
+
+```typescript
+import { SwigClient } from '@swig-wallet/developer-sdk/server/typescript';
+
+const swig = new SwigClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  network: 'devnet',
+});
+
+const created = await swig.wallets.create({
+  feePayer,
+  initialUser: {
+    ed25519: {
+      publicKey: userPublicKey,
+    },
+  },
+});
+
+return {
+  wallet: created.wallet,
+  transactions: created.transactions,
+  clientAuthorityTransactions: created.clientAuthorityTransactions,
+};
+```
+
+Use this page when you specifically want the developer-portal create-wallet
+endpoint or its older portal clients. Use [What the Developer SDK Does](/developer-sdk)
+for the current product surface.
+
+For the current hosted operation flows after wallet creation, see
+[Transfers and Swaps](/developer-sdk/transfers-swaps-and-signing) and
+[Recovery](/developer-sdk/recovery-flows).
 
 ## Specifying the Wallet Authority
 
@@ -129,7 +187,7 @@ curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
 }
 ```
 
-### Using the SDK
+### Using a Portal Client
 
 <Tabs>
   <Tab title="API SDK">
@@ -165,7 +223,7 @@ async function createWallet() {
 const wallet = await createWallet();
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 import { SwigClient, SwigError } from '@swig-wallet/developer';
 
@@ -240,7 +298,7 @@ async function createWallet() {
 const wallet = await createWallet();
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 import { SwigClient, SwigError } from '@swig-wallet/developer';
 
@@ -277,14 +335,14 @@ const wallet = await createWallet();
   </Tab>
 </Tabs>
 
-## SDK Comparison
+## Portal Client Comparison
 
-| Feature | @swig-wallet/api | @swig-wallet/developer |
-|---------|------------------|------------------------|
+| Feature | `@swig-wallet/api` | `@swig-wallet/developer` (legacy) |
+|---------|---------------------|-----------------------------------|
 | Error handling | Returns `{ data, error }` | Throws `SwigError` |
 | Method name | `client.wallet.create()` | `client.createWallet()` |
 | No-paymaster response | Raw base58 string in `transaction` | Reconstructed `VersionedTransaction` object |
-| Best for | Low-level control | Developer convenience |
+| Best for | Low-level control | Existing legacy portal integrations |
 
 ## Request Parameters
 
@@ -398,7 +456,7 @@ if (error) {
 }
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 import { Connection } from '@solana/web3.js';
 import { SwigClient, SwigError } from '@swig-wallet/developer';
@@ -468,7 +526,7 @@ if (data) {
 }
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 import { SwigClient } from '@swig-wallet/developer';
 
@@ -505,7 +563,7 @@ const { data, error } = await client.wallet.create({
 });
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 // Generate a custom ID (must be unique)
 const customId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
@@ -535,7 +593,7 @@ const { data, error } = await client.wallet.create({
 });
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 const wallet = await client.createWallet({
   policyId: 'policy-without-signer',
@@ -563,7 +621,7 @@ const { data, error } = await client.wallet.create({
 });
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 const wallet = await client.createWallet({
   policyId: 'your-policy-id',
@@ -593,7 +651,7 @@ const { data, error } = await client.wallet.create({
 });
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 const wallet = await client.createWallet({
   policyId: 'your-policy-id',
@@ -628,7 +686,7 @@ if (data) {
 }
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 const wallet = await client.createWallet({
   policyId: 'production-policy-id',
@@ -677,7 +735,7 @@ if (error) {
 }
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 try {
   const wallet = await client.createWallet({
@@ -763,7 +821,7 @@ async function main() {
 main();
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```typescript
 import { SwigClient, SwigError } from '@swig-wallet/developer';
 
@@ -868,9 +926,9 @@ type CreateWalletResponse =
   | CreateWalletTransactionResponse;
 ```
 
-### Developer SDK Types
+### Legacy SDK Types
 
-The `@swig-wallet/developer` SDK provides higher-level types that automatically reconstruct the transaction:
+The legacy `@swig-wallet/developer` SDK provides higher-level types that automatically reconstruct the transaction:
 
 ```typescript
 import type { VersionedTransaction } from '@solana/web3.js';

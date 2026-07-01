@@ -1,0 +1,96 @@
+---
+title: "Accounts, PDAs, and Roles"
+sidebarTitle: "Account Model"
+---
+
+Every protocol integration works with a small set of addresses and one role
+graph.
+
+## The three addresses that matter
+
+| Address | Derived from | Why it exists |
+|---------|--------------|---------------|
+| Swig config account | `["swig", id]` | stores wallet identity and role data |
+| Wallet-address PDA | `["swig-wallet-address", swig account]` | signs normal wallet execution |
+| Sub-account PDA | `["sub-account", swig id, role_id]` | optional segregated balance bucket for one role |
+
+Most higher-level SDKs hand you the config account and wallet address together
+because the program needs both.
+
+## What the config account stores
+
+The core `Swig` header stores:
+
+- the wallet `id`
+- the config-account bump
+- the wallet-address bump
+- the current role count
+- the `role_counter` used to assign new role IDs
+
+After that header, the account stores the serialized role records.
+
+## What a role record contains
+
+Each role is laid out as:
+
+1. a `Position` header
+2. one authority payload
+3. one or more action payloads
+
+The `Position` header is what makes the role graph navigable. It stores:
+
+- `authority_type`
+- `authority_length`
+- `num_actions`
+- `id`
+- `boundary`
+
+That `boundary` field is how the program walks from one serialized role to the
+next.
+
+## Why `role_id` matters so much
+
+The protocol does not identify execution only by signer public key.
+
+It identifies:
+
+- which role is acting
+- which authority is attached to that role
+- which action set is attached to that role
+
+That is why `SignV2`, session creation, sub-account flows, and recovery all
+look up a role by `role_id` first.
+
+## Wallet address vs config account
+
+The config account stores state. The wallet-address PDA is the signer used in
+normal execution.
+
+This split matters because:
+
+- the config account is where roles and permissions live
+- the wallet address is what signs CPI execution in `SignV2`
+- migrations and execution bugs often involve confusing these two addresses
+
+## Where sub-accounts fit
+
+Sub-accounts are not standalone wallets. They are role-scoped balance buckets
+derived from the parent Swig ID and a specific `role_id`.
+
+When a sub-account is created, the `SubAccount` action stores metadata for:
+
+- the sub-account public key
+- the PDA bump
+- whether the sub-account is enabled
+- the owning `role_id`
+- the parent `swig_id`
+
+## Practical debugging checks
+
+When protocol behavior looks wrong, check these first:
+
+1. are you using the config account and wallet address in the right places
+2. is the `role_id` the one you think it is
+3. does that role still have the authority and actions you expect
+4. if this is a sub-account flow, does the stored sub-account metadata still
+   match the derived PDA

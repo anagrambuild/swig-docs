@@ -1,8 +1,17 @@
 ---
 title: "REST API Reference"
+sidebarTitle: "REST API"
 ---
 
 This reference documents the Swig Developer Portal REST API endpoints.
+
+<Note>
+  These are the raw developer-portal endpoints. Higher-level SDK surfaces live
+  separately in <code>@swig-wallet/developer-sdk</code>,
+  <code>@swig-wallet/developer</code>, and <code>@swig-wallet/api</code>.
+  In the current docs model, <code>@swig-wallet/developer</code> is treated as
+  the legacy developer SDK.
+</Note>
 
 ## Base URLs
 
@@ -446,7 +455,9 @@ X-RateLimit-Reset: 1642520400
 
 ## SDKs
 
-Use our SDKs for easier integration:
+Use these portal clients if you want SDK wrappers around the raw endpoints.
+For the current prepare-first Swig Developer SDK, see
+[What the Developer SDK Does](/developer-sdk).
 
 <Tabs>
   <Tab title="API SDK">
@@ -463,7 +474,7 @@ const client = new SwigApiClient({
 });
 ```
   </Tab>
-  <Tab title="Developer SDK">
+  <Tab title="Legacy SDK">
 ```bash
 npm install @swig-wallet/developer
 ```

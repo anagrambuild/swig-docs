@@ -1,0 +1,50 @@
+---
+title: "What the Developer SDK Does"
+sidebarTitle: "What It Does"
+---
+
+The Swig Developer SDK is the current hosted wallet SDK in
+`swig-ts/packages/developer-sdk`.
+
+Your server keeps the API key. Your app prepares wallet operations on the
+server. Your client signs only the prepared transactions it is responsible for.
+
+## What you can build
+
+With this SDK, you can:
+
+- create wallets from a backend route
+- prepare transfers, swaps, and grouped wallet operations
+- run custom instruction execution against an existing wallet
+- add guardian-based recovery flows
+- submit signed transactions through Swig's sponsor path
+- expose all of that through Next.js, NestJS, or your own backend routes
+
+## Use this SDK when
+
+- your backend should keep the Swig API key
+- your client should only sign prepared transactions
+- you want hosted wallet creation, movement, recovery, or sponsored submission
+- you want framework route helpers instead of wiring each endpoint by hand
+
+## Three ways to integrate
+
+- use the server SDK directly
+- use the built-in Next.js or NestJS proxy helpers
+- use the browser client against your own proxy routes
+
+## What it is not
+
+- It is not the direct protocol SDK. Use `@swig-wallet/classic`,
+  `@swig-wallet/kit`, or `swig-sdk` when you want direct protocol integration.
+- It is not a browser-direct API client. The API key belongs on the server.
+- It is not the richer legacy policy-helper client in `@swig-wallet/developer`.
+
+## Where to go next
+
+- Use [Choose a Path](/developer-sdk/integration-paths) first
+- Use [Create Wallets](/developer-sdk/create-wallets) when you are ready to
+  prepare your first wallet
+- Use [Client Signing](/developer-sdk/client-signing) and
+  [Transfer SOL and Tokens](/developer-sdk/transfers-swaps-and-signing) for the
+  day-to-day wallet path

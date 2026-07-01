@@ -1,0 +1,56 @@
+---
+title: "Add a Guardian After Wallet Creation"
+sidebarTitle: "Add Guardian Later"
+---
+
+You can add guardian recovery after a wallet already exists, as long as the
+wallet's current authority can still sign.
+
+Use this flow when the wallet was created first and recovery needs to be turned
+on afterward.
+
+## What happens in this flow
+
+The setup still happens in two steps:
+
+1. add the hidden recovery-authority role
+2. configure the guardian public key and recovery delay
+
+The hosted endpoints behind this flow are:
+
+- `POST /transaction/wallet/recovery-authority/add`
+- `POST /transaction/recovery/configure`
+
+## Prepare the setup
+
+```typescript
+const wallet = swig.wallets.use(existingWallet);
+
+const setup = await wallet.recovery.prepareSetup({
+  feePayer,
+  requesterAuthority,
+  guardianPubkey,
+  delaySeconds: 86_400,
+});
+```
+
+This returns:
+
+- `setup.addAuthorityTransaction`
+- `setup.configureRecoveryTransaction`
+
+## Signing model
+
+| Transaction | Who signs |
+| :--- | :--- |
+| `setup.addAuthorityTransaction` | the wallet's current authority |
+| `setup.configureRecoveryTransaction` | the backend recovery operator already signs it |
+
+After the current authority signs `addAuthorityTransaction`, the remaining work
+is fee-payer or sponsor submission for the configure transaction.
+
+## When to use this page instead of initial recovery setup
+
+- use [Set Up Recovery](/developer-sdk/recovery-setup) when recovery is part of
+  the initial wallet create flow
+- use this page when the wallet already exists and you are enabling recovery later

@@ -1,0 +1,40 @@
+---
+title: "Recovery Overview"
+sidebarTitle: "Recovery Overview"
+---
+
+Guardian recovery is an add-on flow around wallet creation.
+
+## Use recovery when
+
+- the wallet should support a guardian-triggered authority change
+- you want a delay before the recovered authority takes effect
+- you want the hosted SDK to prepare both setup and runtime recovery actions
+
+## The recovery lifecycle
+
+The SDK breaks recovery into three stages:
+
+- create a recovery-enabled wallet
+- prepare and submit recovery setup
+- later start, cancel, or execute a recovery
+
+If the policy is not recovery-enabled, treat the result as a normal wallet
+create flow and expect `recoverySetup` to be absent.
+
+## Main SDK entrypoints
+
+- `swig.wallets.create(...)`
+- `wallet.recovery.prepareSetup(...)`
+- `wallet.recovery.start(...)`
+- `wallet.recovery.cancel(...)`
+- `wallet.recovery.execute(...)`
+
+## Read next
+
+- Use [Set Up Recovery](/developer-sdk/recovery-setup) for the wallet creation
+  and setup sequence
+- Use [Add a Guardian After Wallet Creation](/developer-sdk/add-guardian-after-creation)
+  when the wallet already exists
+- Use [Run Recovery](/developer-sdk/recovery-runtime) for start, cancel, and
+  execute

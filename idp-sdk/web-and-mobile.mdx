@@ -1,0 +1,42 @@
+---
+title: "Choose a Platform"
+sidebarTitle: "Platform Paths"
+---
+
+The IDP SDK has two distinct integration surfaces.
+
+## Expo and React Native
+
+Use the provider and hook API:
+
+- `SwigIdpProvider`
+- `useSwigIdp()`
+- `startOAuth()`
+- `startEmailOtp()`
+- `startSmsOtp()`
+
+This path opens the isolated host in a system auth session and persists the
+resulting Swig session in app storage.
+
+Start with [Expo and React Native Apps](/idp-sdk/expo-and-react-native).
+
+## Browser apps
+
+Use the `/web` entry point:
+
+- `createSwigWebClient()`
+- `redirectToOAuth()`
+- `completeOAuthFromUrl()`
+- `getSession()`
+- `logout()`
+
+This path uses full-page redirects and persists the Swig session in browser
+storage.
+
+Start with [Browser Apps](/idp-sdk/web-apps).
+
+## The practical difference
+
+- mobile apps get OAuth plus email and SMS OTP convenience methods
+- browser apps get the browser-safe redirect client and authority-management helpers
+- both paths end with the same Swig session shape

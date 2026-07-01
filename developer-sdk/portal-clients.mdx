@@ -1,0 +1,42 @@
+---
+title: "Legacy and Raw APIs"
+sidebarTitle: "Legacy & Raw APIs"
+---
+
+Swig currently has three TypeScript surfaces related to the developer portal.
+They overlap, but they are not the same product.
+
+## Client comparison
+
+| Package | Status | Best use | Policy access | Transaction access | Response model |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `@swig-wallet/developer-sdk` | current | prepare-first hosted wallet flows | `swig.wallets.getPolicy()` returns raw policy metadata | wallet creation, transfers, swaps, custom execution, recovery, sponsor flow | prepared transactions and signing metadata |
+| `@swig-wallet/developer` | legacy | existing portal integrations that depend on rich helper models | `client.getPolicy()` returns `Policy`, `Actions`, and `AuthorityInfo` helpers | `createWallet()` only | throws `SwigError` |
+| `@swig-wallet/api` | low-level | direct portal and paymaster endpoint access | `client.policies.get()` returns raw policy JSON | raw portal and paymaster calls | returns `{ data, error }` |
+
+## Start here unless you have a reason not to
+
+Use `@swig-wallet/developer-sdk` first if your goal is to:
+
+- create wallets through backend-prepared transactions
+- keep the API key on the server
+- return prepared transactions to browser or mobile clients
+- build Next.js or NestJS proxy routes around Swig actions
+
+## When to use the other two
+
+- Use `@swig-wallet/api` when you mainly want raw REST access to policies,
+  wallet create endpoints, or paymaster endpoints.
+- Keep `@swig-wallet/developer` only for existing integrations that already
+  depend on its richer policy helpers.
+
+## Policy nuance
+
+`@swig-wallet/developer-sdk` does expose `swig.wallets.getPolicy(policyId)`, but
+that does not make it the rich policy-helper SDK. It returns raw policy
+metadata because wallet creation and recovery flows need that metadata.
+
+If you need helpers like `Actions.canSpendSol()` or `AuthorityInfo.isSession()`,
+that is still legacy `@swig-wallet/developer` territory.
+
+Treat `@swig-wallet/developer` as deprecated for new integrations.

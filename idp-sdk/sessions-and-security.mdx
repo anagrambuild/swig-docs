@@ -1,0 +1,70 @@
+---
+title: "Sessions and Security"
+sidebarTitle: "Sessions & Security"
+---
+
+The IDP SDK is built around an isolated-host auth model. That boundary is the
+main reason to use the SDK instead of assembling the flow yourself.
+
+## What the app receives
+
+After a successful callback, the SDK persists a Swig session with:
+
+- `configAddress`
+- `walletAddress`
+- `roleId`
+- `authFlow`
+- `updatedAt`
+
+The app receives session data. It does not receive the OAuth or OTP internals
+that were handled inside the isolated host.
+
+## Where sensitive steps happen
+
+Sensitive auth steps stay inside the isolated host:
+
+- OAuth redirects
+- email or phone entry
+- OTP verification
+- callback JWT handling
+
+That is why the supported mobile flow uses a system auth session instead of an
+embedded `WebView`.
+
+## Default storage by platform
+
+| Platform | Default storage |
+| :--- | :--- |
+| Expo / React Native | `expo-secure-store` |
+| Browser | `window.localStorage` |
+
+Both paths let you override storage if your app needs a custom adapter.
+
+## Backend assumptions
+
+By default, the SDK expects Swig identity and wallet endpoints behind the
+configured backend base URL and isolated-host URL.
+
+The default backend routes include:
+
+- `/identity/api/providers`
+- `/identity/api/auth/start`
+- `/identity/api/auth/email/start`
+- `/identity/api/auth/sms/start`
+- `/identity/api/signup`
+- `/identity/api/session`
+
+## Configuration points
+
+The main config levers are:
+
+- `baseUrl`
+- `isolatedHostUrl`
+- `redirectUri`
+- `network`
+- `storage`
+- `storageKey`
+- `endpoints`
+
+Use these when you need non-default backend URLs, custom storage, or a
+different network.

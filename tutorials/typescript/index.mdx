@@ -1,8 +1,9 @@
 ---
-title: "Getting Started with Swig TS SDK"
+title: "TypeScript Quickstart"
 ---
 
-Welcome to the TypeScript SWIG SDK tutorial! This comprehensive guide will walk you through all the essential functions and features of the SWIG SDK, helping you understand how to integrate SWIG into your TypeScript applications.
+Use this quickstart if you want to integrate with the Protocol SDK from
+TypeScript.
 
 <Tip>
   The tutorial code is available in the
@@ -14,39 +15,23 @@ Welcome to the TypeScript SWIG SDK tutorial! This comprehensive guide will walk 
   see: <code>examples/tutorial/kit</code>
 </Tip>
 
-> **Note:**  
-> This tutorial provides two versions of each code example:
->
-> - **Classic:** Uses the `@solana/web3.js` library and is compatible with the classic Solana SDK.
-> - **Kit:** Uses the new `@solana/kit` library for a modern, streamlined Solana development experience.
->
-> You can switch between Classic and Kit code snippets using the tabs above each example.
+## Choose your stack
 
-## What You'll Learn
+- **Classic** uses `@solana/web3.js` 1.x and `@swig-wallet/classic`
+- **Kit** uses `@solana/kit` and `@swig-wallet/kit`
 
-In this tutorial, you'll learn how to:
+Each tutorial page shows both variants where they differ.
 
-- Set up your development environment for SWIG
-- Create and manage SWIGs
-- Manage authorities and permissions with
-- Sign transactions using the new instruction-based approach
-- Migrate from previous versions
+## What this quickstart covers
 
-## Time Commitment
+- environment setup
+- creating a wallet
+- managing authorities and actions
+- signing transactions
 
-This tutorial is designed to be completed in approximately 30 minutes. Each section builds upon the previous one, providing a clear progression through the SDK's capabilities.
+## Read in this order
 
-## Tutorial Scope
-
-This guide focuses on creating and managing SWIGs using regular Solana keypair authorities. While this covers the most common use cases, SWIG supports other authority types as well.
-
-## Tutorial Sections
-
-Follow these tutorials in order for the best learning experience:
-
-1. [Environment Setup](./env) - Set up your development environment
-2. [Creating Your First SWIG](./create) - Learn how to create and initialize a SWIG
-3. [Managing Authorities and Actions](./managing_authorities) - Learn how to manage authorities and actions
-4. [Signing Transactions](./sign) - Learn how to sign transactions with Swig
-
-Let's get started with building your first SWIG!
+1. [Environment Setup](./env)
+2. [Create a Wallet](./create)
+3. [Manage Authorities and Actions](./managing_authorities)
+4. [Sign Transactions](./sign)

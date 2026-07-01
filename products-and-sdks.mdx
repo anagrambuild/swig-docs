@@ -1,58 +1,51 @@
 ---
-title: "Products & SDKs"
+title: "Choose a Product"
 ---
 
-Swig has two product surfaces, and the docs now reflect that split more clearly:
+Swig has four product surfaces. Choose the one that matches how your app will integrate.
 
-1. **Swig Wallet** for onchain smart wallet functionality on Solana
-2. **Developer Portal** for hosted APIs, policies, paymasters, and managed wallet creation
+## Quick routing
 
-## Choose the right path
-
-| If you want to... | Start here |
+| If you are trying to... | Start here |
 | :--- | :--- |
-| Build directly on the Swig wallet protocol | [Get Started](/) |
-| Create wallets and policies through a hosted backend | [Developer Portal](/examples/dev-portal) |
-| Let AI agents operate Swig wallets | [Build with AI](/build-with-ai) |
+| Understand the on-chain protocol and repo layout | [Swig Protocol](/protocol) |
+| Integrate directly with Swig wallets from TypeScript or Rust | [Swig Protocol SDK](/reference) |
+| Prepare wallet operations behind an API key and sign them client-side | [Swig Developer SDK](/developer-sdk) |
+| Add OAuth, email OTP, or SMS OTP login flows | [Swig IDP SDK](/idp-sdk) |
 
-## Product 1: Swig Wallet
+## Product map
 
-This is the onchain smart wallet layer. Use it when you want to work directly with wallet creation, authorities, sessions, permissions, and transaction execution.
+### Swig Protocol
 
-### Main SDKs
+The on-chain wallet system in `swig-wallet`.
 
-- `@swig-wallet/classic` for Web3.js 1.x apps
-- `@swig-wallet/kit` for Solana Kit / Web3.js 2.0 apps
-- Rust SDKs for backend services, tooling, and CLIs
-- Paymaster SDKs for sponsored transaction flows
+- Use it when you need to understand permissions, sessions, recovery, or program behavior.
+- Start at [Protocol](/protocol).
 
-### Best fit
+### Swig Protocol SDK
 
-- consumer wallets
-- dApps with delegated permissions
-- passkeys and embedded wallet flows
-- advanced transaction automation
+Direct TypeScript and Rust integrations with the protocol.
 
-## Product 2: Developer Portal
+- Use it when your app talks to Swig wallets directly and controls its own authority or signing flows.
+- Start at [Protocol SDK](/reference).
 
-This is the hosted platform layer. Use it when you want managed projects, API keys, policies, paymasters, billing, and REST-driven wallet creation.
+### Swig Developer SDK
 
-### Main SDKs
+Hosted transaction preparation through the developer portal and `@swig-wallet/developer-sdk`.
 
-- `@swig-wallet/api` for low-level REST API access
-- `@swig-wallet/developer` for higher-level developer workflows
-- Direct REST endpoints documented in the portal API reference
+- Use it when you want the backend to prepare wallet creation, transfers, swaps, or recovery flows and the client only signs what it must sign.
+- Start at [Developer SDK](/developer-sdk).
 
-### Best fit
+### Swig IDP SDK
 
-- server-side wallet provisioning
-- project and team management
-- policy-driven wallet creation
-- operational paymaster management
+Login-provider SDKs in `swig-idp-sdk`.
 
-## Recommended learning order
+- Use it when you need OAuth or OTP sign-in that creates Swig sessions for web or Expo apps.
+- Start at [IDP SDK](/idp-sdk).
 
-1. Start with the product you are actually integrating.
-2. Use `Swig SDKs` or `Developer Portal APIs` for product-specific reference docs.
-3. Use `Tutorials` for guided setup flows and examples.
-4. Use `Build with AI` if you want LLMs or agents in the loop.
+## Relationship between the four
+
+- The **Swig Protocol** is the on-chain foundation.
+- The **Swig Protocol SDK** integrates with that protocol directly.
+- The **Swig Developer SDK** uses hosted backend services to prepare and operate on Swig wallets through API-key access.
+- The **Swig IDP SDK** handles end-user identity and session bootstrap for login-provider flows.

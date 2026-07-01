@@ -1,0 +1,103 @@
+---
+title: "Create Wallets"
+sidebarTitle: "Create Wallets"
+---
+
+Wallet creation is the first place where the SDK's prepared-transaction model
+shows up clearly.
+
+## Two create modes
+
+You can create a wallet either:
+
+- from a policy with `policyId`
+- from an inline `initialUser`
+
+If `policyId` is omitted, the backend can create a no-recovery wallet from the
+inline authority you provide. Common authority shapes are `ed25519`,
+`secp256k1`, and `secp256r1`.
+
+## Basic create flow
+
+```typescript
+const created = await swig.wallets.create({
+  feePayer,
+  initialUser: {
+    ed25519: {
+      publicKey: userPublicKey,
+    },
+  },
+});
+```
+
+Passkey-backed creation works the same way with `secp256r1`:
+
+```typescript
+const created = await swig.wallets.create({
+  feePayer,
+  initialUser: {
+    secp256r1: {
+      publicKey: passkeyPublicKey,
+    },
+  },
+});
+```
+
+EVM-backed creation works the same way with `secp256k1`:
+
+```typescript
+const created = await swig.wallets.create({
+  feePayer,
+  initialUser: {
+    secp256k1: {
+      publicKey: evmPublicKey,
+    },
+  },
+});
+```
+
+## What you get back
+
+The result is not just one transaction. It is a categorized create plan:
+
+| Field | Meaning |
+|-------|---------|
+| `wallet` | the config address and wallet address |
+| `transactions` | full ordered transaction list |
+| `clientAuthorityTransactions` | transactions the initial authority must sign |
+| `operatorSignedTransactions` | transactions already signed by the backend operator |
+| `feePayerOnlyTransactions` | transactions that only need fee payer or sponsor handling |
+
+For plain non-recovery creates, this usually collapses to one main creation
+transaction plus any client authority signing the create flow needs.
+
+## Recovery-enabled create flows
+
+If the policy is recovery-enabled and the SDK can derive both the requester
+authority and guardian information, `create(...)` also returns
+`recoverySetup`.
+
+That setup plan is not the same thing as completed recovery setup. It is the
+follow-up input for `wallet.recovery.prepareSetup(...)`.
+
+## What to submit
+
+Always submit the prepared `transactions` in order. Do not reorder the list.
+
+If `clientAuthorityTransactions.length > 0`, those transactions must be signed
+by the client authority before submission.
+
+If `operatorSignedTransactions.length > 0`, treat them as already operator
+signed. They still need fee payer or sponsor submission, but not another
+authority signature.
+
+## What to read next
+
+- Use [Transfers and Swaps](/developer-sdk/transfers-swaps-and-signing) for
+  wallet actions after create
+- Use [Recovery](/developer-sdk/recovery-flows) if the created wallet should
+  support a guardian flow
+- Use [Client Signing](/developer-sdk/client-signing) for Ed25519, passkey, and
+  EVM client signatures
+- Use [Sponsor & Submit](/developer-sdk/sponsor-and-submit) if your app wants
+  Swig-backed fee sponsorship

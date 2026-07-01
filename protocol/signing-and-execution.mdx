@@ -1,0 +1,77 @@
+---
+title: "SignV2 and Execution"
+sidebarTitle: "SignV2 Execution"
+---
+
+`SignV2` is the protocol's main execution path. If a wallet is doing real work,
+this instruction is usually involved.
+
+## What `SignV2` carries
+
+The instruction arguments identify:
+
+- the active `role_id`
+- the length of the nested instruction payload
+
+After that header, the instruction data is split into:
+
+- the nested instruction payload to execute
+- the authority payload used to authenticate the role
+
+That split is why debugging `SignV2` usually means checking both the execution
+payload and the authority payload.
+
+## What the program does
+
+At a high level, `SignV2`:
+
+1. loads the Swig config account and wallet-address PDA
+2. looks up the role by `role_id`
+3. authenticates the role through the standard or session path
+4. parses the nested instructions
+5. checks the role's actions against those instructions
+6. signs execution through the wallet-address PDA
+
+## What permissions actually control
+
+During `SignV2`, the program is not just checking whether a signer is valid. It
+is checking whether the requested instruction shape fits the role's action set.
+
+Examples:
+
+- SOL and token limit actions cap how much value can move
+- destination-limited actions constrain where funds can go
+- `Program`, `ProgramCurated`, `ProgramAll`, and `ProgramScope` control CPI
+  access
+- `All` and `AllButManageAuthority` represent broader execution authority
+
+This is why a valid signature can still fail with a permission error.
+
+## Why `ProgramScope` is special
+
+`ProgramScope` is the most specialized execution permission in the protocol.
+
+It is designed for cases where a role should be able to interact with a program
+and a target account, but only within scoped numeric limits. The program uses
+the stored field layout to validate the relevant balance or counter fields
+during execution.
+
+## Why broad roles behave differently
+
+Roles with `All` or `AllButManageAuthority` are intentionally less constrained
+than narrowly scoped roles. That makes them operationally useful, but it also
+makes them the highest-risk roles in a wallet.
+
+In practice:
+
+- keep broad roles limited to admin or trusted automation paths
+- use narrower transfer and program permissions for user-facing execution
+
+## Debugging a failed execution
+
+When a `SignV2` flow fails, the useful questions are:
+
+1. did the program load the intended `role_id`
+2. did the authority payload match the role's authority type
+3. did the nested instruction payload match the role's action set
+4. did a scoped limit, destination check, or program rule reject execution

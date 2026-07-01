@@ -1,0 +1,57 @@
+---
+title: "Run Recovery"
+sidebarTitle: "Run Recovery"
+---
+
+Once recovery is configured, the runtime flow is straightforward.
+
+## Start recovery
+
+The guardian starts a recovery with:
+
+```typescript
+const start = await wallet.recovery.start({
+  feePayer,
+  guardianPubkey: guardianPublicKey,
+  newAuthority: newAuthorityPublicKey,
+});
+```
+
+## Cancel recovery
+
+The current wallet authority cancels a pending recovery with:
+
+```typescript
+const cancel = await wallet.recovery.cancel({
+  feePayer,
+});
+```
+
+## Execute recovery
+
+After the configured delay, the guardian executes recovery with:
+
+```typescript
+const execute = await wallet.recovery.execute({
+  feePayer,
+  newAuthority: newAuthorityPublicKey,
+});
+```
+
+## Signing model
+
+- the guardian signs `start`
+- the current wallet authority signs `cancel`
+- the guardian signs `execute`
+
+## Policy metadata
+
+The SDK can also read policy metadata through `swig.wallets.getPolicy(policyId)`.
+That is where it finds fields like:
+
+- `guardianEnabled`
+- `guardianAuthority`
+- `guardianDelaySeconds`
+
+Most apps should still rely on `created.recoverySetup` as the setup source of
+truth and treat policy reads as supporting metadata.

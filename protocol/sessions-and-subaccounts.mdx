@@ -1,0 +1,89 @@
+---
+title: "Sessions and Sub-Accounts"
+sidebarTitle: "Sessions & Sub-Accounts"
+---
+
+Sessions and sub-accounts solve different problems.
+
+- sessions let a role delegate execution temporarily
+- sub-accounts carve out a separate balance and signer path for a role
+
+## How sessions work
+
+`CreateSessionV1` is the session bootstrap instruction.
+
+It:
+
+1. loads a role by `role_id`
+2. checks that the role's authority type supports sessions
+3. authenticates the normal authority path
+4. stores a session key and expiration window
+
+After that, later execution can authenticate through the session path instead
+of the base authority path until the session expires.
+
+## Which authorities support sessions
+
+The protocol has session-capable variants for:
+
+- Ed25519
+- Secp256k1
+- Secp256r1
+- ProgramExec
+
+Sessions do not create a new permission model. They reuse the same role and
+action set with temporary authentication material.
+
+## When to use sessions
+
+Use sessions when you want:
+
+- temporary delegated signing
+- shorter-lived credentials
+- reduced need to re-present the base authority on every action
+
+Do not use sessions as a substitute for designing the right role and action set.
+
+## How sub-accounts work
+
+Sub-accounts are tied to a role. The key rule is that `All` alone is not enough
+to create one. The role must carry a `SubAccount` action.
+
+`CreateSubAccountV1`:
+
+1. authenticates the acting role
+2. requires a `SubAccount` action
+3. derives the sub-account PDA from `swig_id` and `role_id`
+4. stores the created sub-account metadata back into the `SubAccount` action
+
+That metadata becomes the source of truth for later sub-account operations.
+
+## Sub-account execution flow
+
+Once a sub-account exists:
+
+- `SubAccountSignV1` executes with the sub-account PDA as signer
+- `WithdrawFromSubAccountV1` moves assets back out
+- `ToggleSubAccountV1` enables or disables the sub-account
+
+The program verifies that the sub-account metadata still matches:
+
+- the parent Swig ID
+- the owning `role_id`
+- the expected sub-account public key
+- the enabled state
+
+## When to use sub-accounts
+
+Use sub-accounts when you want:
+
+- a separate balance bucket for a role
+- delegated execution that should not spend directly from the main wallet path
+- the ability to disable a role's balance bucket without changing the whole
+  wallet
+
+## Common integration mistake
+
+Do not treat a sub-account as an unrelated external account. It is still part
+of the parent wallet's role model, and its validity depends on the stored
+`SubAccount` action metadata.

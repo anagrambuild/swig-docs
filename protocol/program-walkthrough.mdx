@@ -1,0 +1,75 @@
+---
+title: "Instruction Map"
+sidebarTitle: "Instruction Map"
+---
+
+Most of the protocol becomes easier to reason about once you treat it as a small
+set of instruction families.
+
+## Typical lifecycle
+
+In practice, most wallets move through this path:
+
+1. create the wallet with `CreateV1`
+2. add or update roles with the authority-management instructions
+3. execute wallet actions through `SignV2`
+4. optionally layer on sessions, sub-accounts, or recovery
+5. eventually migrate, transfer assets, or close the wallet
+
+## Instruction families
+
+| Instruction family | On-chain instructions | Purpose |
+|--------------------|-----------------------|---------|
+| Wallet lifecycle | `CreateV1`, `MigrateToWalletAddressV1`, `TransferAssetsV1`, `CloseTokenAccountV1`, `CloseSwigV1` | create, migrate, move assets, and close wallets |
+| Role management | `AddAuthorityV1`, `RemoveAuthorityV1`, `UpdateAuthorityV1` | add, remove, or edit roles and their permissions |
+| Session management | `CreateSessionV1` | bootstrap temporary session authorities |
+| General execution | `SignV2` | authenticate a role and execute wallet instructions |
+| Sub-accounts | `CreateSubAccountV1`, `WithdrawFromSubAccountV1`, `SubAccountSignV1`, `ToggleSubAccountV1` | manage segregated balances and sub-account execution |
+| Recovery | `RecoverAuthorityV1` | rotate one signer authority through the constrained recovery path |
+
+## Wallet creation and role management
+
+`CreateV1` initializes the config account, the wallet-address PDA, and the first
+role set. After that, role-management instructions are how you evolve the wallet
+without creating a new one.
+
+That split is important:
+
+- creation decides the initial authority graph
+- updates change the graph over time
+- execution uses the graph, rather than redefining it per transaction
+
+## `SignV2` is the main execution path
+
+`SignV2` is the instruction that turns a Swig wallet into an execution layer.
+Most wallet behavior eventually passes through it.
+
+At a high level it:
+
+1. loads the target role by `role_id`
+2. authenticates the role authority or session authority
+3. parses the nested instruction payload
+4. checks actions, limits, and account constraints
+5. signs execution through the wallet-address PDA
+
+Use [SignV2 Execution](/protocol/signing-and-execution) for the detailed flow.
+
+## Sessions, sub-accounts, and recovery are side systems
+
+These flows are important, but they are extensions around the main role model:
+
+- `CreateSessionV1` grants temporary delegated execution to a session-capable
+  role
+- sub-account instructions carve out a role-specific balance bucket and signer
+  path
+- `RecoverAuthorityV1` rotates an authority through a narrower recovery rule
+  set
+
+Use the dedicated execution pages when you are building or debugging one of
+those flows.
+
+## If you only remember one thing
+
+The protocol is not a generic multisig wrapper. It is a role-and-permission
+execution engine. Once you know which instruction family you are in and which
+`role_id` is active, the rest of the behavior becomes much easier to trace.

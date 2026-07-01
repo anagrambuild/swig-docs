@@ -1,0 +1,52 @@
+---
+title: "Submit and Sponsor Transactions"
+sidebarTitle: "Sponsor & Submit"
+---
+
+The Developer SDK can prepare transactions, but your app still needs to submit
+them. There are two models:
+
+- send directly through your own RPC path
+- sponsor submission through Swig's paymaster route
+
+## Sponsor submission
+
+Use `swig.transactions.sponsor(...)` when your server should hand the signed
+transaction to Swig's sponsor path:
+
+```typescript
+await swig.transactions.sponsor({
+  transaction: signed.transaction,
+  transactionEncoding: signed.transactionEncoding,
+  network: signed.network,
+});
+```
+
+The client still signs first when authority signatures are required. Sponsoring
+does not replace client authority signing.
+
+## When sponsor submission fits
+
+Use it when:
+
+- your product wants gasless or paymaster-backed flows
+- your backend already owns the post-signing submission step
+- you want one server-owned path for ordered transaction submission
+
+## Transaction categories still matter
+
+These categories tell you what can go straight to send or sponsor:
+
+- `clientAuthorityTransactions` must be client-signed first
+- `feePayerOnlyTransactions` can go straight to your fee payer or sponsor path
+- `operatorSignedTransactions` are already operator-signed and just need final
+  submission handling
+
+## Portal admin vs runtime usage
+
+This page is about runtime submission. If you need to create or manage a
+paymaster in the dashboard, use the portal docs:
+
+- [Paymaster](/examples/dev-portal/paymaster-overview)
+- [Create Paymaster](/examples/dev-portal/create-paymaster)
+- [Manage Paymasters](/examples/dev-portal/manage-paymaster)

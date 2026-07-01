@@ -1,0 +1,69 @@
+---
+title: "Transfer SOL and Tokens"
+sidebarTitle: "Transfer SOL and Tokens"
+---
+
+Most app flows start with a wallet handle, then prepare one movement at a time.
+
+## Start from a wallet handle
+
+Attach to an existing wallet with the config address, wallet address, and the
+authority that should sign on the client:
+
+```typescript
+const wallet = swig.wallets.use({
+  swigConfigAddress,
+  walletAddress,
+  requesterAuthority: {
+    ed25519: {
+      publicKey: userPublicKey,
+    },
+  },
+});
+```
+
+The same handle shape works for `secp256k1` and `secp256r1` authorities too.
+
+If you already have an IDP session, the same model works through
+`swig.wallets.fromIdpSession(session)`.
+
+## SOL transfer
+
+```typescript
+const preparedTransfer = await wallet.transfer.sol({
+  feePayer,
+  destination,
+  amount: 1_000_000n,
+});
+```
+
+## Token transfer
+
+Token transfers are owner-based. The backend derives the token program, source
+ATA, destination ATA, and any destination ATA creation it needs.
+
+```typescript
+const preparedTokenTransfer = await wallet.transfer.token({
+  feePayer,
+  mint,
+  destinationOwner,
+  amount: 10_000n,
+});
+```
+
+## How to read the result
+
+Prepared results are intentionally split:
+
+| Field | Meaning |
+|-------|---------|
+| `transactions` | ordered transactions to submit |
+| `clientAuthorityTransactions` | transactions that still need client authority |
+| `feePayerOnlyTransactions` | transactions that only need fee payer or sponsor submission |
+| `signatureRequests` | per-transaction signature metadata |
+
+## Submission
+
+Use [Client Signing](/developer-sdk/client-signing) for the signing step, then
+use [Sponsor & Submit](/developer-sdk/sponsor-and-submit) or your own send path
+to finish submission.

@@ -1,0 +1,78 @@
+---
+title: "Expo and React Native Apps"
+sidebarTitle: "Expo & Mobile"
+---
+
+For mobile apps, the IDP SDK is a provider plus hook API.
+
+## Main integration surface
+
+Use:
+
+- `SwigIdpProvider`
+- `useSwigIdp()`
+
+The hook exposes:
+
+- `startOAuth()`
+- `startEmailOtp()`
+- `startSmsOtp()`
+- `listProviders()`
+- `getSession()`
+- `logout()`
+
+## Basic shape
+
+```tsx
+import { Button } from "react-native";
+import { SwigIdpProvider, useSwigIdp } from "@swig-wallet/expo-idp-sdk";
+
+function LoginButton() {
+  const { startOAuth, authPhase } = useSwigIdp();
+
+  return (
+    <Button
+      title={authPhase === "begin_oauth" ? "Opening browser..." : "Continue"}
+      onPress={() =>
+        startOAuth({
+          provider: "google",
+          clientId: "your-client-id",
+          policyId: "your-policy-id",
+          flow: "role",
+        })
+      }
+    />
+  );
+}
+
+export function App() {
+  return (
+    <SwigIdpProvider
+      config={{
+        redirectUri: "yourapp://auth/callback",
+      }}
+    >
+      <LoginButton />
+    </SwigIdpProvider>
+  );
+}
+```
+
+## What the provider handles
+
+- opening the isolated host in a system auth session
+- parsing the deep-link callback
+- persisting the returned Swig session
+- exposing auth state through `isReady`, `isAuthenticated`, and `authPhase`
+
+## Mobile-specific requirements
+
+- `redirectUri` must be configured
+- auth runs through `expo-web-browser` system auth sessions
+- session persistence defaults to `expo-secure-store`
+- the default network is devnet unless you override `network`
+
+## What to avoid
+
+Do not embed the isolated host in a `WebView`. The supported mobile path is a
+system auth session so the host app cannot inspect the auth page.

@@ -1,5 +1,6 @@
 ---
 title: "Error Codes & Troubleshooting"
+sidebarTitle: "Troubleshooting"
 ---
 
 This guide covers common errors, their causes, and how to resolve them when using the Swig Developer Portal API.
@@ -337,7 +338,7 @@ if (error) {
 }
 ```
 
-### Developer SDK (@swig-wallet/developer)
+### Legacy SDK (@swig-wallet/developer)
 
 ```typescript
 import { SwigClient, SwigError } from '@swig-wallet/developer';
@@ -402,7 +403,7 @@ async function fetchWithRetry<T>(
 
 ### SDK Built-in Retry
 
-Both SDKs support retry configuration:
+Both portal clients support retry configuration:
 
 ```typescript
 // API SDK
@@ -415,7 +416,7 @@ const client = new SwigApiClient({
   },
 });
 
-// Developer SDK
+// Legacy SDK
 const client = new SwigClient({
   apiKey: 'sk_your_api_key',
   retryOptions: {

@@ -1,0 +1,73 @@
+---
+title: "Set Up Recovery"
+sidebarTitle: "Set Up Recovery"
+---
+
+Recovery setup happens after wallet creation. It is not finished by
+`swig.wallets.create(...)` alone.
+
+Use [Add a Guardian After Wallet Creation](/developer-sdk/add-guardian-after-creation)
+instead if the wallet already exists and you are enabling recovery later.
+
+## Create from a recovery-enabled policy
+
+```typescript
+const created = await swig.wallets.create({
+  feePayer,
+  policyId,
+  initialUser: {
+    secp256r1: {
+      publicKey: passkeyPublicKey,
+    },
+  },
+  recovery: {
+    guardianPubkey: guardianPublicKey,
+    delaySeconds: 86_400,
+  },
+});
+```
+
+If the policy is recovery-enabled and the SDK can derive the requester
+authority and guardian information, `create(...)` returns `recoverySetup`.
+
+## What `create(...)` gives you
+
+For a recovery-enabled flow, the important pieces are:
+
+- `creationTransaction`
+- `clientAuthorityTransactions`
+- `operatorSignedTransactions`
+- `recoverySetup`
+
+## Prepare the follow-up setup
+
+After wallet creation is submitted, prepare recovery setup:
+
+```typescript
+const wallet = swig.wallets.use(created.wallet);
+
+const setup = await wallet.recovery.prepareSetup({
+  feePayer,
+  ...created.recoverySetup!,
+});
+```
+
+That returns:
+
+- `addAuthorityTransaction`
+- `configureRecoveryTransaction`
+
+## Who signs what
+
+| Transaction | Who signs |
+|-------------|-----------|
+| `creationTransaction` | fee payer or sponsor path |
+| `addAuthorityTransaction` | current wallet authority |
+| `configureRecoveryTransaction` | backend recovery operator already signs it |
+
+Do not authority-sign `operatorSignedTransactions` again.
+
+## Advanced option
+
+`targetRoleId` is available when you intentionally want recovery bound to a
+specific non-default role.

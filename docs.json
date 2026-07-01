@@ -9,109 +9,77 @@
   },
   "favicon": "/favicon.png",
   "navigation": {
-    "groups": [
+    "products": [
       {
-        "group": "Getting Started",
-        "expanded": true,
-        "pages": [
-          "index",
-          "products-and-sdks",
-          {
-            "group": "Build with AI",
-            "pages": [
-              "build-with-ai",
-              "tutorials/mcp/index",
-              "reference/mcp-server",
-              "mcp-support"
-            ]
-          },
-          {
-            "group": "Use Cases",
-            "pages": [
-              "use-case-customers",
-              "use-case-partners"
-            ]
-          }
-        ]
-      },
-      {
-        "group": "Swig SDKs",
-        "pages": [
-          "reference/index",
-          {
-            "group": "TypeScript",
-            "pages": [
-              "reference/typescript/index",
-              "reference/typescript/kit",
-              "reference/typescript/actions"
-            ]
-          },
-          {
-            "group": "Rust",
-            "pages": [
-              "reference/rust/index",
-              "reference/rust/instruction_builder",
-              "reference/rust/rust_wallet"
-            ]
-          },
-          "reference/error-types/index",
-          {
-            "group": "Migration & Release Notes",
-            "pages": [
-              "tutorials/typescript/migration-v1",
-              "v1-release-notes"
-            ]
-          }
-        ]
-      },
-      {
-        "group": "Developer Portal APIs",
-        "pages": [
+        "product": "Overview",
+        "icon": "book-open",
+        "description": "Use this section to choose the right Swig product and docs path",
+        "groups": [
           {
             "group": "Overview",
             "pages": [
-              "examples/dev-portal/index",
-              "examples/dev-portal/api-reference"
+              "index",
+              "products-and-sdks",
+              "build-with-ai"
             ]
           },
           {
-            "group": "Projects & Access",
+            "group": "Product Areas",
             "pages": [
-              "examples/dev-portal/projects",
-              "examples/dev-portal/create-project",
-              "examples/dev-portal/manage-members",
-              "examples/dev-portal/subscriptions-billing",
-              "examples/dev-portal/create-api-key"
-            ]
-          },
-          {
-            "group": "Policies & Wallets",
-            "pages": [
-              "examples/dev-portal/create-policy",
-              "examples/dev-portal/fetch-policy",
-              "examples/dev-portal/create-swig"
-            ]
-          },
-          {
-            "group": "Paymaster",
-            "pages": [
-              "examples/dev-portal/paymaster-overview",
-              "examples/dev-portal/create-paymaster",
-              "examples/dev-portal/manage-paymaster",
-              "examples/dev-portal/transaction-history"
-            ]
-          },
-          {
-            "group": "Troubleshooting",
-            "pages": [
-              "examples/dev-portal/error-codes"
+              "overview/protocol",
+              "overview/protocol-sdk",
+              "overview/developer-sdk",
+              "overview/idp-sdk"
             ]
           }
         ]
       },
       {
-        "group": "Tutorials",
-        "pages": [
+        "product": "Protocol",
+        "icon": "shield",
+        "description": "The on-chain wallet protocol in swig-wallet",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "protocol/index"
+            ]
+          },
+          {
+            "group": "Authorization Model",
+            "pages": [
+              "protocol/account-model",
+              "protocol/concepts-and-permissions"
+            ]
+          },
+          {
+            "group": "Execution Model",
+            "pages": [
+              "protocol/program-walkthrough",
+              "protocol/signing-and-execution",
+              "protocol/sessions-and-subaccounts",
+              "protocol/recovery-model"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "protocol/security-and-audits"
+            ]
+          }
+        ]
+      },
+      {
+        "product": "Protocol SDK",
+        "icon": "terminal",
+        "description": "Direct TypeScript and Rust integrations with the protocol",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "reference/index"
+            ]
+          },
           {
             "group": "Quickstarts",
             "pages": [
@@ -121,6 +89,30 @@
               "tutorials/typescript/managing_authorities",
               "tutorials/typescript/sign",
               "tutorials/embeded_wallet_para/index"
+            ]
+          },
+          {
+            "group": "TypeScript Packages",
+            "pages": [
+              "reference/typescript/index",
+              "reference/typescript/kit",
+              "reference/typescript/actions"
+            ]
+          },
+          {
+            "group": "Rust Packages",
+            "pages": [
+              "reference/rust/index",
+              "reference/rust/instruction_builder",
+              "reference/rust/rust_wallet"
+            ]
+          },
+          {
+            "group": "AI & MCP",
+            "pages": [
+              "tutorials/mcp/index",
+              "reference/mcp-server",
+              "mcp-support"
             ]
           },
           {
@@ -158,13 +150,127 @@
                 ]
               }
             ]
+          },
+          {
+            "group": "Error Types",
+            "pages": [
+              "reference/error-types/index"
+            ]
+          },
+          {
+            "group": "Migration & Releases",
+            "pages": [
+              "tutorials/typescript/migration-v1",
+              "v1-release-notes"
+            ]
           }
         ]
       },
       {
-        "group": "Resources",
-        "pages": [
-          "links-and-contact"
+        "product": "Developer SDK",
+        "icon": "building",
+        "description": "Prepare wallet creation, transfers, swaps, recovery, and sponsored submission on your server",
+        "groups": [
+          {
+            "group": "Start Here",
+            "pages": [
+              "developer-sdk/index",
+              "developer-sdk/integration-paths",
+              "developer-sdk/server-and-client",
+              "developer-sdk/framework-proxies"
+            ]
+          },
+          {
+            "group": "Set Up Access",
+            "pages": [
+              "examples/dev-portal/create-api-key",
+              "examples/dev-portal/create-policy",
+              "examples/dev-portal/fetch-policy"
+            ]
+          },
+          {
+            "group": "Build Wallet Flows",
+            "pages": [
+              "developer-sdk/create-wallets",
+              "developer-sdk/client-signing",
+              "developer-sdk/transfers-swaps-and-signing",
+              "developer-sdk/swaps-and-batches",
+              "developer-sdk/custom-execution"
+            ]
+          },
+          {
+            "group": "Add Recovery",
+            "pages": [
+              "developer-sdk/recovery-flows",
+              "developer-sdk/recovery-setup",
+              "developer-sdk/add-guardian-after-creation",
+              "developer-sdk/recovery-runtime"
+            ]
+          },
+          {
+            "group": "Operate in Production",
+            "pages": [
+              "developer-sdk/sponsor-and-submit",
+              "examples/dev-portal/paymaster-overview",
+              {
+                "group": "Paymaster Admin",
+                "pages": [
+                  "examples/dev-portal/create-paymaster",
+                  "examples/dev-portal/manage-paymaster",
+                  "examples/dev-portal/transaction-history"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Workspace Admin",
+            "pages": [
+              {
+                "group": "Workspace",
+                "pages": [
+                  "examples/dev-portal/index",
+                  "examples/dev-portal/projects",
+                  "examples/dev-portal/create-project",
+                  "examples/dev-portal/manage-members",
+                  "examples/dev-portal/subscriptions-billing"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "product": "IDP SDK",
+        "icon": "fingerprint",
+        "description": "Sign users in and return a Swig session for the wallet layer that follows",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "idp-sdk/index",
+              "idp-sdk/auth-methods",
+              "idp-sdk/web-and-mobile"
+            ]
+          },
+          {
+            "group": "Expo & React Native",
+            "pages": [
+              "idp-sdk/expo-and-react-native"
+            ]
+          },
+          {
+            "group": "Browser Apps",
+            "pages": [
+              "idp-sdk/web-apps",
+              "idp-sdk/authority-and-agents"
+            ]
+          },
+          {
+            "group": "Sessions & Security",
+            "pages": [
+              "idp-sdk/sessions-and-security"
+            ]
+          }
         ]
       }
     ]
