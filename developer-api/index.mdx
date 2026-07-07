@@ -1,0 +1,66 @@
+---
+title: "Developer API"
+sidebarTitle: "Overview"
+---
+
+The Developer API is the REST surface behind Swig's hosted wallet, paymaster,
+identity, ramp, and developer-portal operations.
+
+Use it when you want to call Swig's backend directly instead of using the
+Developer SDK helpers.
+
+## API shape
+
+Swig's backend services are defined as protobuf services and exposed over REST
+through gRPC JSON transcoding. The REST paths in this section come from the
+backend `google.api.http` annotations.
+
+```bash
+curl "https://api.onswig.com/paymaster/balance?network=devnet" \
+  -H "Authorization: Bearer sk_your_api_key"
+```
+
+## Start here
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="key" href="/developer-api/authentication">
+    API keys, portal auth, JSON encoding, and request conventions
+  </Card>
+  <Card title="Transactions" icon="send" href="/developer-api/transactions">
+    Prepare wallet creation, transfers, swaps, and recovery transactions
+  </Card>
+  <Card title="Wallets" icon="wallet" href="/developer-api/wallets">
+    Lookup Swigs, inspect balances and roles, manage policies, and close ATAs
+  </Card>
+  <Card title="Paymaster" icon="credit-card" href="/developer-api/paymaster">
+    Sign, sponsor, check balances, and manage paymaster limits
+  </Card>
+  <Card title="Identity" icon="fingerprint" href="/developer-api/identity">
+    Identity provider login, OTP, passkeys, invites, clients, and org providers
+  </Card>
+  <Card title="Ramp" icon="credit-card" href="/developer-api/ramp">
+    Quote ramp flows, create sessions, and read ramp transaction state
+  </Card>
+</CardGroup>
+
+## API groups
+
+| Group | Use it for |
+| :--- | :--- |
+| [Transaction API](/developer-api/transactions) | Preparing unsigned or partially signed Solana transactions for Swig wallet flows |
+| [Wallet API](/developer-api/wallets) | Reading Swig wallet state, policies, balances, roles, and developer wallet admin resources |
+| [Paymaster API](/developer-api/paymaster) | Signing or sponsoring transactions and managing paymaster balances and limits |
+| [Identity API](/developer-api/identity) | Starting login flows, managing identity clients, and configuring organization providers |
+| [Ramp API](/developer-api/ramp) | Creating fiat ramp quotes, sessions, and transaction-history views |
+
+## SDK or API
+
+Use the [Developer SDK](/developer-sdk) when you want higher-level helpers for
+server routes, transaction preparation, client signing, and sponsored
+submission. Use this Developer API section when you need exact REST paths,
+payloads, and response shapes.
+
+## Shared reference
+
+- [Authentication and conventions](/developer-api/authentication)
+- [Errors](/developer-api/errors)

@@ -2,7 +2,7 @@
 title: "Choose a Product"
 ---
 
-Swig has four product surfaces. Choose the one that matches how your app will integrate.
+Swig has five product surfaces. Choose the one that matches how your app will integrate.
 
 ## Quick routing
 
@@ -11,6 +11,7 @@ Swig has four product surfaces. Choose the one that matches how your app will in
 | Understand the on-chain protocol and repo layout | [Swig Protocol](/protocol) |
 | Integrate directly with Swig wallets from TypeScript or Rust | [Swig Protocol SDK](/reference) |
 | Prepare wallet operations behind an API key and sign them client-side | [Swig Developer SDK](/developer-sdk) |
+| Call hosted backend endpoints directly over REST | [Swig Developer API](/developer-api) |
 | Add OAuth, email OTP, or SMS OTP login flows | [Swig IDP SDK](/idp-sdk) |
 
 ## Product map
@@ -36,6 +37,13 @@ Hosted transaction preparation through the developer portal and `@swig-wallet/de
 - Use it when you want the backend to prepare wallet creation, transfers, swaps, or recovery flows and the client only signs what it must sign.
 - Start at [Developer SDK](/developer-sdk).
 
+### Swig Developer API
+
+REST access to Swig's hosted backend services.
+
+- Use it when you need exact endpoint paths, payloads, response fields, or direct API integration without SDK wrappers.
+- Start at [Developer API](/developer-api).
+
 ### Swig IDP SDK
 
 Login-provider SDKs in `swig-idp-sdk`.
@@ -48,4 +56,5 @@ Login-provider SDKs in `swig-idp-sdk`.
 - The **Swig Protocol** is the on-chain foundation.
 - The **Swig Protocol SDK** integrates with that protocol directly.
 - The **Swig Developer SDK** uses hosted backend services to prepare and operate on Swig wallets through API-key access.
+- The **Swig Developer API** documents the REST endpoints exposed by those hosted backend services.
 - The **Swig IDP SDK** handles end-user identity and session bootstrap for login-provider flows.

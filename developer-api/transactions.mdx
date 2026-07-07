@@ -1,0 +1,163 @@
+---
+title: "Transaction API"
+sidebarTitle: "Transactions"
+---
+
+The Transaction API prepares Solana transactions for Swig wallet creation,
+transfers, swaps, and recovery. It does not replace required client authority
+signatures; responses include signature requests when the client must sign.
+
+## Auth
+
+Use an API key:
+
+```text
+Authorization: Bearer sk_your_api_key
+```
+
+## Endpoints
+
+| Method | Path | Operation |
+| :--- | :--- | :--- |
+| `POST` | `/transaction/prepare` | Prepare a grouped set of wallet operations |
+| `POST` | `/transaction/wallet/create` | Prepare or create a Swig wallet |
+| `POST` | `/transaction/wallet/recovery-authority/add` | Prepare adding a recovery authority |
+| `POST` | `/transaction/recovery/configure` | Prepare recovery configuration |
+| `POST` | `/transaction/transfer/sol` | Prepare a SOL transfer |
+| `POST` | `/transaction/transfer/spl-token` | Prepare an SPL token transfer |
+| `POST` | `/transaction/swap/jupiter` | Prepare a Jupiter swap |
+| `POST` | `/transaction/recovery/start` | Prepare starting recovery |
+| `POST` | `/transaction/recovery/cancel` | Prepare canceling recovery |
+| `POST` | `/transaction/recovery/execute` | Prepare executing recovery |
+
+## Common request fields
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `network` | enum | `NETWORK_DEVNET` or `NETWORK_MAINNET` |
+| `feePayer` | string | Fee payer public key used in the prepared Solana transaction |
+| `swigAddress` | string | Swig config address for existing-wallet operations |
+| `requesterAuthority` | object | Wallet authority requesting the operation |
+
+## Prepared transaction response
+
+Most endpoints return a prepared transaction or a response containing prepared
+transactions.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `transaction` | base64 string | Serialized unsigned or partially signed Solana transaction |
+| `transactionEncoding` | enum | Currently `TRANSACTION_ENCODING_BASE64` |
+| `wallet` | object | `swigConfigAddress` and `walletAddress` when known |
+| `expiresAt` | timestamp | Expiration for the prepared transaction |
+| `recentBlockhash` | string | Recent blockhash used in the transaction |
+| `kind` | enum | Prepared transaction category |
+| `signatureRequests` | array | Client authority signatures required before submission |
+
+## Prepare operations
+
+`POST /transaction/prepare` batches one or more operations for an existing Swig.
+
+```json
+{
+  "network": "NETWORK_DEVNET",
+  "feePayer": "FeePayerPublicKey",
+  "swigAddress": "SwigConfigAddress",
+  "requesterAuthority": {
+    "ed25519": { "publicKey": "RequesterPublicKey" }
+  },
+  "operations": [
+    {
+      "transferSol": {
+        "destination": "DestinationPublicKey",
+        "lamports": "1000000"
+      }
+    }
+  ]
+}
+```
+
+## Create a wallet
+
+`POST /transaction/wallet/create`
+
+```json
+{
+  "network": "NETWORK_DEVNET",
+  "feePayer": "FeePayerPublicKey",
+  "policyId": "policy_123",
+  "initialUser": {
+    "ed25519": { "publicKey": "InitialUserPublicKey" }
+  }
+}
+```
+
+If `policyId` is omitted, `initialUser` is required and the API creates a
+no-recovery wallet policy for the caller's organization.
+
+## Transfer SOL
+
+`POST /transaction/transfer/sol`
+
+```json
+{
+  "network": "NETWORK_DEVNET",
+  "feePayer": "FeePayerPublicKey",
+  "swigAddress": "SwigConfigAddress",
+  "requesterAuthority": {
+    "ed25519": { "publicKey": "RequesterPublicKey" }
+  },
+  "destination": "DestinationPublicKey",
+  "lamports": "1000000"
+}
+```
+
+## Transfer SPL token
+
+`POST /transaction/transfer/spl-token`
+
+```json
+{
+  "network": "NETWORK_DEVNET",
+  "feePayer": "FeePayerPublicKey",
+  "swigAddress": "SwigConfigAddress",
+  "requesterAuthority": {
+    "ed25519": { "publicKey": "RequesterPublicKey" }
+  },
+  "mint": "MintAddress",
+  "destinationOwner": "DestinationOwnerPublicKey",
+  "amount": "1000000"
+}
+```
+
+## Jupiter swap
+
+`POST /transaction/swap/jupiter`
+
+```json
+{
+  "network": "NETWORK_DEVNET",
+  "feePayer": "FeePayerPublicKey",
+  "swigAddress": "SwigConfigAddress",
+  "requesterAuthority": {
+    "ed25519": { "publicKey": "RequesterPublicKey" }
+  },
+  "inputMint": "InputMintAddress",
+  "outputMint": "OutputMintAddress",
+  "amount": "1000000",
+  "slippageBps": 50,
+  "mode": "ExactIn"
+}
+```
+
+## Recovery
+
+Recovery endpoints prepare transactions for the guardian flow.
+
+| Endpoint | Required purpose fields |
+| :--- | :--- |
+| `/transaction/wallet/recovery-authority/add` | `swigAddress`, `requesterAuthority` |
+| `/transaction/recovery/configure` | `swigAddress`, `guardianPubkey`, `delaySeconds`, optional `targetRoleId` |
+| `/transaction/recovery/start` | `swigAddress`, `guardianPubkey` or `guardianSwigAddress`, `newAuthority`, `newAuthorityKind` |
+| `/transaction/recovery/cancel` | `swigAddress`, `requesterAuthority` |
+| `/transaction/recovery/execute` | `swigAddress`, `newAuthority`, `newAuthorityKind` |
