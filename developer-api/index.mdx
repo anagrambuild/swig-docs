@@ -3,8 +3,8 @@ title: "Developer API"
 sidebarTitle: "Overview"
 ---
 
-The Developer API is the REST surface behind Swig's hosted wallet, paymaster,
-identity, ramp, and developer-portal operations.
+The Developer API is the API-key guarded REST surface behind Swig's hosted
+wallet, transaction, paymaster, identity, and ramp runtime APIs.
 
 Use it when you want to call Swig's backend directly instead of using the
 Developer SDK helpers.
@@ -24,19 +24,19 @@ curl "https://api.onswig.com/paymaster/balance?network=devnet" \
 
 <CardGroup cols={2}>
   <Card title="Authentication" icon="key" href="/developer-api/authentication">
-    API keys, portal auth, JSON encoding, and request conventions
+    API keys, JSON encoding, and request conventions
   </Card>
   <Card title="Transactions" icon="send" href="/developer-api/transactions">
     Prepare wallet creation, transfers, swaps, and recovery transactions
   </Card>
   <Card title="Wallets" icon="wallet" href="/developer-api/wallets">
-    Lookup Swigs, inspect balances and roles, manage policies, and close ATAs
+    Lookup Swigs and inspect balances, roles, policies, and token history
   </Card>
   <Card title="Paymaster" icon="credit-card" href="/developer-api/paymaster">
-    Sign, sponsor, check balances, and manage paymaster limits
+    Sign, sponsor, and check paymaster balances
   </Card>
   <Card title="Identity" icon="fingerprint" href="/developer-api/identity">
-    Identity provider login, OTP, passkeys, invites, clients, and org providers
+    Identity provider login, OTP, passkeys, invites, and role operations
   </Card>
   <Card title="Ramp" icon="credit-card" href="/developer-api/ramp">
     Quote ramp flows, create sessions, and read ramp transaction state
@@ -48,9 +48,9 @@ curl "https://api.onswig.com/paymaster/balance?network=devnet" \
 | Group | Use it for |
 | :--- | :--- |
 | [Transaction API](/developer-api/transactions) | Preparing unsigned or partially signed Solana transactions for Swig wallet flows |
-| [Wallet API](/developer-api/wallets) | Reading Swig wallet state, policies, balances, roles, and developer wallet admin resources |
-| [Paymaster API](/developer-api/paymaster) | Signing or sponsoring transactions and managing paymaster balances and limits |
-| [Identity API](/developer-api/identity) | Starting login flows, managing identity clients, and configuring organization providers |
+| [Wallet API](/developer-api/wallets) | Reading Swig wallet state, policies, balances, roles, and token history |
+| [Paymaster API](/developer-api/paymaster) | Signing or sponsoring transactions and checking paymaster balances |
+| [Identity API](/developer-api/identity) | Starting login flows, OTP/passkey flows, invites, and role operations |
 | [Ramp API](/developer-api/ramp) | Creating fiat ramp quotes, sessions, and transaction-history views |
 
 ## SDK or API

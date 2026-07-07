@@ -243,7 +243,7 @@
       {
         "product": "Developer API",
         "icon": "code",
-        "description": "REST reference for Swig's hosted developer and runtime APIs",
+        "description": "REST reference for Swig's API-key guarded runtime APIs",
         "groups": [
           {
             "group": "Start Here",
