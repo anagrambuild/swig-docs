@@ -3,15 +3,20 @@ title: "Paymaster API"
 sidebarTitle: "Paymaster"
 ---
 
-The Paymaster API signs or sponsors transactions and exposes paymaster balance
-and limit management.
+The Paymaster API signs or sponsors transactions and reads paymaster balance
+state through API-key guarded runtime endpoints.
 
 ## Auth
 
-Runtime endpoints use API-key auth. Developer endpoints under
-`/paymaster/developer` use developer portal auth.
+Use an API key:
 
-## Runtime endpoints
+```text
+Authorization: Bearer sk_your_api_key
+```
+
+Developer-portal admin endpoints are intentionally omitted from this reference.
+
+## Endpoints
 
 | Method | Path | Operation |
 | :--- | :--- | :--- |
@@ -22,15 +27,6 @@ Runtime endpoints use API-key auth. Developer endpoints under
 | `POST` | `/sign` | Legacy alias for `/paymaster/sign` |
 | `POST` | `/paymaster/sponsor` | Sign and submit a transaction |
 | `POST` | `/sponsor` | Legacy alias for `/paymaster/sponsor` |
-
-## Developer endpoints
-
-| Method | Path | Operation |
-| :--- | :--- | :--- |
-| `GET` | `/paymaster/developer/organizations/{organization_id}/paymasters/{paymaster_id}/daily-limit` | Read paymaster daily limits |
-| `POST` | `/paymaster/developer/organizations/{organization_id}/paymasters/{paymaster_id}/daily-limit` | Update paymaster daily limits |
-| `GET` | `/paymaster/developer/organizations/{organization_id}/idp-paymaster` | Read the organization IdP paymaster |
-| `POST` | `/paymaster/developer/organizations/{organization_id}/idp-paymaster/get-or-create` | Get or create the organization IdP paymaster |
 
 ## Get balance
 
@@ -98,20 +94,5 @@ Response:
 }
 ```
 
-## Update daily limits
-
-`POST /paymaster/developer/organizations/{organization_id}/paymasters/{paymaster_id}/daily-limit`
-
-```json
-{
-  "dailyApiThreshold": 1000,
-  "hasDailyApiThreshold": true,
-  "dailySolThresholdLamports": "1000000000",
-  "hasDailySolThreshold": true,
-  "dailyUserSolThresholdLamports": "10000000",
-  "hasDailyUserSolThreshold": true
-}
-```
-
-Daily limit responses return the updated paymaster limit state, including
-organization id, paymaster id, thresholds, and update time.
+Paymaster limit configuration is handled through developer-portal admin
+surfaces, not API-key runtime endpoints.

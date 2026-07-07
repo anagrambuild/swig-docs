@@ -3,7 +3,8 @@ title: "Authentication and Conventions"
 sidebarTitle: "Authentication"
 ---
 
-Developer API endpoints are REST mappings over Swig backend services.
+Developer API endpoints are API-key guarded REST mappings over Swig backend
+services.
 
 ## Base URL
 
@@ -16,15 +17,18 @@ https://api.onswig.com
 Use the environment-specific base URL provided for your project when working
 against dev, staging, or private deployments.
 
-## Authentication models
+## Authentication
 
-| Auth model | Header | Used by |
-| :--- | :--- | :--- |
-| API key | `Authorization: Bearer sk_...` | Runtime API endpoints under `/transaction`, `/wallet`, `/wallet/api/ramp`, `/paymaster`, and `/identity/api` |
-| Developer portal auth | Portal session or developer-service credential | Tenant-admin endpoints under `/wallet/developer`, `/paymaster/developer`, and `/identity/admin` |
+Send your API key as a bearer token:
+
+```text
+Authorization: Bearer sk_your_api_key
+```
 
 Runtime API keys are created in the Developer Portal and should stay on your
 server. Do not expose an API key in browser or mobile client code.
+
+This section intentionally excludes developer-portal admin endpoints.
 
 ## JSON encoding
 

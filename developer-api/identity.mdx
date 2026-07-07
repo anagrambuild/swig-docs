@@ -4,16 +4,22 @@ sidebarTitle: "Identity"
 ---
 
 The Identity API starts login flows, completes OTP/passkey flows, manages role
-and invite operations, and exposes developer-portal client/provider
-configuration.
+and invite operations, and reads identity policies through API-key guarded
+runtime endpoints.
 
 ## Auth
 
-Runtime endpoints under `/identity/api` are API-key or JWT protected depending
-on the flow. Tenant-admin endpoints under `/identity/admin` and
-`/identity/developer` use developer portal auth.
+Use an API key:
 
-## Runtime identity endpoints
+```text
+Authorization: Bearer sk_your_api_key
+```
+
+Some identity flows may return or consume flow-specific tokens after the
+API-key-guarded start point. Developer-portal admin endpoints are intentionally
+omitted from this reference.
+
+## Endpoints
 
 | Method | Path | Operation |
 | :--- | :--- | :--- |
@@ -30,23 +36,6 @@ on the flow. Tenant-admin endpoints under `/identity/admin` and
 | `POST` | `/identity/api/grant-access` | Grant access to an authority |
 | `POST` | `/identity/api/role-remove` | Remove a role |
 | `GET` | `/identity/api/policy/{policy_id}/client/{client_id}` | Read an identity policy for a client |
-
-## Developer identity endpoints
-
-| Method | Path | Operation |
-| :--- | :--- | :--- |
-| `GET` | `/identity/developer/providers` | List providers available to the organization |
-| `GET` | `/identity/admin/clients` | List identity clients |
-| `GET` | `/identity/admin/clients/disabled` | List disabled identity clients |
-| `POST` | `/identity/admin/clients` | Create an identity client |
-| `GET` | `/identity/admin/clients/{client_id}` | Read one identity client |
-| `PUT` | `/identity/admin/clients/{client_id}` | Update an identity client |
-| `DELETE` | `/identity/admin/clients/{client_id}` | Disable/delete an identity client |
-| `POST` | `/identity/admin/clients/{client_id}/enable` | Re-enable a client |
-| `GET` | `/identity/admin/organizations/{organization_id}/providers` | List organization providers |
-| `POST` | `/identity/admin/organizations/{organization_id}/providers` | Add an organization provider |
-| `DELETE` | `/identity/admin/organizations/{organization_id}/providers/{provider_id}` | Remove an organization provider |
-| `POST` | `/identity/admin/organizations/{organization_id}/providers/{provider_id}/enable` | Enable an organization provider |
 
 ## Start OAuth auth
 
@@ -114,21 +103,5 @@ The response includes `challengeId`, `maskedEmail`, `expiresAt`,
 The response returns a `challengeId` and `webauthnOptionsJson` for
 `navigator.credentials`.
 
-## Create a client
-
-`POST /identity/admin/clients`
-
-```json
-{
-  "organizationId": "org_123",
-  "displayName": "Production web app",
-  "callbackUrls": ["https://app.example/callback"],
-  "paymasterEnabled": true,
-  "allowSignup": true,
-  "codeChallengeMethod": "S256",
-  "defaultRoleTemplateId": "policy_123"
-}
-```
-
-Client responses include the generated `clientId` and `clientSecret`. Treat the
-client secret as sensitive.
+Identity client and organization-provider configuration is handled through
+developer-portal admin surfaces, not API-key runtime endpoints.
