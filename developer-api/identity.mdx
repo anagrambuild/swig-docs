@@ -19,24 +19,6 @@ Some identity flows may return or consume flow-specific tokens after the
 API-key-guarded start point. Developer-portal admin endpoints are intentionally
 omitted from this reference.
 
-## Endpoints
-
-| Method | Path | Operation |
-| :--- | :--- | :--- |
-| `GET` | `/identity/api/providers` | List configured login providers for a client |
-| `GET` | `/identity/api/auth/start` | Start an OAuth-style auth flow |
-| `POST` | `/identity/api/auth/email/start` | Start first-party email OTP |
-| `POST` | `/identity/api/auth/sms/start` | Start first-party SMS OTP |
-| `POST` | `/identity/api/auth/passkey/start` | Start a WebAuthn passkey ceremony |
-| `POST` | `/identity/api/auth/passkey/finish` | Finish a WebAuthn passkey ceremony |
-| `POST` | `/identity/api/signup` | Create or find the user's Swig after identity proof |
-| `POST` | `/identity/api/role-add` | Add a role using an identity proof |
-| `POST` | `/identity/api/invite/initiate` | Create an invite for another authority |
-| `POST` | `/identity/api/invite/accept` | Accept an invite |
-| `POST` | `/identity/api/grant-access` | Grant access to an authority |
-| `POST` | `/identity/api/role-remove` | Remove a role |
-| `GET` | `/identity/api/policy/{policy_id}/client/{client_id}` | Read an identity policy for a client |
-
 ## Start OAuth auth
 
 `GET /identity/api/auth/start`
