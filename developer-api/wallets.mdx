@@ -16,20 +16,6 @@ Authorization: Bearer sk_your_api_key
 
 Developer-portal admin endpoints are intentionally omitted from this reference.
 
-## Endpoints
-
-| Method | Path | Operation |
-| :--- | :--- | :--- |
-| `POST` | `/wallet/swig/lookup` | Look up a Swig by `clientId`, `swigId`, and `network` |
-| `GET` | `/wallet/swig/status` | Check whether a Swig exists and whether signup/paymaster are enabled |
-| `GET` | `/wallet/policies/{policy_id}` | Read a wallet policy by id |
-| `POST` | `/wallet/swig/auth/check` | Check whether a Swig is authorized for a client |
-| `POST` | `/wallet/swig/session` | Create a Swig session for a role template |
-| `GET` | `/wallet/swig/{swig_config_address}/balance/usd` | Read total USD balance |
-| `GET` | `/wallet/swig/{swig_config_address}/token-balances` | List token balances |
-| `GET` | `/wallet/swig/{swig_config_address}/token-transactions` | List token transaction history |
-| `GET` | `/wallet/swig/{swig_config_address}/roles` | List roles and actions |
-
 ## List token balances
 
 `GET /wallet/swig/{swig_config_address}/token-balances`
