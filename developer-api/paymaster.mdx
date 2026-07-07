@@ -1,0 +1,117 @@
+---
+title: "Paymaster API"
+sidebarTitle: "Paymaster"
+---
+
+The Paymaster API signs or sponsors transactions and exposes paymaster balance
+and limit management.
+
+## Auth
+
+Runtime endpoints use API-key auth. Developer endpoints under
+`/paymaster/developer` use developer portal auth.
+
+## Runtime endpoints
+
+| Method | Path | Operation |
+| :--- | :--- | :--- |
+| `GET` | `/paymaster/test` | Validate the API key and return caller identity metadata |
+| `GET` | `/test` | Legacy alias for `/paymaster/test` |
+| `GET` | `/paymaster/balance` | Read paymaster balance for an API or IdP paymaster |
+| `POST` | `/paymaster/sign` | Add the paymaster signature to a transaction |
+| `POST` | `/sign` | Legacy alias for `/paymaster/sign` |
+| `POST` | `/paymaster/sponsor` | Sign and submit a transaction |
+| `POST` | `/sponsor` | Legacy alias for `/paymaster/sponsor` |
+
+## Developer endpoints
+
+| Method | Path | Operation |
+| :--- | :--- | :--- |
+| `GET` | `/paymaster/developer/organizations/{organization_id}/paymasters/{paymaster_id}/daily-limit` | Read paymaster daily limits |
+| `POST` | `/paymaster/developer/organizations/{organization_id}/paymasters/{paymaster_id}/daily-limit` | Update paymaster daily limits |
+| `GET` | `/paymaster/developer/organizations/{organization_id}/idp-paymaster` | Read the organization IdP paymaster |
+| `POST` | `/paymaster/developer/organizations/{organization_id}/idp-paymaster/get-or-create` | Get or create the organization IdP paymaster |
+
+## Get balance
+
+`GET /paymaster/balance`
+
+Query parameters:
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `network` | string | `devnet` or `mainnet`; empty defaults to `mainnet` |
+| `kind` | enum | `PAYMASTER_KIND_API` or `PAYMASTER_KIND_IDP` |
+
+Response:
+
+```json
+{
+  "configured": true,
+  "kind": "PAYMASTER_KIND_API",
+  "id": "paymaster_123",
+  "address": "PaymasterPublicKey",
+  "label": "Production paymaster",
+  "balanceLamports": "1000000000",
+  "balanceSol": 1
+}
+```
+
+## Sign a transaction
+
+`POST /paymaster/sign`
+
+```json
+{
+  "base58EncodedTransaction": "BASE58_TRANSACTION",
+  "network": "devnet"
+}
+```
+
+Response:
+
+```json
+{
+  "requestId": "req_123",
+  "signedTransaction": "BASE58_SIGNED_TRANSACTION"
+}
+```
+
+## Sponsor a transaction
+
+`POST /paymaster/sponsor`
+
+```json
+{
+  "base58EncodedTransaction": "BASE58_TRANSACTION",
+  "network": "devnet"
+}
+```
+
+Response:
+
+```json
+{
+  "requestId": "req_123",
+  "signature": "TransactionSignature",
+  "spentByPaymaster": "5000"
+}
+```
+
+## Update daily limits
+
+`POST /paymaster/developer/organizations/{organization_id}/paymasters/{paymaster_id}/daily-limit`
+
+```json
+{
+  "dailyApiThreshold": 1000,
+  "hasDailyApiThreshold": true,
+  "dailySolThresholdLamports": "1000000000",
+  "hasDailySolThreshold": true,
+  "dailyUserSolThresholdLamports": "10000000",
+  "hasDailyUserSolThreshold": true
+}
+```
+
+Daily limit responses return the updated paymaster limit state, including
+organization id, paymaster id, thresholds, and update time.

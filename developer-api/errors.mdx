@@ -1,0 +1,54 @@
+---
+title: "Errors"
+sidebarTitle: "Errors"
+---
+
+Developer API errors come from the gateway, service auth layer, or backend
+handler. The REST status is mapped from the underlying gRPC status.
+
+## Common HTTP statuses
+
+| Status | Meaning | Common cause |
+| :--- | :--- | :--- |
+| `400` | Bad request | Missing field, invalid enum, malformed public key, invalid transaction payload |
+| `401` | Unauthorized | Missing or invalid API key or developer credential |
+| `403` | Forbidden | Authenticated caller cannot access the organization or resource |
+| `404` | Not found | Resource id does not exist or is not visible to the caller |
+| `409` | Conflict | Resource already exists or current state does not allow the requested mutation |
+| `429` | Rate limited | API key or organization exceeded request limits |
+| `500` | Internal error | Backend handler or upstream service failed |
+| `503` | Unavailable | Dependency or backend service is unavailable |
+
+## Error body
+
+The gateway may return a gRPC-transcoded error body. The exact body can vary by
+service and gateway layer, so clients should key primarily on HTTP status and
+then log any returned `code`, `message`, or `details`.
+
+```json
+{
+  "code": 3,
+  "message": "invalid request",
+  "details": []
+}
+```
+
+Some legacy endpoints or SDK proxy routes may return an object-shaped error:
+
+```json
+{
+  "error": {
+    "code": "BAD_REQUEST",
+    "message": "Invalid request parameters"
+  }
+}
+```
+
+## Client handling
+
+- Retry `429` and transient `5xx` responses with exponential backoff.
+- Do not retry validation failures without changing the request.
+- Treat `401` as an API-key or credential configuration failure.
+- Treat `403` as an organization/resource access failure.
+- Log request ids and non-sensitive identifiers, but do not log API keys,
+  signed transactions, launch URLs, OTP values, or upstream provider payloads.

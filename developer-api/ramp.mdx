@@ -1,0 +1,109 @@
+---
+title: "Ramp API"
+sidebarTitle: "Ramp"
+---
+
+The Ramp API exposes the Meld-backed onramp/offramp flow used by Swig wallet
+integrations.
+
+## Auth
+
+Use an API key:
+
+```text
+Authorization: Bearer sk_your_api_key
+```
+
+## Endpoints
+
+| Method | Path | Operation |
+| :--- | :--- | :--- |
+| `GET` | `/wallet/api/ramp/options` | List supported countries, fiat currencies, crypto currencies, and payment methods |
+| `POST` | `/wallet/api/ramp/quote` | Quote a ramp transaction |
+| `POST` | `/wallet/api/ramp/sessions` | Create a hosted ramp session |
+| `GET` | `/wallet/api/ramp/transactions/{transaction_id}` | Read one ramp transaction |
+| `GET` | `/wallet/api/ramp/wallets/{wallet_id}/transactions` | List ramp transactions for a wallet |
+
+## Get options
+
+`GET /wallet/api/ramp/options`
+
+Query parameters:
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `organization_id` | string | Organization id |
+| `partner_application_id` | string | Optional partner application id |
+| `country_code` | string | Optional ISO country filter |
+| `fiat_currency_code` | string | Optional fiat currency filter |
+
+## Quote ramp
+
+`POST /wallet/api/ramp/quote`
+
+```json
+{
+  "customer": {
+    "organizationId": "org_123",
+    "swigUserId": "user_123",
+    "customerType": "RAMP_CUSTOMER_TYPE_INDIVIDUAL"
+  },
+  "wallet": {
+    "walletId": "wallet_123",
+    "walletAddress": "WalletPublicKey",
+    "network": "NETWORK_DEVNET"
+  },
+  "direction": "RAMP_DIRECTION_ONRAMP",
+  "sourceAmount": "100",
+  "sourceCurrencyCode": "USD",
+  "destinationCurrencyCode": "USDC",
+  "countryCode": "US",
+  "paymentMethodType": "RAMP_PAYMENT_METHOD_TYPE_CREDIT_DEBIT_CARD"
+}
+```
+
+The response returns one or more quotes with provider, exchange-rate, fee, and
+destination amount fields.
+
+## Create session
+
+`POST /wallet/api/ramp/sessions`
+
+```json
+{
+  "customer": {
+    "organizationId": "org_123",
+    "swigUserId": "user_123",
+    "customerType": "RAMP_CUSTOMER_TYPE_INDIVIDUAL"
+  },
+  "wallet": {
+    "walletId": "wallet_123",
+    "walletAddress": "WalletPublicKey",
+    "network": "NETWORK_DEVNET"
+  },
+  "direction": "RAMP_DIRECTION_ONRAMP",
+  "selectedQuoteId": "quote_123",
+  "sourceAmount": "100",
+  "sourceCurrencyCode": "USD",
+  "destinationCurrencyCode": "USDC",
+  "countryCode": "US",
+  "serviceProvider": "RAMP_SERVICE_PROVIDER_OTHER",
+  "redirectUrl": "https://app.example/ramp/return"
+}
+```
+
+The response includes `localSessionId`, Meld session/customer ids, and
+`launchUrl`. Treat launch URLs as user-specific session URLs.
+
+## List transactions
+
+`GET /wallet/api/ramp/wallets/{wallet_id}/transactions`
+
+Query parameters:
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `network` | enum | `NETWORK_DEVNET` or `NETWORK_MAINNET` |
+| `direction` | enum | Optional ramp direction |
+| `status` | enum | Optional transaction status |
+| `limit` | number | Optional result limit |

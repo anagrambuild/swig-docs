@@ -1,0 +1,81 @@
+---
+title: "Authentication and Conventions"
+sidebarTitle: "Authentication"
+---
+
+Developer API endpoints are REST mappings over Swig backend services.
+
+## Base URL
+
+Examples use:
+
+```text
+https://api.onswig.com
+```
+
+Use the environment-specific base URL provided for your project when working
+against dev, staging, or private deployments.
+
+## Authentication models
+
+| Auth model | Header | Used by |
+| :--- | :--- | :--- |
+| API key | `Authorization: Bearer sk_...` | Runtime API endpoints under `/transaction`, `/wallet`, `/wallet/api/ramp`, `/paymaster`, and `/identity/api` |
+| Developer portal auth | Portal session or developer-service credential | Tenant-admin endpoints under `/wallet/developer`, `/paymaster/developer`, and `/identity/admin` |
+
+Runtime API keys are created in the Developer Portal and should stay on your
+server. Do not expose an API key in browser or mobile client code.
+
+## JSON encoding
+
+The REST API uses protobuf JSON mapping.
+
+| Protobuf type | JSON form |
+| :--- | :--- |
+| `string`, `bool`, `double` | ordinary JSON string, boolean, or number |
+| `uint64`, `int64` | string or number depending on field and client encoder; use strings for large values when in doubt |
+| `bytes` | base64 string |
+| enum fields | enum names such as `NETWORK_DEVNET`, unless a field explicitly documents a legacy string |
+| `google.protobuf.Struct` | JSON object |
+
+## Request mapping
+
+Fields in the path template go in the URL. Remaining scalar fields on `GET`
+requests become query parameters.
+
+```bash
+curl "https://api.onswig.com/wallet/swig/ExampleConfig/token-transactions?network=NETWORK_DEVNET&limit=25" \
+  -H "Authorization: Bearer sk_your_api_key"
+```
+
+For `POST`, `PUT`, and `PATCH` endpoints, the request body is the full request
+message unless noted otherwise.
+
+```bash
+curl "https://api.onswig.com/transaction/transfer/sol" \
+  -H "Authorization: Bearer sk_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "network": "NETWORK_DEVNET",
+    "feePayer": "FeePayerPublicKey",
+    "swigAddress": "SwigConfigAddress",
+    "requesterAuthority": {
+      "ed25519": { "publicKey": "RequesterPublicKey" }
+    },
+    "destination": "DestinationPublicKey",
+    "lamports": "1000000"
+  }'
+```
+
+## Field casing
+
+The protobuf field names are snake_case. JSON transcoding accepts protobuf JSON
+names, which are normally camelCase. This docs section uses camelCase in JSON
+examples and snake_case in endpoint tables when referring to the source proto
+field.
+
+## Response shape
+
+Successful responses are JSON encodings of the protobuf response message. API
+errors are returned by the gateway or service as HTTP errors with a gRPC status
+mapping. See [Errors](/developer-api/errors).

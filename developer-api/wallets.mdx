@@ -1,0 +1,118 @@
+---
+title: "Wallet API"
+sidebarTitle: "Wallets"
+---
+
+The Wallet API reads Swig wallet state and exposes developer-portal wallet
+administration resources such as policies and closeable token accounts.
+
+## Auth
+
+Runtime wallet endpoints use API-key auth. Developer admin endpoints under
+`/wallet/developer` use developer portal auth.
+
+## Runtime wallet endpoints
+
+| Method | Path | Operation |
+| :--- | :--- | :--- |
+| `POST` | `/wallet/swig/lookup` | Look up a Swig by `clientId`, `swigId`, and `network` |
+| `GET` | `/wallet/swig/status` | Check whether a Swig exists and whether signup/paymaster are enabled |
+| `GET` | `/wallet/policies/{policy_id}` | Read a wallet policy by id |
+| `POST` | `/wallet/swig/auth/check` | Check whether a Swig is authorized for a client |
+| `POST` | `/wallet/swig/session` | Create a Swig session for a role template |
+| `GET` | `/wallet/swig/{swig_config_address}/balance/usd` | Read total USD balance |
+| `GET` | `/wallet/swig/{swig_config_address}/token-balances` | List token balances |
+| `GET` | `/wallet/swig/{swig_config_address}/token-transactions` | List token transaction history |
+| `GET` | `/wallet/swig/{swig_config_address}/roles` | List roles and actions |
+
+## Developer wallet endpoints
+
+| Method | Path | Operation |
+| :--- | :--- | :--- |
+| `GET` | `/wallet/developer/organizations/{organization_id}/wallets` | List organization wallets and token balances |
+| `GET` | `/wallet/developer/organizations/{organization_id}/policy-templates` | List reusable policy templates |
+| `GET` | `/wallet/developer/organizations/{organization_id}/policies` | List organization policies |
+| `GET` | `/wallet/developer/organizations/{organization_id}/policies/{policy_id}` | Read one policy |
+| `POST` | `/wallet/developer/organizations/{organization_id}/policies` | Create a policy |
+| `PATCH` | `/wallet/developer/organizations/{organization_id}/policies/{policy_id}` | Update a policy |
+| `DELETE` | `/wallet/developer/organizations/{organization_id}/policies/{policy_id}` | Delete a policy |
+
+## Closeable ATA endpoints
+
+| Method | Path | Operation |
+| :--- | :--- | :--- |
+| `GET` | `/wallet/developer/organizations/{organization_id}/closeable-signers` | List signers with closeable token accounts |
+| `GET` | `/wallet/developer/organizations/{organization_id}/closeable-atas` | List closeable ATAs for a signer |
+| `GET` | `/wallet/developer/organizations/{organization_id}/closeable-atas:summary` | Summarize closeable and pending ATA value |
+| `GET` | `/wallet/developer/organizations/{organization_id}/close-batches` | List submitted close batches |
+| `POST` | `/wallet/developer/organizations/{organization_id}/close-batches:lookup` | Look up ATAs for close batch signatures |
+| `POST` | `/wallet/developer/organizations/{organization_id}/close-ata-batches` | Submit close-ATA batches |
+| `POST` | `/wallet/developer/organizations/{organization_id}/resolve-pending-close-ata-batches` | Resolve pending close batches |
+
+## List token balances
+
+`GET /wallet/swig/{swig_config_address}/token-balances`
+
+Query parameters:
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `network` | enum | `NETWORK_DEVNET` or `NETWORK_MAINNET` |
+
+Response fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `swigConfigAddress` | string | Swig config address |
+| `walletAddress` | string | Swig wallet address |
+| `balances` | array | Token and native SOL balances |
+| `totalUsdValue` | number | Total USD value across returned balances |
+
+## List token transactions
+
+`GET /wallet/swig/{swig_config_address}/token-transactions`
+
+Query parameters:
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `network` | enum | `NETWORK_DEVNET` or `NETWORK_MAINNET` |
+| `limit` | number | Maximum number of transactions to return |
+
+## Create a policy
+
+`POST /wallet/developer/organizations/{organization_id}/policies`
+
+```json
+{
+  "name": "daily-transfer-policy",
+  "description": "Initial user can transfer a limited amount each day.",
+  "signer": {
+    "mode": "CREATE_POLICY_SIGNER_MODE_CREATE",
+    "name": "Initial user",
+    "authorityType": "POLICY_AUTHORITY_TYPE_ED25519",
+    "publicKey": "UserPublicKey"
+  },
+  "permission": {
+    "mode": "CREATE_POLICY_PERMISSION_MODE_CREATE",
+    "name": "Daily SOL transfer",
+    "actions": [
+      {
+        "type": "SolRecurringLimit",
+        "amount": "1000000000",
+        "windowSeconds": 86400
+      }
+    ]
+  }
+}
+```
+
+Policy create and update requests can include:
+
+| Field | Description |
+| :--- | :--- |
+| `signer` | Use an existing signer, create one, or skip signer creation |
+| `permission` | Use an existing permission or create a permission from actions |
+| `initialUser` | Initial wallet authority and key source |
+| `guardian` | Optional guardian authority and recovery delay |
+| `additionalUsers` | Extra authorities added when wallets are created from the policy |

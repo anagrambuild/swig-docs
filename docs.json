@@ -29,6 +29,7 @@
               "overview/protocol",
               "overview/protocol-sdk",
               "overview/developer-sdk",
+              "overview/developer-api",
               "overview/idp-sdk"
             ]
           }
@@ -235,6 +236,31 @@
                   "examples/dev-portal/subscriptions-billing"
                 ]
               }
+            ]
+          }
+        ]
+      },
+      {
+        "product": "Developer API",
+        "icon": "code",
+        "description": "REST reference for Swig's hosted developer and runtime APIs",
+        "groups": [
+          {
+            "group": "Start Here",
+            "pages": [
+              "developer-api/index",
+              "developer-api/authentication",
+              "developer-api/errors"
+            ]
+          },
+          {
+            "group": "Runtime APIs",
+            "pages": [
+              "developer-api/transactions",
+              "developer-api/wallets",
+              "developer-api/paymaster",
+              "developer-api/identity",
+              "developer-api/ramp"
             ]
           }
         ]
