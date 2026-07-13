@@ -12,26 +12,49 @@ auth checks, request validation, and response format.
 
 Main entrypoint:
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 import { SwigClient } from '@swig-wallet/developer-sdk/server/typescript';
 ```
 
-## 2. Next.js or NestJS proxy helpers
+```python Python
+from swig_developer_sdk import SwigClient
+```
+
+</CodeGroup>
+
+## 2. Proxy helpers
 
 Use the framework helpers when you want the API key to stay on the server, but
 you do not want to implement each prepare route yourself.
 
 Main entrypoints:
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 import { createSwigRouteHandlers } from '@swig-wallet/developer-sdk/next';
 import { createSwigNestHandler } from '@swig-wallet/developer-sdk/nest';
 ```
+
+```python Python
+from swig_developer_sdk import SwigProxyConfig, create_swig_proxy_handler
+
+handler = create_swig_proxy_handler(SwigProxyConfig())
+```
+
+</CodeGroup>
 
 ## 3. Browser client against your own proxy
 
 Use the browser client when your frontend should work with wallet handles and
 prepared results, while still calling only your own app routes.
+
+<Note>
+  The browser client is TypeScript-only. Python provides the equivalent
+  server-side proxy handler, while browser signing remains in your frontend.
+</Note>
 
 Main entrypoint:
 

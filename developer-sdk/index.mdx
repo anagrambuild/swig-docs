@@ -3,11 +3,36 @@ title: "What the Developer SDK Does"
 sidebarTitle: "What It Does"
 ---
 
-The Swig Developer SDK is the current hosted wallet SDK in
-`swig-ts/packages/developer-sdk`.
+The Swig Developer SDK is the current hosted wallet SDK for TypeScript and
+Python.
 
 Your server keeps the API key. Your app prepares wallet operations on the
 server. Your client signs only the prepared transactions it is responsible for.
+
+## Choose your language
+
+Install the SDK for your server runtime. The examples throughout these docs use
+the same TypeScript and Python selector.
+
+<Tabs>
+
+<Tab title="TypeScript">
+
+```bash
+bun add @swig-wallet/developer-sdk
+```
+
+</Tab>
+
+<Tab title="Python">
+
+```bash
+pip install swig-developer-sdk
+```
+
+</Tab>
+
+</Tabs>
 
 ## What you can build
 
@@ -18,7 +43,8 @@ With this SDK, you can:
 - run custom instruction execution against an existing wallet
 - add guardian-based recovery flows
 - submit signed transactions through Swig's sponsor path
-- expose all of that through Next.js, NestJS, or your own backend routes
+- expose all of that through Next.js, NestJS, a Python proxy handler, or your
+  own backend routes
 
 ## Use this SDK when
 
@@ -30,7 +56,7 @@ With this SDK, you can:
 ## Three ways to integrate
 
 - use the server SDK directly
-- use the built-in Next.js or NestJS proxy helpers
+- use a built-in TypeScript framework helper or the Python proxy handler
 - use the browser client against your own proxy routes
 
 ## What it is not

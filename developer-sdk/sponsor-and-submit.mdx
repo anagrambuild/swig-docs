@@ -14,13 +14,29 @@ them. There are two models:
 Use `swig.transactions.sponsor(...)` when your server should hand the signed
 transaction to Swig's sponsor path:
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 await swig.transactions.sponsor({
   transaction: signed.transaction,
   transactionEncoding: signed.transactionEncoding,
   network: signed.network,
 });
 ```
+
+```python Python
+from swig_developer_sdk import SponsorSignedTransactionArgs
+
+await swig.transactions.sponsor(
+    SponsorSignedTransactionArgs(
+        transaction=signed.transaction,
+        transaction_encoding=signed.transaction_encoding,
+        network=signed.network,
+    )
+)
+```
+
+</CodeGroup>
 
 The client still signs first when authority signatures are required. Sponsoring
 does not replace client authority signing.
@@ -37,10 +53,12 @@ Use it when:
 
 These categories tell you what can go straight to send or sponsor:
 
-- `clientAuthorityTransactions` must be client-signed first
-- `feePayerOnlyTransactions` can go straight to your fee payer or sponsor path
-- `operatorSignedTransactions` are already operator-signed and just need final
-  submission handling
+- `clientAuthorityTransactions` / `client_authority_transactions` must be
+  client-signed first
+- `feePayerOnlyTransactions` / `fee_payer_only_transactions` can go straight
+  to your fee payer or sponsor path
+- `operatorSignedTransactions` / `operator_signed_transactions` are already
+  operator-signed and just need final submission handling
 
 ## Portal admin vs runtime usage
 

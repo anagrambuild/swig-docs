@@ -20,12 +20,12 @@ The SDK breaks recovery into three stages:
 - later start, cancel, or execute a recovery
 
 If the policy is not recovery-enabled, treat the result as a normal wallet
-create flow and expect `recoverySetup` to be absent.
+create flow and expect `recoverySetup` / `recovery_setup` to be absent.
 
 ## Main SDK entrypoints
 
 - `swig.wallets.create(...)`
-- `wallet.recovery.prepareSetup(...)`
+- `wallet.recovery.prepareSetup(...)` / `wallet.recovery.prepare_setup(...)`
 - `wallet.recovery.start(...)`
 - `wallet.recovery.cancel(...)`
 - `wallet.recovery.execute(...)`

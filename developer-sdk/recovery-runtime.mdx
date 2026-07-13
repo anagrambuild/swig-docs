@@ -9,7 +9,9 @@ Once recovery is configured, the runtime flow is straightforward.
 
 The guardian starts a recovery with:
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const start = await wallet.recovery.start({
   feePayer,
   guardianPubkey: guardianPublicKey,
@@ -17,26 +19,55 @@ const start = await wallet.recovery.start({
 });
 ```
 
+```python Python
+start = await wallet.recovery.start(
+    fee_payer=fee_payer,
+    guardian_pubkey=guardian_public_key,
+    new_authority=new_authority_public_key,
+)
+```
+
+</CodeGroup>
+
 ## Cancel recovery
 
 The current wallet authority cancels a pending recovery with:
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const cancel = await wallet.recovery.cancel({
   feePayer,
 });
 ```
 
+```python Python
+cancel = await wallet.recovery.cancel(fee_payer=fee_payer)
+```
+
+</CodeGroup>
+
 ## Execute recovery
 
 After the configured delay, the guardian executes recovery with:
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const execute = await wallet.recovery.execute({
   feePayer,
   newAuthority: newAuthorityPublicKey,
 });
 ```
+
+```python Python
+execute = await wallet.recovery.execute(
+    fee_payer=fee_payer,
+    new_authority=new_authority_public_key,
+)
+```
+
+</CodeGroup>
 
 ## Signing model
 
@@ -49,9 +80,9 @@ const execute = await wallet.recovery.execute({
 The SDK can also read policy metadata through `swig.wallets.getPolicy(policyId)`.
 That is where it finds fields like:
 
-- `guardianEnabled`
-- `guardianAuthority`
-- `guardianDelaySeconds`
+- `guardianEnabled` / `guardian_enabled`
+- `guardianAuthority` / `guardian_authority`
+- `guardianDelaySeconds` / `guardian_delay_seconds`
 
 Most apps should still rely on `created.recoverySetup` as the setup source of
 truth and treat policy reads as supporting metadata.
