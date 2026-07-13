@@ -23,7 +23,9 @@ The hosted endpoints behind this flow are:
 
 ## Prepare the setup
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const wallet = swig.wallets.use(existingWallet);
 
 const setup = await wallet.recovery.prepareSetup({
@@ -34,20 +36,33 @@ const setup = await wallet.recovery.prepareSetup({
 });
 ```
 
+```python Python
+wallet = swig.wallets.use(existing_wallet)
+
+setup = await wallet.recovery.prepare_setup(
+    fee_payer=fee_payer,
+    requester_authority=requester_authority,
+    guardian_pubkey=guardian_public_key,
+    delay_seconds=86_400,
+)
+```
+
+</CodeGroup>
+
 This returns:
 
-- `setup.addAuthorityTransaction`
-- `setup.configureRecoveryTransaction`
+- `setup.addAuthorityTransaction` / `setup.add_authority_transaction`
+- `setup.configureRecoveryTransaction` / `setup.configure_recovery_transaction`
 
 ## Signing model
 
 | Transaction | Who signs |
 | :--- | :--- |
-| `setup.addAuthorityTransaction` | the wallet's current authority |
-| `setup.configureRecoveryTransaction` | the backend recovery operator already signs it |
+| `setup.addAuthorityTransaction` / `setup.add_authority_transaction` | the wallet's current authority |
+| `setup.configureRecoveryTransaction` / `setup.configure_recovery_transaction` | the backend recovery operator already signs it |
 
-After the current authority signs `addAuthorityTransaction`, the remaining work
-is fee-payer or sponsor submission for the configure transaction.
+After the current authority signs the add-authority transaction, the remaining
+work is fee-payer or sponsor submission for the configure transaction.
 
 ## When to use this page instead of initial recovery setup
 

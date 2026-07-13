@@ -11,7 +11,9 @@ instead if the wallet already exists and you are enabling recovery later.
 
 ## Create from a recovery-enabled policy
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const created = await swig.wallets.create({
   feePayer,
   policyId,
@@ -27,23 +29,46 @@ const created = await swig.wallets.create({
 });
 ```
 
+```python Python
+from swig_developer_sdk import RecoveryOptions
+
+created = await swig.wallets.create(
+    fee_payer=fee_payer,
+    policy_id=policy_id,
+    initial_user={
+        "secp256r1": {
+            "publicKey": passkey_public_key,
+        },
+    },
+    recovery=RecoveryOptions(
+        guardian_pubkey=guardian_public_key,
+        delay_seconds=86_400,
+    ),
+)
+```
+
+</CodeGroup>
+
 If the policy is recovery-enabled and the SDK can derive the requester
-authority and guardian information, `create(...)` returns `recoverySetup`.
+authority and guardian information, `create(...)` returns `recoverySetup` /
+`recovery_setup`.
 
 ## What `create(...)` gives you
 
 For a recovery-enabled flow, the important pieces are:
 
-- `creationTransaction`
-- `clientAuthorityTransactions`
-- `operatorSignedTransactions`
-- `recoverySetup`
+- `creationTransaction` / `creation_transaction`
+- `clientAuthorityTransactions` / `client_authority_transactions`
+- `operatorSignedTransactions` / `operator_signed_transactions`
+- `recoverySetup` / `recovery_setup`
 
 ## Prepare the follow-up setup
 
 After wallet creation is submitted, prepare recovery setup:
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const wallet = swig.wallets.use(created.wallet);
 
 const setup = await wallet.recovery.prepareSetup({
@@ -52,22 +77,38 @@ const setup = await wallet.recovery.prepareSetup({
 });
 ```
 
+```python Python
+wallet = swig.wallets.use(created.wallet)
+assert created.recovery_setup is not None
+
+setup = await wallet.recovery.prepare_setup(
+    fee_payer=fee_payer,
+    guardian_pubkey=created.recovery_setup.guardian_pubkey,
+    requester_authority=created.recovery_setup.requester_authority,
+    delay_seconds=created.recovery_setup.delay_seconds,
+    target_role_id=created.recovery_setup.target_role_id,
+)
+```
+
+</CodeGroup>
+
 That returns:
 
-- `addAuthorityTransaction`
-- `configureRecoveryTransaction`
+- `addAuthorityTransaction` / `add_authority_transaction`
+- `configureRecoveryTransaction` / `configure_recovery_transaction`
 
 ## Who signs what
 
 | Transaction | Who signs |
 |-------------|-----------|
-| `creationTransaction` | fee payer or sponsor path |
-| `addAuthorityTransaction` | current wallet authority |
-| `configureRecoveryTransaction` | backend recovery operator already signs it |
+| `creationTransaction` / `creation_transaction` | fee payer or sponsor path |
+| `addAuthorityTransaction` / `add_authority_transaction` | current wallet authority |
+| `configureRecoveryTransaction` / `configure_recovery_transaction` | backend recovery operator already signs it |
 
-Do not authority-sign `operatorSignedTransactions` again.
+Do not authority-sign `operatorSignedTransactions` /
+`operator_signed_transactions` again.
 
 ## Advanced option
 
-`targetRoleId` is available when you intentionally want recovery bound to a
-specific non-default role.
+`targetRoleId` / `target_role_id` is available when you intentionally want
+recovery bound to a specific non-default role.

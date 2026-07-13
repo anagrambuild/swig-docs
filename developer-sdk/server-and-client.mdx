@@ -26,9 +26,17 @@ The server owns:
 
 The main entrypoint is:
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 import { SwigClient } from '@swig-wallet/developer-sdk/server/typescript';
 ```
+
+```python Python
+from swig_developer_sdk import SwigClient
+```
+
+</CodeGroup>
 
 ## What reaches the client
 
@@ -40,23 +48,27 @@ directly.
 
 Prepared responses are categorized so your app knows what to do next:
 
-| Field | What your app should do |
+| TypeScript / Python | What your app should do |
 |-------|-------------------------|
 | `transactions` | submit these in order |
-| `clientAuthorityTransactions` | get a client authority signature first |
-| `feePayerOnlyTransactions` | send or sponsor without client authority signing |
-| `operatorSignedTransactions` | submit as-is after fee payer or sponsor handling |
+| `clientAuthorityTransactions` / `client_authority_transactions` | get a client authority signature first |
+| `feePayerOnlyTransactions` / `fee_payer_only_transactions` | send or sponsor without client authority signing |
+| `operatorSignedTransactions` / `operator_signed_transactions` | submit as-is after fee payer or sponsor handling |
 
 For recovery-enabled wallet creation, `create(...)` also returns
-`creationTransaction`, `addAuthorityTransaction`, `configureRecoveryTransaction`,
-and sometimes `recoverySetup`.
+`creationTransaction` / `creation_transaction`, `addAuthorityTransaction` /
+`add_authority_transaction`, `configureRecoveryTransaction` /
+`configure_recovery_transaction`, and sometimes `recoverySetup` /
+`recovery_setup`.
 
 ## Wallet handles
 
 The server-side wallet handle is how you move from "I know this wallet" to "I
 want to prepare actions for it":
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const wallet = swig.wallets.use({
   swigConfigAddress,
   walletAddress,
@@ -68,6 +80,19 @@ const wallet = swig.wallets.use({
 });
 ```
 
+```python Python
+wallet = swig.wallets.use(
+    swig_config_address,
+    requester_authority={
+        "ed25519": {
+            "publicKey": user_public_key,
+        },
+    },
+)
+```
+
+</CodeGroup>
+
 If you already have an IDP session, the SDK also supports
 `swig.wallets.fromIdpSession(session)`.
 
@@ -75,10 +100,12 @@ If you already have an IDP session, the SDK also supports
 
 The client package is intentionally small:
 
-- `signPreparedTransaction(...)` for normal Ed25519 transaction signing
-- `signPreparedSwigTransaction(...)` and
-  `signPreparedSwigTransactions(...)` for passkey-backed Swig signature flows
-- passkey signing helpers such as `createSecp256r1PasskeySigningFn(...)`
+- `signPreparedTransaction(...)` / `sign_prepared_transaction(...)` for normal
+  Ed25519 transaction signing
+- `signPreparedSwigTransaction(...)` / `sign_prepared_swig_transaction(...)`
+  for passkey-backed Swig signature flows
+- passkey signing helpers such as `createSecp256r1PasskeySigningFn(...)` /
+  `create_secp256r1_passkey_signing_fn(...)`
 
 Use the browser and framework pages next if you want this split without writing
 all of the proxy glue yourself.

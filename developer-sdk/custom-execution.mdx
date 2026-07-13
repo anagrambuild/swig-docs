@@ -19,7 +19,9 @@ Use it when:
 
 ## Example
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const prepared = await wallet.execute({
   instructions: [
     {
@@ -40,6 +42,29 @@ const prepared = await wallet.execute({
 });
 ```
 
+```python Python
+from swig_developer_sdk import SolanaAccountMeta, SolanaInstructionInput
+
+prepared = await wallet.execute(
+    instructions=(
+        SolanaInstructionInput(
+            program_id=target_program_id,
+            accounts=(
+                SolanaAccountMeta(
+                    pubkey=writable_account,
+                    is_writable=True,
+                ),
+                SolanaAccountMeta(pubkey=readonly_account),
+            ),
+            data=instruction_data,
+        ),
+    ),
+    address_lookup_table_accounts=(lookup_table_address,),
+)
+```
+
+</CodeGroup>
+
 The SDK normalizes the instruction input and sends it to the hosted execute
 endpoint for preparation.
 
@@ -47,7 +72,7 @@ endpoint for preparation.
 
 This is still a prepared transaction result. That means:
 
-- your app still checks `signatureRequests`
+- your app still checks `signatureRequests` / `signature_requests`
 - the client still signs if required
 - your app still chooses direct submission or sponsor submission
 

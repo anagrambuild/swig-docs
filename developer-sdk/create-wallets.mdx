@@ -10,16 +10,18 @@ shows up clearly.
 
 You can create a wallet either:
 
-- from a policy with `policyId`
-- from an inline `initialUser`
+- from a policy with `policyId` / `policy_id`
+- from an inline `initialUser` / `initial_user`
 
-If `policyId` is omitted, the backend can create a no-recovery wallet from the
-inline authority you provide. Common authority shapes are `ed25519`,
+If the policy ID is omitted, the backend can create a no-recovery wallet from
+the inline authority you provide. Common authority shapes are `ed25519`,
 `secp256k1`, and `secp256r1`.
 
 ## Basic create flow
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const created = await swig.wallets.create({
   feePayer,
   initialUser: {
@@ -30,9 +32,24 @@ const created = await swig.wallets.create({
 });
 ```
 
+```python Python
+created = await swig.wallets.create(
+    fee_payer=fee_payer,
+    initial_user={
+        "ed25519": {
+            "publicKey": user_public_key,
+        },
+    },
+)
+```
+
+</CodeGroup>
+
 Passkey-backed creation works the same way with `secp256r1`:
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const created = await swig.wallets.create({
   feePayer,
   initialUser: {
@@ -43,9 +60,24 @@ const created = await swig.wallets.create({
 });
 ```
 
+```python Python
+created = await swig.wallets.create(
+    fee_payer=fee_payer,
+    initial_user={
+        "secp256r1": {
+            "publicKey": passkey_public_key,
+        },
+    },
+)
+```
+
+</CodeGroup>
+
 EVM-backed creation works the same way with `secp256k1`:
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const created = await swig.wallets.create({
   feePayer,
   initialUser: {
@@ -56,17 +88,30 @@ const created = await swig.wallets.create({
 });
 ```
 
+```python Python
+created = await swig.wallets.create(
+    fee_payer=fee_payer,
+    initial_user={
+        "secp256k1": {
+            "publicKey": evm_public_key,
+        },
+    },
+)
+```
+
+</CodeGroup>
+
 ## What you get back
 
 The result is not just one transaction. It is a categorized create plan:
 
-| Field | Meaning |
+| TypeScript / Python | Meaning |
 |-------|---------|
 | `wallet` | the config address and wallet address |
 | `transactions` | full ordered transaction list |
-| `clientAuthorityTransactions` | transactions the initial authority must sign |
-| `operatorSignedTransactions` | transactions already signed by the backend operator |
-| `feePayerOnlyTransactions` | transactions that only need fee payer or sponsor handling |
+| `clientAuthorityTransactions` / `client_authority_transactions` | transactions the initial authority must sign |
+| `operatorSignedTransactions` / `operator_signed_transactions` | transactions already signed by the backend operator |
+| `feePayerOnlyTransactions` / `fee_payer_only_transactions` | transactions that only need fee payer or sponsor handling |
 
 For plain non-recovery creates, this usually collapses to one main creation
 transaction plus any client authority signing the create flow needs.
@@ -74,22 +119,23 @@ transaction plus any client authority signing the create flow needs.
 ## Recovery-enabled create flows
 
 If the policy is recovery-enabled and the SDK can derive both the requester
-authority and guardian information, `create(...)` also returns
-`recoverySetup`.
+authority and guardian information, `create(...)` also returns `recoverySetup`
+/ `recovery_setup`.
 
 That setup plan is not the same thing as completed recovery setup. It is the
-follow-up input for `wallet.recovery.prepareSetup(...)`.
+follow-up input for `wallet.recovery.prepareSetup(...)` /
+`wallet.recovery.prepare_setup(...)`.
 
 ## What to submit
 
 Always submit the prepared `transactions` in order. Do not reorder the list.
 
-If `clientAuthorityTransactions.length > 0`, those transactions must be signed
-by the client authority before submission.
+If the client-authority transaction collection is not empty, those transactions
+must be signed by the client authority before submission.
 
-If `operatorSignedTransactions.length > 0`, treat them as already operator
-signed. They still need fee payer or sponsor submission, but not another
-authority signature.
+If the operator-signed transaction collection is not empty, treat those
+transactions as already operator signed. They still need fee payer or sponsor
+submission, but not another authority signature.
 
 ## What to read next
 

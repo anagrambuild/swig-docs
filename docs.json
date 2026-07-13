@@ -170,7 +170,7 @@
       {
         "product": "Developer SDK",
         "icon": "building",
-        "description": "Prepare wallet creation, transfers, swaps, recovery, and sponsored submission on your server",
+        "description": "Prepare wallet creation, transfers, swaps, recovery, and sponsored submission with TypeScript or Python",
         "groups": [
           {
             "group": "Start Here",

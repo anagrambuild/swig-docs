@@ -1,6 +1,6 @@
 ---
-title: "Use Next.js or NestJS"
-sidebarTitle: "Use Next.js or NestJS"
+title: "Use Proxy Helpers"
+sidebarTitle: "Use Proxy Helpers"
 ---
 
 If your app only needs a safe server-side proxy around transaction preparation,
@@ -43,6 +43,27 @@ export class SwigController {
 }
 ```
 
+## Python
+
+Create one handler, then adapt your framework's request and response objects at
+the route boundary:
+
+```python
+from swig_developer_sdk import SwigProxyConfig, create_swig_proxy_handler
+
+swig_handler = create_swig_proxy_handler(
+    SwigProxyConfig(api_key=swig_api_key, network="devnet")
+)
+
+response = await swig_handler.handle(
+    method="POST",
+    path="/transfer/sol",
+    body=request_body,
+)
+```
+
+Return `response.body` with `response.status` from your framework route.
+
 ## Routes the helpers cover
 
 The framework helpers cover:
@@ -57,6 +78,11 @@ The framework helpers cover:
 
 Once your proxy exists, browser code can use `SwigBrowserClient` and call only
 your local app routes:
+
+<Note>
+  `SwigBrowserClient` is TypeScript-only. Python applications expose the proxy
+  server-side and use their normal frontend stack for browser signing.
+</Note>
 
 ```typescript
 import { SwigBrowserClient } from '@swig-wallet/developer-sdk/browser';

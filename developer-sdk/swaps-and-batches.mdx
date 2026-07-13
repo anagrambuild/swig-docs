@@ -7,7 +7,9 @@ Use the built-in helpers when your app needs more than one simple transfer.
 
 ## Jupiter swaps
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const preparedSwap = await wallet.swap.jupiter({
   feePayer,
   inputMint,
@@ -19,6 +21,20 @@ const preparedSwap = await wallet.swap.jupiter({
 });
 ```
 
+```python Python
+prepared_swap = await wallet.swap.jupiter(
+    fee_payer=fee_payer,
+    input_mint=input_mint,
+    output_mint=output_mint,
+    amount=10_000,
+    slippage_bps=100,
+    destination_account=destination_account,
+    wrap_and_unwrap_sol=True,
+)
+```
+
+</CodeGroup>
+
 `destinationAccount` is the recipient owner. The backend resolves the output
 ATA for SPL outputs or the native destination for unwrapped SOL.
 
@@ -27,7 +43,9 @@ ATA for SPL outputs or the native destination for unwrapped SOL.
 Use `wallet.prepare(...)` when you want the backend to shape a batch instead of
 calling single-operation helpers one by one.
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 const prepared = await wallet.prepare({
   feePayer,
   operations: [
@@ -45,6 +63,27 @@ const prepared = await wallet.prepare({
   ],
 });
 ```
+
+```python Python
+from swig_developer_sdk import TransferSolOperation, TransferTokenOperation
+
+prepared = await wallet.prepare(
+    fee_payer=fee_payer,
+    operations=(
+        TransferSolOperation(
+            destination=destination,
+            amount=1_000_000,
+        ),
+        TransferTokenOperation(
+            mint=mint,
+            destination_owner=destination_owner,
+            amount=10_000,
+        ),
+    ),
+)
+```
+
+</CodeGroup>
 
 ## When to use this page
 
