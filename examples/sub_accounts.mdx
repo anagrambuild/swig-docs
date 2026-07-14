@@ -10,9 +10,15 @@ You can find complete working examples in the Swig repository:
 
 ## What are Sub Accounts?
 
-Sub accounts in Swig allow an authority to create and manage a single sub account address and perform any actions on behalf of that sub account. This is a super high level of permission so use with care. It works for use cases like portfolio management, where you want to allow an unlimited complexity of actions on behalf of a single address, but you don't want to give the authority control over all the assets of the swig. The root authority can always pull funds (SOL and tokens) from the sub account back to the main Swig wallet.
+Sub accounts in Swig allow an authority to create and manage a dedicated
+address and perform any actions on its behalf. This broad permission fits use
+cases like portfolio management, where the authority can perform complex
+actions while remaining scoped to the sub account's assets. The root authority
+can always pull SOL and tokens from the sub account back to the main Swig wallet.
 
-A great example of this is Breeze, Anagram's onchain yield optimizer. Breeze can optimize the yield of a user's portfolio without giving them control over their whole swig.
+A great example of this is Breeze, Anagram's onchain yield optimizer. Breeze can
+optimize the yield of a user's portfolio while its authority remains scoped to
+the sub account.
 
 ## How Sub Accounts Work
 

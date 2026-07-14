@@ -72,7 +72,7 @@ export function App() {
 - session persistence defaults to `expo-secure-store`
 - the default network is devnet unless you override `network`
 
-## What to avoid
+## Supported mobile boundary
 
-Do not embed the isolated host in a `WebView`. The supported mobile path is a
-system auth session so the host app cannot inspect the auth page.
+Open the isolated host through a system auth session. This keeps the auth page
+outside the host app's inspection boundary.

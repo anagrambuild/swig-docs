@@ -59,12 +59,14 @@ With this SDK, you can:
 - use a built-in TypeScript framework helper or the Python proxy handler
 - use the browser client against your own proxy routes
 
-## What it is not
+## Choose the matching SDK surface
 
-- It is not the direct protocol SDK. Use `@swig-wallet/classic`,
-  `@swig-wallet/kit`, or `swig-sdk` when you want direct protocol integration.
-- It is not a browser-direct API client. The API key belongs on the server.
-- It is not the richer legacy policy-helper client in `@swig-wallet/developer`.
+- Use `@swig-wallet/developer-sdk` for hosted wallet preparation and keep its
+  API key on the server.
+- Use `@swig-wallet/classic`, `@swig-wallet/kit`, or `swig-sdk` for direct
+  protocol integration.
+- Keep existing `@swig-wallet/developer` integrations when they depend on its
+  legacy policy helpers.
 
 ## Where to go next
 

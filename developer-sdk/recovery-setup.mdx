@@ -105,8 +105,8 @@ That returns:
 | `addAuthorityTransaction` / `add_authority_transaction` | current wallet authority |
 | `configureRecoveryTransaction` / `configure_recovery_transaction` | backend recovery operator already signs it |
 
-Do not authority-sign `operatorSignedTransactions` /
-`operator_signed_transactions` again.
+Treat `operatorSignedTransactions` / `operator_signed_transactions` as already
+authority-signed and submit them through the fee payer or sponsor path.
 
 ## Advanced option
 

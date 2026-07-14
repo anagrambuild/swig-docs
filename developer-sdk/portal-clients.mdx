@@ -14,7 +14,7 @@ They overlap, but they are not the same product.
 | `@swig-wallet/developer` | legacy | existing portal integrations that depend on rich helper models | `client.getPolicy()` returns `Policy`, `Actions`, and `AuthorityInfo` helpers | `createWallet()` only | throws `SwigError` |
 | `@swig-wallet/api` | low-level | direct portal and paymaster endpoint access | `client.policies.get()` returns raw policy JSON | raw portal and paymaster calls | returns `{ data, error }` |
 
-## Start here unless you have a reason not to
+## Recommended starting point
 
 Use `@swig-wallet/developer-sdk` first if your goal is to:
 

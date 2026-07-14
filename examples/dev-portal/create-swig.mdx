@@ -125,7 +125,9 @@ If you've already created a signer in the Developer Portal dashboard (or your po
 You can supply a `walletAddress` (the public key) and `walletType` (the authority type) at creation time instead of using a signer ID. This lets you skip creating a signer in the dashboard entirely -- useful when your application already knows the user's public key and authority type.
 
 <Info>
-  You must use one approach or the other -- provide either `signerId` **or** the `walletAddress` + `walletType` pair. If your policy already has a signer attached and you don't pass either, the policy's signer is used by default.
+  Provide either `signerId` **or** the `walletAddress` + `walletType` pair. When
+  your policy already has a signer attached and both inputs are omitted, the
+  policy's signer is used by default.
 </Info>
 
 ### Supported Wallet Types
@@ -395,7 +397,7 @@ When you omit `paymasterPubkey`, the API builds the create-swig transaction but 
 This is useful when:
 - Your users pay their own transaction fees
 - You want to collect multiple signatures before sending
-- You don't want to set up or fund a paymaster
+- You prefer to manage fee payment directly
 
 ### Using the REST API (No Paymaster)
 

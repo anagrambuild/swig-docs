@@ -31,7 +31,7 @@ The protocol has session-capable variants for:
 - Secp256r1
 - ProgramExec
 
-Sessions do not create a new permission model. They reuse the same role and
+Sessions keep the existing permission model. They reuse the same role and
 action set with temporary authentication material.
 
 ## When to use sessions
@@ -42,7 +42,8 @@ Use sessions when you want:
 - shorter-lived credentials
 - reduced need to re-present the base authority on every action
 
-Do not use sessions as a substitute for designing the right role and action set.
+Design the role and action set first, then use sessions as temporary
+authentication material for that permission model.
 
 ## How sub-accounts work
 
@@ -82,8 +83,7 @@ Use sub-accounts when you want:
 - the ability to disable a role's balance bucket without changing the whole
   wallet
 
-## Common integration mistake
+## Relationship to the parent wallet
 
-Do not treat a sub-account as an unrelated external account. It is still part
-of the parent wallet's role model, and its validity depends on the stored
-`SubAccount` action metadata.
+A sub-account remains part of the parent wallet's role model, and its validity
+depends on the stored `SubAccount` action metadata.

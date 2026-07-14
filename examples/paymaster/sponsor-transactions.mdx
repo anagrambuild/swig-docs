@@ -20,7 +20,8 @@ The paymaster client provides several methods for working with transactions:
 
 ### Legacy Transactions (Classic Only)
 
-Legacy transactions are simpler but don't support address lookup tables:
+Use legacy transactions for fixed account lists and versioned transactions for
+address lookup table support:
 
 ```typescript
 import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
