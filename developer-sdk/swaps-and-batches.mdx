@@ -41,7 +41,8 @@ ATA for SPL outputs or the native destination for unwrapped SOL.
 ## Grouped operations
 
 Use `wallet.prepare(...)` when you want the backend to shape a batch instead of
-calling single-operation helpers one by one.
+calling single-operation helpers one by one. Both SDKs send this request to
+`POST /transaction/prepare/batch`.
 
 <CodeGroup dropdown>
 

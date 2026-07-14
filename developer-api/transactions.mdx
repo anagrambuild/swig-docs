@@ -39,9 +39,10 @@ transactions.
 | `kind` | enum | Prepared transaction category |
 | `signatureRequests` | array | Client authority signatures required before submission |
 
-## Prepare operations
+## Prepare a batch
 
-`POST /transaction/prepare` batches one or more operations for an existing Swig.
+`POST /transaction/prepare/batch` batches one or more supported operations for
+an existing Swig.
 
 ```json
 {
@@ -61,6 +62,38 @@ transactions.
   ]
 }
 ```
+
+## Prepare custom instructions
+
+`POST /transaction/prepare/custom` builds one prepared Swig transaction from
+the Solana instructions supplied by the application.
+
+```json
+{
+  "network": "NETWORK_DEVNET",
+  "feePayer": "FeePayerPublicKey",
+  "swigAddress": "SwigConfigAddress",
+  "requesterAuthority": {
+    "ed25519": { "publicKey": "RequesterPublicKey" }
+  },
+  "instructions": [
+    {
+      "programId": "ProgramPublicKey",
+      "accounts": [
+        {
+          "pubkey": "WritableAccountPublicKey",
+          "isWritable": true
+        }
+      ],
+      "data": "Base64EncodedInstructionData"
+    }
+  ],
+  "addressLookupTableAccounts": ["LookupTablePublicKey"]
+}
+```
+
+The response is prepared only. The application still supplies any requested
+client authority signature and chooses direct or sponsored submission.
 
 ## Create a wallet
 
