@@ -10,7 +10,7 @@ They overlap, but they are not the same product.
 
 | Package | Status | Best use | Policy access | Transaction access | Response model |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `@swig-wallet/developer-sdk` | current | prepare-first hosted wallet flows | `swig.wallets.getPolicy()` returns raw policy metadata | wallet creation, transfers, swaps, custom execution, recovery, sponsor flow | prepared transactions and signing metadata |
+| `@swig-wallet/developer-sdk` | current | prepare-first hosted wallet flows | `swig.wallets.getPolicy()` returns raw policy metadata | wallet creation, transfers, swaps, custom transaction preparation, recovery, sponsor flow | prepared transactions and signing metadata |
 | `@swig-wallet/developer` | legacy | existing portal integrations that depend on rich helper models | `client.getPolicy()` returns `Policy`, `Actions`, and `AuthorityInfo` helpers | `createWallet()` only | throws `SwigError` |
 | `@swig-wallet/api` | low-level | direct portal and paymaster endpoint access | `client.policies.get()` returns raw policy JSON | raw portal and paymaster calls | returns `{ data, error }` |
 

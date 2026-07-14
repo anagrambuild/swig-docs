@@ -1,15 +1,16 @@
 ---
-title: "Run Custom Instructions"
-sidebarTitle: "Custom Execution"
+title: "Build Custom Transactions"
+sidebarTitle: "Custom Transactions"
 ---
 
-The built-in helpers cover common flows. `wallet.execute(...)` is the escape
-hatch when you still want hosted preparation but need your own instruction set.
+The built-in helpers cover common flows. Use `wallet.buildTransaction(...)` or
+`wallet.build_transaction(...)` when you still want hosted preparation but need
+your own instruction set.
 
 ## What it does
 
-`wallet.execute(...)` prepares a transaction for an existing Swig wallet from a
-list of Solana instructions you provide.
+The custom transaction builder prepares a transaction for an existing Swig
+wallet from a list of Solana instructions you provide.
 
 Use it when:
 
@@ -22,7 +23,8 @@ Use it when:
 <CodeGroup dropdown>
 
 ```typescript TypeScript
-const prepared = await wallet.execute({
+const prepared = await wallet.buildTransaction({
+  feePayer,
   instructions: [
     {
       programId: targetProgramId,
@@ -45,7 +47,8 @@ const prepared = await wallet.execute({
 ```python Python
 from swig_developer_sdk import SolanaAccountMeta, SolanaInstructionInput
 
-prepared = await wallet.execute(
+prepared = await wallet.build_transaction(
+    fee_payer=fee_payer,
     instructions=(
         SolanaInstructionInput(
             program_id=target_program_id,
@@ -65,8 +68,9 @@ prepared = await wallet.execute(
 
 </CodeGroup>
 
-The SDK normalizes the instruction input and sends it to the hosted execute
-endpoint for preparation.
+The SDK normalizes the instruction input and sends it to
+`POST /transaction/prepare/custom`. The API prepares the transaction; it does
+not submit it or insert the client authority signature.
 
 ## What still applies
 
