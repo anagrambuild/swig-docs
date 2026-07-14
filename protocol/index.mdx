@@ -61,7 +61,6 @@ Use the rest of the Protocol section in this order:
 ## Where `swig-wallet` fits
 
 The `swig-wallet` workspace includes the Solana program plus the protocol-facing
-Rust crates, instruction builders, state types, assertions, and CLI. If you are
-working above this layer, you usually do not need to understand every Rust
-module. You do need to understand the account model, `role_id`, and the
-execution rules.
+Rust crates, instruction builders, state types, assertions, and CLI. Higher-level
+SDK surfaces abstract the individual Rust modules. Direct integrations should
+focus on the account model, `role_id`, and execution rules.

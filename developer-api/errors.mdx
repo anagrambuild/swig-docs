@@ -47,8 +47,9 @@ Some legacy endpoints or SDK proxy routes may return an object-shaped error:
 ## Client handling
 
 - Retry `429` and transient `5xx` responses with exponential backoff.
-- Do not retry validation failures without changing the request.
+- Retry validation failures only after changing the request.
 - Treat `401` as an API-key or credential configuration failure.
 - Treat `403` as an organization/resource access failure.
-- Log request ids and non-sensitive identifiers, but do not log API keys,
-  signed transactions, launch URLs, OTP values, or upstream provider payloads.
+- Log only request ids and non-sensitive identifiers. Keep API keys, signed
+  transactions, launch URLs, OTP values, and upstream provider payloads out of
+  logs.
