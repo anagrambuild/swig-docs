@@ -13,9 +13,9 @@ You can create a wallet either:
 - from a policy with `policyId` / `policy_id`
 - from an inline `initialUser` / `initial_user`
 
-If the policy ID is omitted, the backend can create a no-recovery wallet from
-the inline authority you provide. Common authority shapes are `ed25519`,
-`secp256k1`, and `secp256r1`.
+If the policy ID is omitted, the backend creates the wallet from the inline
+authority you provide. Supported authority shapes are `ed25519`, `secp256k1`,
+and `secp256r1`.
 
 ## Basic create flow
 
@@ -107,43 +107,46 @@ The result is not just one transaction. It is a categorized create plan:
 
 | TypeScript / Python | Meaning |
 |-------|---------|
-| `wallet` | the config address and wallet address |
+| `wallet` | the config address, wallet address, and resolved network |
 | `transactions` | full ordered transaction list |
 | `clientAuthorityTransactions` / `client_authority_transactions` | transactions the initial authority must sign |
 | `operatorSignedTransactions` / `operator_signed_transactions` | transactions already signed by the backend operator |
 | `feePayerOnlyTransactions` / `fee_payer_only_transactions` | transactions that only need fee payer or sponsor handling |
+| `creationTransaction` / `creation_transaction` | the create transaction itself |
 
-For plain non-recovery creates, this usually collapses to one main creation
-transaction plus any client authority signing the create flow needs.
+For a plain create, this usually collapses to one creation transaction plus any
+client authority signing the create flow needs.
 
-## Recovery-enabled create flows
+## Networks
 
-If the policy is recovery-enabled and the SDK can derive both the requester
-authority and guardian information, `create(...)` also returns `recoverySetup`
-/ `recovery_setup`.
-
-That setup plan is not the same thing as completed recovery setup. It is the
-follow-up input for `wallet.recovery.prepareSetup(...)` /
-`wallet.recovery.prepare_setup(...)`.
+TypeScript resolves the network from the call, then the client default. Python
+requires a network to be resolvable at create time, either as `network=` on the
+call or as the client's default.
 
 ## What to submit
 
 Always submit the prepared `transactions` exactly in the returned order.
 
-If the client-authority transaction collection is not empty, those transactions
-must be signed by the client authority before submission.
+If the client-authority collection is not empty, those transactions must be
+signed by the client authority before submission.
 
-If the operator-signed transaction collection is not empty, treat those
-transactions as already operator signed. They still need fee payer or sponsor
-submission, but not another authority signature.
+If the operator-signed collection is not empty, treat those transactions as
+already operator signed. They still need fee payer or sponsor submission, but
+not another authority signature.
 
 ## What to read next
 
-- Use [Transfers and Swaps](/developer-sdk/transfers-swaps-and-signing) for
-  wallet actions after create
-- Use [Recovery](/developer-sdk/recovery-flows) if the created wallet should
-  support a guardian flow
-- Use [Client Signing](/developer-sdk/client-signing) for Ed25519, passkey, and
-  EVM client signatures
-- Use [Sponsor & Submit](/developer-sdk/sponsor-and-submit) if your app wants
-  Swig-backed fee sponsorship
+<CardGroup cols={2}>
+  <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-swaps-and-signing">
+    Wallet actions after create
+  </Card>
+  <Card title="Client Signing" icon="signature" href="/developer-sdk/client-signing">
+    Ed25519, passkey, and EVM client signatures
+  </Card>
+  <Card title="Read Wallet State" icon="magnifying-glass" href="/developer-sdk/wallet-reads">
+    Balances, token activity, and roles
+  </Card>
+  <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">
+    Swig-backed fee sponsorship
+  </Card>
+</CardGroup>

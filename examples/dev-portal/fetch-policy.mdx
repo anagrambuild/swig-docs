@@ -190,7 +190,7 @@ const policy = await getPolicy('clx1234567890abcdef');
 
 If your app already uses `@swig-wallet/developer-sdk` for prepared wallet
 operations, you can read the same raw policy metadata the SDK uses during
-wallet creation and recovery flows:
+wallet creation:
 
 ```typescript
 import { SwigClient } from '@swig-wallet/developer-sdk/server/typescript';
@@ -202,9 +202,10 @@ const swig = new SwigClient({
 
 const policy = await swig.wallets.getPolicy('clx1234567890abcdef');
 
+console.log(policy.id);
 console.log(policy.name);
-console.log(policy.guardianEnabled);
-console.log(policy.guardianDelaySeconds);
+console.log(policy.description);
+console.log(policy.authority);
 console.log(policy.actions);
 ```
 

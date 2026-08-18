@@ -170,7 +170,7 @@
       {
         "product": "Developer SDK",
         "icon": "building",
-        "description": "Prepare wallet creation, transfers, swaps, recovery, and sponsored submission with TypeScript or Python",
+        "description": "Prepare wallet creation, transfers, swaps, reads, ramps, and sponsored submission with TypeScript or Python",
         "groups": [
           {
             "group": "Start Here",
@@ -200,12 +200,10 @@
             ]
           },
           {
-            "group": "Add Recovery",
+            "group": "Balances and Funding",
             "pages": [
-              "developer-sdk/recovery-flows",
-              "developer-sdk/recovery-setup",
-              "developer-sdk/add-guardian-after-creation",
-              "developer-sdk/recovery-runtime"
+              "developer-sdk/wallet-reads",
+              "developer-sdk/ramp"
             ]
           },
           {
@@ -221,6 +219,12 @@
                   "examples/dev-portal/transaction-history"
                 ]
               }
+            ]
+          },
+          {
+            "group": "Migrate and Compare",
+            "pages": [
+              "developer-sdk/portal-clients"
             ]
           },
           {
@@ -259,8 +263,13 @@
               "developer-api/transactions",
               "developer-api/wallets",
               "developer-api/paymaster",
-              "developer-api/identity",
               "developer-api/ramp"
+            ]
+          },
+          {
+            "group": "Boundaries",
+            "pages": [
+              "developer-api/identity"
             ]
           }
         ]

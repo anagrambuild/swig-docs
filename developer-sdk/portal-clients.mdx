@@ -3,25 +3,30 @@ title: "Legacy and Raw APIs"
 sidebarTitle: "Legacy & Raw APIs"
 ---
 
-Swig currently has three TypeScript surfaces related to the developer portal.
-They overlap, but they are not the same product.
+Swig has three TypeScript surfaces related to the developer portal. They
+overlap, but they are not the same product.
 
 ## Client comparison
 
 | Package | Status | Best use | Policy access | Transaction access | Response model |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `@swig-wallet/developer-sdk` | current | prepare-first hosted wallet flows | `swig.wallets.getPolicy()` returns raw policy metadata | wallet creation, transfers, swaps, custom transaction preparation, recovery, sponsor flow | prepared transactions and signing metadata |
+| `@swig-wallet/developer-sdk` | current | prepare-first hosted wallet flows | `swig.wallets.getPolicy()` returns raw policy metadata | wallet creation, transfers, swaps, custom preparation, wallet reads, ramp, sponsor flow | prepared transactions and signing metadata |
 | `@swig-wallet/developer` | legacy | existing portal integrations that depend on rich helper models | `client.getPolicy()` returns `Policy`, `Actions`, and `AuthorityInfo` helpers | `createWallet()` only | throws `SwigError` |
 | `@swig-wallet/api` | low-level | direct portal and paymaster endpoint access | `client.policies.get()` returns raw policy JSON | raw portal and paymaster calls | returns `{ data, error }` |
 
+The current SDK also ships a Python package, `swig-developer-sdk`, at the same
+version and with the same surface. The other two are TypeScript-only.
+
 ## Recommended starting point
 
-Use `@swig-wallet/developer-sdk` first if your goal is to:
+Use `@swig-wallet/developer-sdk` or `swig-developer-sdk` first if your goal is
+to:
 
 - create wallets through backend-prepared transactions
 - keep the API key on the server
 - return prepared transactions to browser or mobile clients
-- build Next.js or NestJS proxy routes around Swig actions
+- read wallet balances, activity, and roles
+- build Next.js, NestJS, or Python proxy routes around Swig actions
 
 ## When to use the other two
 
@@ -30,13 +35,19 @@ Use `@swig-wallet/developer-sdk` first if your goal is to:
 - Keep `@swig-wallet/developer` only for existing integrations that already
   depend on its richer policy helpers.
 
+Treat `@swig-wallet/developer` as deprecated for new integrations.
+
 ## Policy nuance
 
 `@swig-wallet/developer-sdk` does expose `swig.wallets.getPolicy(policyId)`, but
 that does not make it the rich policy-helper SDK. It returns raw policy
-metadata because wallet creation and recovery flows need that metadata.
+metadata because wallet creation flows need that metadata.
 
 If you need helpers like `Actions.canSpendSol()` or `AuthorityInfo.isSession()`,
 that is still legacy `@swig-wallet/developer` territory.
 
-Treat `@swig-wallet/developer` as deprecated for new integrations.
+## Not the protocol SDK
+
+None of these three are the protocol SDK. If your app talks to Swig wallets
+directly and owns its own authority and signing flow, use the
+[Protocol SDK](/reference) instead.

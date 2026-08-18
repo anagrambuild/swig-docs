@@ -3,8 +3,9 @@ title: "Ramp API"
 sidebarTitle: "Ramp"
 ---
 
-The Ramp API exposes the Meld-backed onramp/offramp flow used by Swig wallet
-integrations.
+The Ramp API exposes the MELD-backed fiat on-ramp and off-ramp used by Swig
+wallet integrations. Routes are split by direction; there is no generic ramp
+endpoint.
 
 ## Auth
 
@@ -14,86 +15,185 @@ Use an API key:
 Authorization: Bearer sk_your_api_key
 ```
 
+## Routes
+
+| Method | Route |
+| :--- | :--- |
+| `GET` | `/wallet/api/ramp/onramp/options` |
+| `POST` | `/wallet/api/ramp/onramp/quote` |
+| `POST` | `/wallet/api/ramp/onramp/session` |
+| `GET` | `/wallet/api/ramp/onramp/session/{session_id}` |
+| `GET` | `/wallet/api/ramp/offramp/options` |
+| `POST` | `/wallet/api/ramp/offramp/quote` |
+| `POST` | `/wallet/api/ramp/offramp/session` |
+| `POST` | `/wallet/api/ramp/offramp/session/{session_id}/prepare` |
+| `POST` | `/wallet/api/ramp/offramp/session/{session_id}/submit` |
+| `GET` | `/wallet/api/ramp/offramp/session/{session_id}` |
+
+## Required fields
+
+Every ramp request requires an `environment`. Options, quotes, and session
+creation also require the organization's MELD configuration id:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `environment` | enum | `MELD_ENVIRONMENT_SANDBOX` or `MELD_ENVIRONMENT_PRODUCTION` |
+| `organizationMeldConfigurationId` | string | Required for options, quotes, and session creation |
+
+On options routes these values are query parameters. On quote and session
+creation routes they are body fields. Session reads and off-ramp authorization
+actions identify the session in the route path and require only `environment`
+from this table.
+
+Quote requests additionally require `externalCustomerId`, `swigConfigAddress`,
+and `network`.
+
 ## Get options
 
-`GET /wallet/api/ramp/options`
+`GET /wallet/api/ramp/onramp/options`
+`GET /wallet/api/ramp/offramp/options`
 
 Query parameters:
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `organization_id` | string | Organization id |
-| `partner_application_id` | string | Optional partner application id |
-| `country_code` | string | Optional ISO country filter |
-| `fiat_currency_code` | string | Optional fiat currency filter |
+| `organizationMeldConfigurationId` | string | Required MELD configuration id |
+| `environment` | enum | Required MELD environment |
+| `countryCode` | string | Optional ISO country filter |
+| `fiatCurrencyCode` | string | Optional fiat currency filter |
 
-## Quote ramp
+Both directions return `countries` (each with `countryCode`, `countryName`, and
+`subdivisions`), `fiatCurrencyCodes`, and `paymentMethodTypes`. On-ramp adds
+`cryptoCurrencyCodes`; off-ramp adds `cryptoCurrencies`, each with
+`currencyCode`, `currencyName`, `iconUrl`, and `contractAddress`.
 
-`POST /wallet/api/ramp/quote`
+Read options first so currency and payment-method codes come from the API
+rather than from a hardcoded list.
 
-```json
-{
-  "customer": {
-    "organizationId": "org_123",
-    "swigUserId": "user_123",
-    "customerType": "RAMP_CUSTOMER_TYPE_INDIVIDUAL"
-  },
-  "wallet": {
-    "walletId": "wallet_123",
-    "walletAddress": "WalletPublicKey",
-    "network": "NETWORK_DEVNET"
-  },
-  "direction": "RAMP_DIRECTION_ONRAMP",
-  "sourceAmount": "100",
-  "sourceCurrencyCode": "USD",
-  "destinationCurrencyCode": "USDC",
-  "countryCode": "US",
-  "paymentMethodType": "RAMP_PAYMENT_METHOD_TYPE_CREDIT_DEBIT_CARD"
-}
-```
+## Quote
 
-The response returns one or more quotes with provider, exchange-rate, fee, and
-destination amount fields.
-
-## Create session
-
-`POST /wallet/api/ramp/sessions`
+`POST /wallet/api/ramp/onramp/quote`
+`POST /wallet/api/ramp/offramp/quote`
 
 ```json
 {
-  "customer": {
-    "organizationId": "org_123",
-    "swigUserId": "user_123",
-    "customerType": "RAMP_CUSTOMER_TYPE_INDIVIDUAL"
-  },
-  "wallet": {
-    "walletId": "wallet_123",
-    "walletAddress": "WalletPublicKey",
-    "network": "NETWORK_DEVNET"
-  },
-  "direction": "RAMP_DIRECTION_ONRAMP",
-  "selectedQuoteId": "quote_123",
-  "sourceAmount": "100",
+  "organizationMeldConfigurationId": "meld_config_123",
+  "environment": "MELD_ENVIRONMENT_SANDBOX",
+  "externalCustomerId": "customer_123",
+  "swigConfigAddress": "SwigConfigAddress",
+  "network": "NETWORK_DEVNET",
+  "sourceAmount": "100.00",
   "sourceCurrencyCode": "USD",
   "destinationCurrencyCode": "USDC",
   "countryCode": "US",
-  "serviceProvider": "RAMP_SERVICE_PROVIDER_OTHER",
-  "redirectUrl": "https://app.example/ramp/return"
+  "subdivision": "US-CA",
+  "paymentMethodType": "CREDIT_DEBIT_CARD"
 }
 ```
 
-The response includes `localSessionId`, Meld session/customer ids, and
-`launchUrl`. Treat launch URLs as user-specific session URLs.
+`subdivision` and `paymentMethodType` are optional. Take currency and payment
+method values from the matching options response.
 
-## List transactions
+The response returns `quotes`, each with `quoteId`, `serviceProvider`,
+`paymentMethodType`, `sourceAmount`, `sourceCurrencyCode`,
+`destinationAmount`, `destinationCurrencyCode`, `exchangeRate`, and
+`totalFee`.
 
-`GET /wallet/api/ramp/wallets/{wallet_id}/transactions`
+## Create a session
+
+`POST /wallet/api/ramp/onramp/session`
+`POST /wallet/api/ramp/offramp/session`
+
+```json
+{
+  "organizationMeldConfigurationId": "meld_config_123",
+  "environment": "MELD_ENVIRONMENT_SANDBOX",
+  "quoteId": "quote_123"
+}
+```
+
+The response returns `sessionId` and `launchUrl`.
+
+<Warning>
+  A `launchUrl` is a user-specific session URL. Return it only to the customer
+  who owns the session, and keep it out of logs and analytics.
+</Warning>
+
+## Read a session
+
+`GET /wallet/api/ramp/onramp/session/{session_id}`
+`GET /wallet/api/ramp/offramp/session/{session_id}`
 
 Query parameters:
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `network` | enum | `NETWORK_DEVNET` or `NETWORK_MAINNET` |
-| `direction` | enum | Optional ramp direction |
-| `status` | enum | Optional transaction status |
-| `limit` | number | Optional result limit |
+| `environment` | enum | Required MELD environment |
+
+On-ramp sessions return `sessionId`, `status`, `createdAt`, and `updatedAt`.
+Status values are:
+
+```text
+ONRAMP_SESSION_STATUS_UNSPECIFIED  ..._CREATED  ..._PENDING
+..._SETTLING  ..._SETTLED  ..._FAILED  ..._DECLINED
+..._CANCELLED  ..._REFUNDED
+```
+
+Off-ramp sessions return the same base fields plus `sourceAmount`,
+`sourceCurrencyCode`, `destinationAmount`, `destinationCurrencyCode`,
+`serviceProvider`, and optional `paymentMethodType`, `solanaSignature`, and
+`providerDestinationAmount`. Off-ramp adds three states:
+
+```text
+OFFRAMP_SESSION_STATUS_PROVIDER_SESSION_CREATED
+OFFRAMP_SESSION_STATUS_TRANSFER_REQUIRED
+OFFRAMP_SESSION_STATUS_TRANSFER_SUBMITTED
+```
+
+## Off-ramp authorization
+
+Off-ramp requires an on-chain transfer from the Swig to the provider before the
+session can settle.
+
+### Prepare
+
+`POST /wallet/api/ramp/offramp/session/{session_id}/prepare`
+
+```json
+{
+  "environment": "MELD_ENVIRONMENT_PRODUCTION",
+  "feePayer": "FeePayerPublicKey",
+  "requesterAuthority": {
+    "ed25519": { "publicKey": "RequesterPublicKey" }
+  }
+}
+```
+
+The response returns `authorizationId`, a `preparedTransaction`, and a
+`display` object describing the transfer: `sourceWalletAddress`,
+`destinationWalletAddress`, `sourceAmount`, `sourceCurrencyCode`,
+`destinationAmount`, `destinationCurrencyCode`, `serviceProvider`, and optional
+`paymentMethodType` and `providerDestinationAmount`.
+
+Show `display` to the customer before signing.
+
+### Submit
+
+`POST /wallet/api/ramp/offramp/session/{session_id}/submit`
+
+```json
+{
+  "environment": "MELD_ENVIRONMENT_PRODUCTION",
+  "authorizationId": "authorization_123",
+  "signedTransaction": "BASE64_SIGNED_TRANSACTION"
+}
+```
+
+The response returns `solanaSignature`.
+
+## SDK equivalent
+
+The Developer SDKs wrap these routes as `swig.ramp.onramp` and
+`swig.ramp.offramp`, and accept `sandbox` / `production` as plain strings while
+encoding the MELD enum for you. See
+[Add and Withdraw Funds](/developer-sdk/ramp).

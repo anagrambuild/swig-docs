@@ -16,6 +16,16 @@ Authorization: Bearer sk_your_api_key
 
 Developer-portal admin endpoints are intentionally omitted from this reference.
 
+## Routes
+
+| Method | Route | Purpose |
+| :--- | :--- | :--- |
+| `GET` | `/paymaster/test` | connectivity check |
+| `GET` | `/paymaster/balance` | read paymaster funding |
+| `POST` | `/paymaster/sign` | add the paymaster signature without submitting |
+| `POST` | `/paymaster/sponsor` | sponsor and submit one transaction |
+| `POST` | `/paymaster/sponsor/bundle` | sponsor and submit a bundle |
+
 ## Get balance
 
 `GET /paymaster/balance`
@@ -47,7 +57,7 @@ Response:
 
 ```json
 {
-  "base58EncodedTransaction": "BASE58_TRANSACTION",
+  "base58_encoded_transaction": "BASE58_TRANSACTION",
   "network": "devnet"
 }
 ```
@@ -56,8 +66,8 @@ Response:
 
 ```json
 {
-  "requestId": "req_123",
-  "signedTransaction": "BASE58_SIGNED_TRANSACTION"
+  "request_id": "req_123",
+  "signed_transaction": "BASE58_SIGNED_TRANSACTION"
 }
 ```
 
@@ -67,8 +77,9 @@ Response:
 
 ```json
 {
-  "base58EncodedTransaction": "BASE58_TRANSACTION",
-  "network": "devnet"
+  "base58_encoded_transaction": "BASE58_TRANSACTION",
+  "network": "devnet",
+  "idempotencyKey": "sponsor:order_123"
 }
 ```
 
@@ -76,11 +87,66 @@ Response:
 
 ```json
 {
-  "requestId": "req_123",
+  "request_id": "req_123",
   "signature": "TransactionSignature",
-  "spentByPaymaster": "5000"
+  "spent_by_paymaster": "5000"
 }
 ```
+
+There is no status field on this response. A returned `signature` means the
+Solana RPC accepted the transaction; it may still be pending and is not proof
+of confirmation or finality. Track the signature through your RPC provider if
+your product needs either.
+
+<Note>
+  Send `idempotencyKey` whenever your application may retry. A matching retry
+  returns the original response rather than sponsoring twice. Without a key,
+  treat a failed sponsor call as unresolved rather than replaying it blindly.
+</Note>
+
+## Sponsor a bundle
+
+`POST /paymaster/sponsor/bundle` submits related transactions together.
+
+```json
+{
+  "base58_encoded_transactions": [
+    "BASE58_TRANSACTION_ONE",
+    "BASE58_TRANSACTION_TWO"
+  ],
+  "network": "mainnet",
+  "idempotencyKey": "sponsor-bundle:order_123"
+}
+```
+
+Response:
+
+```json
+{
+  "request_id": "req_123",
+  "bundle_id": "bundle_123",
+  "signatures": ["SignatureOne", "SignatureTwo"],
+  "estimated_spent_by_paymaster": "10000"
+}
+```
+
+Constraints:
+
+| Constraint | Detail |
+| :--- | :--- |
+| Network | mainnet only |
+| Size | one to five transactions |
+| Order | `signatures` are returned in bundle order |
+| Cost | `estimated_spent_by_paymaster` is an estimate, not a settled charge |
+
+A returned `bundle_id` means Jito accepted the bundle. The bundle may still be
+pending; acceptance is not confirmation or finality.
+
+## Transaction encoding
+
+Sponsor and sign requests take base58-encoded transactions. The Developer SDKs
+accept base64 prepared transactions and convert them for you — see
+[Sponsor & Submit](/developer-sdk/sponsor-and-submit).
 
 Paymaster limit configuration is handled through developer-portal admin
 surfaces, not API-key runtime endpoints.
