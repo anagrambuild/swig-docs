@@ -110,7 +110,6 @@ The result is not just one transaction. It is a categorized create plan:
 | `wallet` | the config address, wallet address, and resolved network |
 | `transactions` | full ordered transaction list |
 | `clientAuthorityTransactions` / `client_authority_transactions` | transactions the initial authority must sign |
-| `operatorSignedTransactions` / `operator_signed_transactions` | transactions already signed by the backend operator |
 | `feePayerOnlyTransactions` / `fee_payer_only_transactions` | transactions that only need fee payer or sponsor handling |
 | `creationTransaction` / `creation_transaction` | the create transaction itself |
 
@@ -119,9 +118,8 @@ client authority signing the create flow needs.
 
 ## Networks
 
-TypeScript resolves the network from the call, then the client default. Python
-requires a network to be resolvable at create time, either as `network=` on the
-call or as the client's default.
+Both SDKs resolve the network from the call and then the client default. Wallet
+creation requires one of those values to be set.
 
 ## What to submit
 
@@ -129,10 +127,6 @@ Always submit the prepared `transactions` exactly in the returned order.
 
 If the client-authority collection is not empty, those transactions must be
 signed by the client authority before submission.
-
-If the operator-signed collection is not empty, treat those transactions as
-already operator signed. They still need fee payer or sponsor submission, but
-not another authority signature.
 
 ## What to read next
 

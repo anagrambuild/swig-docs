@@ -24,7 +24,8 @@ For the API-key routes, send:
 Authorization: Bearer sk_your_api_key
 ```
 
-All of them are `GET` reads, so they are safe to retry.
+All API-key runtime routes listed above are `GET` reads, so they are safe to
+retry. The public lookup boundary is a `POST`.
 
 Developer-portal admin endpoints are intentionally omitted from this reference.
 
@@ -80,7 +81,7 @@ Query parameters:
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `network` | enum | `NETWORK_DEVNET` or `NETWORK_MAINNET` |
-| `limit` | number | Maximum number of transactions to return |
+| `limit` | number | Optional result count; defaults to 25 and values above 100 are capped at 100 |
 
 Each entry carries `transactionSignature`, `slot`, `blockTime`,
 `ownerAddress`, `walletAddress`, `isSubaccount`, `tokenAccountAddress`,

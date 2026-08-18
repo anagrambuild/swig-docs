@@ -90,19 +90,6 @@ an existing Swig.
 }
 ```
 
-Optional Jupiter controls:
-
-| Field | Type | Purpose |
-| :--- | :--- | :--- |
-| `slippageBps` | number | Maximum slippage in basis points |
-| `wrapAndUnwrapSol` | boolean | Let Jupiter wrap or unwrap native SOL |
-| `tipAmountLamports` | integer string | Optional prioritization tip |
-| `computeUnitPricePercentile` | string | Jupiter compute-unit price percentile |
-| `maxAccounts` | number | Limit the accounts used by the route |
-| `mode` | string | Swap mode, such as `ExactIn` |
-| `blockhashSlotsToExpiry` | number | Requested blockhash lifetime in slots |
-| `destinationAccount` | string | Explicit output token account or native SOL destination |
-
 ## Prepare custom instructions
 
 `POST /transaction/prepare/custom` builds one prepared Swig transaction from
@@ -200,10 +187,22 @@ client authority signature and chooses direct or sponsored submission.
   "inputMint": "InputMintAddress",
   "outputMint": "OutputMintAddress",
   "amount": "1000000",
-  "slippageBps": 50,
-  "mode": "ExactIn"
+  "slippageBps": 50
 }
 ```
+
+Optional Jupiter controls:
+
+| Field | Type | Purpose |
+| :--- | :--- | :--- |
+| `slippageBps` | number | Maximum slippage in basis points |
+| `wrapAndUnwrapSol` | boolean | Let Jupiter wrap or unwrap native SOL |
+| `tipAmountLamports` | integer string | Optional prioritization tip |
+| `computeUnitPricePercentile` | string | Jupiter compute-unit price percentile |
+| `maxAccounts` | number | Limit the accounts used by the route |
+| `mode` | string | Opaque swap mode forwarded to Jupiter |
+| `blockhashSlotsToExpiry` | number | Requested blockhash lifetime in slots |
+| `destinationAccount` | string | Destination owner; the backend derives the SPL token account, or uses the address for native SOL |
 
 ## After preparation
 

@@ -89,7 +89,6 @@ Prepared responses are categorized so your app knows what to do next:
 | `transactions` | submit these in order |
 | `clientAuthorityTransactions` / `client_authority_transactions` | get a client authority signature first |
 | `feePayerOnlyTransactions` / `fee_payer_only_transactions` | send or sponsor without client authority signing |
-| `operatorSignedTransactions` / `operator_signed_transactions` | submit as-is after fee payer or sponsor handling |
 
 A prepared transaction needs a client authority signature exactly when its
 `signatureRequests` / `signature_requests` collection is non-empty.

@@ -52,6 +52,9 @@ There is no status field. A returned signature means the Solana RPC accepted
 the transaction; it may still be pending and is not confirmation or finality.
 Track it through your RPC provider when your product needs either.
 
+For single-transaction sponsorship, `network` resolves from the call and then
+the client default. If neither is set, the paymaster defaults to mainnet.
+
 ## Retry safely with an idempotency key
 
 Sponsorship is the one `POST` the SDKs will retry, and only when you pass an
@@ -172,8 +175,6 @@ API paymaster.
   client-signed first
 - `feePayerOnlyTransactions` / `fee_payer_only_transactions` can go straight to
   your fee payer or sponsor path
-- `operatorSignedTransactions` / `operator_signed_transactions` are already
-  operator-signed and just need final submission handling
 
 ## Portal admin vs runtime usage
 

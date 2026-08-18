@@ -36,7 +36,11 @@ const usd = await wallet.getUsdBalance();
 
 const tokens = await wallet.listTokenBalances();
 for (const balance of tokens.balances) {
-  console.log(balance.assetKind, balance.tokenSymbol, balance.uiAmount);
+  console.log(
+    balance.assetKind,
+    balance.tokenSymbol,
+    balance.uiAmount,
+  );
 }
 console.log(tokens.totalUsdValue);
 ```
@@ -100,7 +104,8 @@ Each entry also carries `slot`, optional `blockTime` / `block_time`,
 `token_account_address`, `isSubaccount` / `is_subaccount`, and the same
 amount, USD, and normalized asset-kind fields as a balance.
 
-`limit` is optional. Omit it to take the backend default.
+`limit` is optional. Omit it for the backend default of 25. Values above 100
+are capped at 100.
 
 ## Roles
 

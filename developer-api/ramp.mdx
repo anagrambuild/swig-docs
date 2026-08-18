@@ -72,8 +72,9 @@ rather than from a hardcoded list.
 
 ## Quote
 
+### On-ramp quote
+
 `POST /wallet/api/ramp/onramp/quote`
-`POST /wallet/api/ramp/offramp/quote`
 
 ```json
 {
@@ -88,6 +89,30 @@ rather than from a hardcoded list.
   "countryCode": "US",
   "subdivision": "US-CA",
   "paymentMethodType": "CREDIT_DEBIT_CARD"
+}
+```
+
+### Off-ramp quote
+
+`POST /wallet/api/ramp/offramp/quote`
+
+Off-ramp reverses the currency direction: the source is the crypto asset being
+sold and the destination is fiat. It settles on mainnet even in the MELD sandbox
+environment, so `network` must be `NETWORK_MAINNET`.
+
+```json
+{
+  "organizationMeldConfigurationId": "meld_config_123",
+  "environment": "MELD_ENVIRONMENT_SANDBOX",
+  "externalCustomerId": "customer_123",
+  "swigConfigAddress": "SwigConfigAddress",
+  "network": "NETWORK_MAINNET",
+  "sourceAmount": "25.00",
+  "sourceCurrencyCode": "USDC_SOLANA",
+  "destinationCurrencyCode": "USD",
+  "countryCode": "US",
+  "subdivision": "US-CA",
+  "paymentMethodType": "PAYOUT_TO_CARD"
 }
 ```
 

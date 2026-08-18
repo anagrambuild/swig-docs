@@ -141,6 +141,8 @@ failed  declined  cancelled  refunded
 Off-ramp adds an on-chain step. The customer's wallet must authorize the
 transfer to the provider before the session can settle, so the flow is:
 quote → session → prepare authorization → client signs → submit authorization.
+It settles on mainnet even when `environment` is `sandbox`, so use `mainnet` for
+the quote network.
 
 <CodeGroup dropdown>
 
