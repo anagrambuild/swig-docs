@@ -10,7 +10,7 @@ overlap, but they are not the same product.
 
 | Package | Status | Best use | Policy access | Transaction access | Response model |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `@swig-wallet/developer-sdk` | current | prepare-first hosted wallet flows | `swig.wallets.getPolicy()` returns raw policy metadata | wallet creation, transfers, swaps, custom preparation, wallet reads, ramp, sponsor flow | prepared transactions and signing metadata |
+| `@swig-wallet/developer-sdk` | current | server-only hosted wallet flows | `swig.wallets.getPolicy()` returns raw policy metadata | wallet creation, transfers, swaps, custom preparation, wallet reads, ramp, sponsor flow | prepared transactions and signing metadata |
 | `@swig-wallet/developer` | legacy | existing portal integrations that depend on rich helper models | `client.getPolicy()` returns `Policy`, `Actions`, and `AuthorityInfo` helpers | `createWallet()` only | throws `SwigError` |
 | `@swig-wallet/api` | low-level | direct portal and paymaster endpoint access | `client.policies.get()` returns raw policy JSON | raw portal and paymaster calls | returns `{ data, error }` |
 
@@ -24,9 +24,10 @@ to:
 
 - create wallets through backend-prepared transactions
 - keep the API key on the server
-- return prepared transactions to browser or mobile clients
 - read wallet balances, activity, and roles
-- build Next.js, NestJS, or Python proxy routes around Swig actions
+- build authenticated Next.js, NestJS, Fetch, or Python server routes around
+  Swig actions
+- submit transactions signed by application-owned wallet or custody code
 
 ## When to use the other two
 

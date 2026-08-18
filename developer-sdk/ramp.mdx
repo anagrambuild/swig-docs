@@ -4,8 +4,8 @@ sidebarTitle: "Ramp (On/Off)"
 ---
 
 The ramp clients build a headless fiat on-ramp and off-ramp around a Swig
-wallet. The server SDK keeps the API key on your backend while returning
-frontend-safe quotes, launch URLs, and session state.
+wallet. Every ramp client call runs on your server. Your application decides
+how to present authorized quote, launch URL, and session data to a user.
 
 Ramp is split by direction. There is no generic ramp client:
 
@@ -140,15 +140,13 @@ failed  declined  cancelled  refunded
 
 Off-ramp adds an on-chain step. The customer's wallet must authorize the
 transfer to the provider before the session can settle, so the flow is:
-quote → session → prepare authorization → client signs → submit authorization.
-It settles on mainnet even when `environment` is `sandbox`, so use `mainnet` for
-the quote network.
+quote → session → prepare authorization → application-owned signer → submit
+authorization. It settles on mainnet even when `environment` is `sandbox`, so
+use `mainnet` for the quote network.
 
 <CodeGroup dropdown>
 
 ```typescript TypeScript
-import { signPreparedSwigTransaction } from '@swig-wallet/developer-sdk/client';
-
 const options = await swig.ramp.offramp.getOptions({
   organizationMeldConfigurationId,
   environment,
@@ -181,22 +179,21 @@ const authorization = await swig.ramp.offramp.prepareAuthorization({
   requesterAuthority: { secp256r1: { publicKey: passkeyPublicKey } },
 });
 
-// Show authorization.display for confirmation, then sign on the client.
-const signed = await signPreparedSwigTransaction(
+// After authorized confirmation, coordinate signing in application-owned code.
+const signedBase64Transaction = await applicationSigner(
   authorization.preparedTransaction,
-  { secp256r1: passkeySigningFn },
 );
 
 const { solanaSignature } = await swig.ramp.offramp.submitAuthorization({
   sessionId: session.sessionId,
   environment,
   authorizationId: authorization.authorizationId,
-  signedTransaction: signed.transaction,
+  signedTransaction: signedBase64Transaction,
 });
 ```
 
 ```python Python
-from swig_developer_sdk import QuoteRampArgs, sign_prepared_swig_transaction
+from swig_developer_sdk import QuoteRampArgs
 
 options = await swig.ramp.offramp.get_options(
     organization_meld_configuration_id=configuration_id,
@@ -232,17 +229,16 @@ authorization = await swig.ramp.offramp.prepare_authorization(
     requester_authority={"secp256r1": {"publicKey": passkey_public_key}},
 )
 
-# Show authorization.display for confirmation, then sign.
-signed = await sign_prepared_swig_transaction(
-    authorization.prepared_transaction,
-    secp256r1=passkey_signing_fn,
+# After authorized confirmation, coordinate signing in application-owned code.
+signed_base64_transaction = await application_signer(
+    authorization.prepared_transaction
 )
 
 submitted = await swig.ramp.offramp.submit_authorization(
     session_id=session.session_id,
     environment=environment,
     authorization_id=authorization.authorization_id,
-    signed_transaction=signed.transaction,
+    signed_transaction=signed_base64_transaction,
 )
 ```
 
@@ -254,9 +250,13 @@ signing: `sourceWalletAddress`, `destinationWalletAddress`, `sourceAmount`,
 `serviceProvider`, and optional `paymentMethodType` and
 `providerDestinationAmount`.
 
-The prepared authorization is an ordinary prepared transaction, so
-[Client Signing](/developer-sdk/client-signing) applies unchanged — use the
-Ed25519, passkey, or EVM helper that matches the wallet's authority.
+The prepared authorization follows the same boundary as every other prepared
+transaction. Inspect its signature metadata, obtain the required signature
+from application-owned signing code, and return only the signed serialized
+transaction to the server. The optional
+[browser signing helpers](/developer-sdk/browser-signing) can assemble that
+result. See [Server Runtime](/developer-sdk/server-runtime) for the trust
+boundary.
 
 Off-ramp session status adds three states to the on-ramp set:
 
@@ -282,21 +282,10 @@ A settled off-ramp session also exposes `solanaSignature` /
 | `offramp.submitAuthorization` | `POST /wallet/api/ramp/offramp/session/{session_id}/submit` |
 | `offramp.getSession` | `GET /wallet/api/ramp/offramp/session/{session_id}` |
 
-## Browser apps
+## Application delivery
 
-The framework proxies expose the same ramp routes, so browser code can drive a
-ramp UI through `SwigBrowserClient` without holding the API key:
-
-```typescript
-import { SwigBrowserClient } from '@swig-wallet/developer-sdk/browser';
-
-const swig = new SwigBrowserClient({ basePath: '/api/swig', network: 'devnet' });
-
-const options = await swig.ramp.onramp.getOptions({
-  organizationMeldConfigurationId,
-  environment: 'sandbox',
-  countryCode: 'US',
-});
-```
-
-See [Use Proxy Helpers](/developer-sdk/framework-proxies) for the route setup.
+Treat `launchUrl` / `launch_url`, quotes, and session state as user-scoped
+data. If another application runtime needs them, return only the authorized
+fields through your own server API. Do not import the Developer SDK's API
+client or expose the Swig API key outside the server. The optional `/browser`
+signing helpers remain limited to local transaction assembly.

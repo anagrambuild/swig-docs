@@ -45,7 +45,8 @@ created = await swig.wallets.create(
 
 </CodeGroup>
 
-Passkey-backed creation works the same way with `secp256r1`:
+An application may provide a `secp256r1` public key for a passkey-backed
+authority. Credential creation and signing stay outside the Developer SDK:
 
 <CodeGroup dropdown>
 
@@ -109,12 +110,13 @@ The result is not just one transaction. It is a categorized create plan:
 |-------|---------|
 | `wallet` | the config address, wallet address, and resolved network |
 | `transactions` | full ordered transaction list |
-| `clientAuthorityTransactions` / `client_authority_transactions` | transactions the initial authority must sign |
-| `feePayerOnlyTransactions` / `fee_payer_only_transactions` | transactions that only need fee payer or sponsor handling |
+| `clientAuthorityTransactions` / `client_authority_transactions` | transactions with explicit embedded `secp256r1` or `secp256k1` signature requests |
+| `feePayerOnlyTransactions` / `fee_payer_only_transactions` | transactions without explicit signature requests; verify the Solana required signer set before treating them as fee-payer-only |
 | `creationTransaction` / `creation_transaction` | the create transaction itself |
 
-For a plain create, this usually collapses to one creation transaction plus any
-client authority signing the create flow needs.
+For a plain create, this usually collapses to one creation transaction whose
+only required transaction signer is the fee payer. Policy-driven follow-up
+instructions can add other signer requirements.
 
 ## Networks
 
@@ -125,17 +127,21 @@ creation requires one of those values to be set.
 
 Always submit the prepared `transactions` exactly in the returned order.
 
-If the client-authority collection is not empty, those transactions must be
-signed by the client authority before submission.
+If the client-authority collection is not empty, your application must obtain
+and patch each requested embedded signature outside the server SDK before
+submission. An empty collection does not prove that the transaction needs no
+application signature; inspect each serialized transaction's required signer
+set as well. The field name comes from the hosted API schema; it is not a
+browser SDK surface.
 
 ## What to read next
 
 <CardGroup cols={2}>
-  <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-swaps-and-signing">
+  <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-and-swaps">
     Wallet actions after create
   </Card>
-  <Card title="Client Signing" icon="signature" href="/developer-sdk/client-signing">
-    Ed25519, passkey, and EVM client signatures
+  <Card title="Browser Signers" icon="signature" href="/developer-sdk/browser-signing">
+    Basic signing support for application-owned wallets and passkeys
   </Card>
   <Card title="Read Wallet State" icon="magnifying-glass" href="/developer-sdk/wallet-reads">
     Balances, token activity, and roles

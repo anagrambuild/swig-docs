@@ -3,14 +3,17 @@ title: "Submit and Sponsor Transactions"
 sidebarTitle: "Sponsor & Submit"
 ---
 
-The Developer SDK prepares transactions; your app still submits them. There are
-two models:
+The Developer SDK prepares unsigned transactions and accepts
+application-signed transactions for submission. There are two submission
+models:
 
 - send directly through your own RPC path
 - sponsor submission through Swig's paymaster
 
-Client authority signing happens first either way. Sponsoring does not replace
-it.
+Signing happens in application-owned wallet or custody code first. Sponsoring
+does not replace it. If useful, the narrow
+[browser signing helpers](/developer-sdk/browser-signing) assemble an
+application-provided signature into the prepared transaction.
 
 ## Sponsor one transaction
 
@@ -18,7 +21,7 @@ it.
 
 ```typescript TypeScript
 const submitted = await swig.transactions.sponsor({
-  transaction: signed.transaction,
+  transaction: signedBase64Transaction,
   network: 'mainnet',
   idempotencyKey,
 });
@@ -33,7 +36,7 @@ from swig_developer_sdk import SponsorSignedTransactionArgs
 
 submitted = await swig.transactions.sponsor(
     SponsorSignedTransactionArgs(
-        transaction=signed.transaction,
+        transaction=signed_base64_transaction,
         network="mainnet",
         idempotency_key=idempotency_key,
     )
@@ -64,7 +67,7 @@ idempotency key.
 
 ```typescript TypeScript
 await swig.transactions.sponsor({
-  transaction: signed.transaction,
+  transaction: signedBase64Transaction,
   network: 'mainnet',
   idempotencyKey: `sponsor:${orderId}`,
 });
@@ -73,7 +76,7 @@ await swig.transactions.sponsor({
 ```python Python
 await swig.transactions.sponsor(
     SponsorSignedTransactionArgs(
-        transaction=signed.transaction,
+        transaction=signed_base64_transaction,
         network="mainnet",
         idempotency_key=f"sponsor:{order_id}",
     )
@@ -99,7 +102,7 @@ ordered plan returned by `wallet.prepare(...)`.
 
 ```typescript TypeScript
 const bundle = await swig.transactions.sponsorBundle({
-  transactions: [signedFirst.transaction, signedSecond.transaction],
+  transactions: [signedFirstBase64, signedSecondBase64],
   network: 'mainnet',
   idempotencyKey,
 });
@@ -115,7 +118,7 @@ from swig_developer_sdk import SponsorSignedTransactionBundleArgs
 
 bundle = await swig.transactions.sponsor_bundle(
     SponsorSignedTransactionBundleArgs(
-        transactions=(signed_first.transaction, signed_second.transaction),
+        transactions=(signed_first_base64, signed_second_base64),
         network="mainnet",
         idempotency_key=idempotency_key,
     )
@@ -141,8 +144,8 @@ Constraints the SDK enforces before sending:
 A returned `bundleId` means Jito accepted the bundle. The bundle may still be
 pending; acceptance is not confirmation or finality.
 
-Sign each transaction in the bundle exactly as you would for single
-sponsorship.
+Obtain each required application signature before sending the ordered bundle
+to the server.
 
 ## When sponsor submission fits
 
@@ -171,10 +174,13 @@ API paymaster.
 
 ## Transaction categories still matter
 
-- `clientAuthorityTransactions` / `client_authority_transactions` must be
-  client-signed first
-- `feePayerOnlyTransactions` / `fee_payer_only_transactions` can go straight to
-  your fee payer or sponsor path
+- `clientAuthorityTransactions` / `client_authority_transactions` contain
+  explicit embedded `secp256r1` or `secp256k1` signature requests
+- `feePayerOnlyTransactions` / `fee_payer_only_transactions` have no explicit
+  signature requests, but may still require an Ed25519 transaction signature
+
+Use the serialized transaction's required signer set as the final authority
+before sending either category to a fee payer or sponsor.
 
 ## Portal admin vs runtime usage
 

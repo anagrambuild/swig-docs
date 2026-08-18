@@ -170,15 +170,15 @@
       {
         "product": "Developer SDK",
         "icon": "building",
-        "description": "Prepare wallet creation, transfers, swaps, reads, ramps, and sponsored submission with TypeScript or Python",
+        "description": "Prepare wallet creation, transfers, swaps, reads, ramps, and sponsored submission from a trusted TypeScript or Python server",
         "groups": [
           {
             "group": "Start Here",
             "pages": [
               "developer-sdk/index",
               "developer-sdk/integration-paths",
-              "developer-sdk/server-and-client",
-              "developer-sdk/framework-proxies"
+              "developer-sdk/server-runtime",
+              "developer-sdk/server-route-adapters"
             ]
           },
           {
@@ -193,8 +193,8 @@
             "group": "Build Wallet Flows",
             "pages": [
               "developer-sdk/create-wallets",
-              "developer-sdk/client-signing",
-              "developer-sdk/transfers-swaps-and-signing",
+              "developer-sdk/browser-signing",
+              "developer-sdk/transfers-and-swaps",
               "developer-sdk/swaps-and-batches",
               "developer-sdk/custom-execution"
             ]
@@ -310,6 +310,24 @@
       }
     ]
   },
+  "redirects": [
+    {
+      "source": "/developer-sdk/client-signing",
+      "destination": "/developer-sdk/browser-signing"
+    },
+    {
+      "source": "/developer-sdk/framework-proxies",
+      "destination": "/developer-sdk/server-route-adapters"
+    },
+    {
+      "source": "/developer-sdk/server-and-client",
+      "destination": "/developer-sdk/server-runtime"
+    },
+    {
+      "source": "/developer-sdk/transfers-swaps-and-signing",
+      "destination": "/developer-sdk/transfers-and-swaps"
+    }
+  ],
   "logo": {
     "light": "/swiglogodark.png",
     "dark": "/swiglogolight.png"

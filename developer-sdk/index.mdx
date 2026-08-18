@@ -1,12 +1,17 @@
 ---
-title: "What the Developer SDK Does"
-sidebarTitle: "What It Does"
+title: "Server-Side Developer SDK"
+sidebarTitle: "Overview"
 ---
 
-The Swig Developer SDK is the hosted wallet SDK for TypeScript and Python.
+The Swig Developer SDK is a strict server-side product for TypeScript and
+Python. It authenticates to Swig's hosted API, prepares wallet operations,
+reads wallet state, and submits application-signed transactions.
 
-Your server keeps the API key and prepares wallet operations. Your client signs
-only the prepared transactions it is responsible for. Your app submits them.
+<Warning>
+  Never import a server entrypoint or place a Swig developer API key in browser
+  or mobile code. The narrow `/browser` signing helpers accept no API key and
+  cannot call Swig's hosted API.
+</Warning>
 
 ## Install
 
@@ -18,7 +23,10 @@ only the prepared transactions it is responsible for. Your app submits them.
 bun add @swig-wallet/developer-sdk
 ```
 
-Package `@swig-wallet/developer-sdk`, version `0.8.0`.
+These docs target `@swig-wallet/developer-sdk` version `0.8.0` from the
+standalone repository. npm currently resolves this install to `0.7.0`; do not
+rely on the new TypeScript `0.8.0` server surfaces until that version is
+published.
 
 </Tab>
 
@@ -28,7 +36,8 @@ Package `@swig-wallet/developer-sdk`, version `0.8.0`.
 pip install swig-developer-sdk
 ```
 
-Package `swig-developer-sdk`, version `0.8.0`.
+Published package `swig-developer-sdk`, version `0.8.0`. Requires Python 3.10 or
+later.
 
 </Tab>
 
@@ -36,55 +45,63 @@ Package `swig-developer-sdk`, version `0.8.0`.
 
 Both packages live in
 [anagrambuild/swig-developer-sdk](https://github.com/anagrambuild/swig-developer-sdk)
-and default to the public API base URL `https://api.onswig.com`.
+and default to `https://api.onswig.com`.
 
-## What you can build
+## What the SDK owns
 
-- create wallets from a backend route
-- prepare transfers, swaps, and grouped wallet operations
-- build a transaction from custom Solana instructions
-- read balances, token activity, and wallet roles
-- move money in and out through the fiat on-ramp and off-ramp
-- submit signed transactions through Swig's paymaster, individually or as a
-  bundle
-- expose preparation and read routes through Next.js, NestJS, a Python proxy
-  handler, or your own backend routes; keep sponsorship in server-owned code
+- API-key authentication and retry behavior
+- wallet creation and unsigned transaction preparation
+- transfers, swaps, grouped operations, and custom instructions
+- wallet, role, paymaster, and ramp reads
+- fiat on-ramp and off-ramp server operations
+- sponsorship of application-signed transactions and mainnet bundles
+- optional server route adapters for Next.js, NestJS, Fetch, and Python
+- optional Browser Signers that combine application-provided signatures with
+  prepared transactions
 
-## Use this SDK when
+## What your application owns
 
-- your backend should keep the Swig API key
-- your client should only sign prepared transactions
-- you want hosted wallet creation, movement, reads, or sponsored submission
-- you want framework route helpers instead of wiring each endpoint by hand
+- end-user authentication and authorization
+- frontend transport and user interfaces
+- wallet-provider, passkey, hardware-wallet, or custody integration
+- every private key and user authorization decision
+- confirmation and finality tracking after submission
 
-## Three ways to integrate
+The server SDK returns unsigned prepared transactions and signature-request
+metadata. Your application obtains the signature. The optional signing helpers
+can assemble that signature into the prepared transaction without receiving an
+API key or private key.
 
-- use the server SDK directly
-- use a built-in TypeScript framework helper or the Python proxy handler
-- use the browser client against your own proxy routes
+## Choose the matching Swig product
 
-## Choose the matching SDK surface
-
-- Use `@swig-wallet/developer-sdk` or `swig-developer-sdk` for hosted wallet
-  preparation, and keep the API key on the server.
-- Use `@swig-wallet/classic`, `@swig-wallet/kit`, or `swig-sdk` for direct
-  protocol integration.
-- See [Legacy & Raw APIs](/developer-sdk/portal-clients) if you are still on
-  `@swig-wallet/developer` or `@swig-wallet/api`.
+- Use this SDK when a trusted server should call Swig's hosted API.
+- Use the [Developer API](/developer-api) for direct REST integration.
+- Use the [Protocol SDK](/reference) when your application integrates directly
+  with the on-chain protocol and owns the full transaction lifecycle.
+- Use the [IDP SDK](/idp-sdk) for browser or mobile authentication flows.
 
 ## Where to go next
 
 <CardGroup cols={2}>
-  <Card title="Choose a Path" icon="signs-post" href="/developer-sdk/integration-paths">
-    Server SDK, proxy helpers, or browser client
+  <Card title="Choose a Server Path" icon="signs-post" href="/developer-sdk/integration-paths">
+    Direct server client or server route adapter
+  </Card>
+  <Card title="Understand the Runtime" icon="server" href="/developer-sdk/server-runtime">
+    Credentials, prepared data, retries, and signing boundary
   </Card>
   <Card title="Create Wallets" icon="wallet" href="/developer-sdk/create-wallets">
-    Prepare your first wallet
+    Prepare your first wallet on the server
   </Card>
-  <Card title="Client Signing" icon="signature" href="/developer-sdk/client-signing">
-    Ed25519, passkey, and EVM signatures
+  <Card title="Browser Signers" icon="signature" href="/developer-sdk/browser-signing">
+    Basic signing support for application-owned wallets and passkeys
   </Card>
   <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">
-    Finish the flow with direct or sponsored submission
+    Submit application-signed transactions
   </Card>
 </CardGroup>
+
+<Note>
+  Recovery API types remain for backend compatibility, but the recovery flow is
+  currently broken. Recovery setup and runtime guidance are intentionally
+  omitted.
+</Note>

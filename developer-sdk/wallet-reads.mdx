@@ -188,5 +188,7 @@ policy management.
 | Roles | `GET /wallet/swig/{swig_config_address}/roles` |
 | Policy | `GET /wallet/policies/{policy_id}` |
 
-These are API-key routes. If you need them in the browser, expose them through
-your own proxy — see [Use Proxy Helpers](/developer-sdk/framework-proxies).
+These are API-key routes and must be called from a trusted server. If your
+product needs to display the data elsewhere, return a validated, authorized
+view model through your own application API. Do not import the Developer SDK's
+API client or server entrypoint into that application runtime.

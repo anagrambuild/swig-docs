@@ -10,7 +10,7 @@ Swig has five product surfaces. Choose the one that matches how your app will in
 | :--- | :--- |
 | Understand the on-chain protocol and repo layout | [Swig Protocol](/protocol) |
 | Integrate directly with Swig wallets from TypeScript or Rust | [Swig Protocol SDK](/reference) |
-| Prepare wallet operations behind an API key and sign them client-side | [Swig Developer SDK](/developer-sdk) |
+| Prepare wallet operations and submit signed transactions from a trusted server | [Swig Developer SDK](/developer-sdk) |
 | Call hosted backend endpoints directly over REST | [Swig Developer API](/developer-api) |
 | Add OAuth, email OTP, or SMS OTP login flows | [Swig IDP SDK](/idp-sdk) |
 
@@ -34,7 +34,9 @@ Direct TypeScript and Rust integrations with the protocol.
 
 Hosted transaction preparation through `@swig-wallet/developer-sdk` (TypeScript) and `swig-developer-sdk` (Python).
 
-- Use it when you want the backend to prepare wallet creation, transfers, swaps, reads, or fiat ramps and the client only signs what it must sign.
+- Use it when a trusted backend should prepare wallet creation, transfers,
+  swaps, reads, or fiat ramps and submit transactions signed by
+  application-owned wallet or custody code.
 - Start at [Developer SDK](/developer-sdk).
 
 ### Swig Developer API

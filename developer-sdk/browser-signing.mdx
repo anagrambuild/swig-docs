@@ -1,0 +1,161 @@
+---
+title: "Browser Signers"
+sidebarTitle: "Browser Signers"
+---
+
+The Developer SDK remains a server-side product: `SwigClient` and the API key
+stay on your server. After the server prepares a transaction, the TypeScript
+`/browser` entrypoint provides a small set of signers for application-owned
+wallets and passkeys.
+
+The helpers accept no API key, cannot call Swig's hosted API, and never receive
+a private key. Your application still owns user authorization, the signer, and
+key custody.
+
+## Decide how to sign
+
+Do not use an empty `signatureRequests` / `signature_requests` array as proof
+that a transaction needs no application signature. Those records describe
+embedded `secp256r1` or `secp256k1` signatures. A native Ed25519 authority is a
+required signer in the serialized Solana transaction instead, so the array can
+be empty while the Ed25519 transaction signature is still missing.
+
+Match the signing path to the requester authority used during preparation and
+to the transaction's required signer set. Use each signature request to select
+and patch the corresponding `secp256r1` or `secp256k1` signer.
+
+## Ed25519 and application-defined signers
+
+Use the generic helper when your application already knows how to sign a
+serialized Solana transaction:
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+import {
+  signPreparedTransaction,
+  type PreparedTransaction,
+} from '@swig-wallet/developer-sdk/browser';
+
+declare const prepared: PreparedTransaction;
+
+const signed = await signPreparedTransaction(prepared, {
+  signTransaction: async (transaction) => {
+    return applicationSigner.signSerializedTransaction(transaction);
+  },
+});
+```
+
+```python Python
+from swig_developer_sdk import sign_prepared_transaction
+
+async def sign_with_application(transaction, _prepared):
+    return await application_signer(transaction)
+
+signed = await sign_prepared_transaction(
+    prepared,
+    sign_transaction=sign_with_application,
+)
+```
+
+</CodeGroup>
+
+The application callback receives the base64 serialized transaction and the
+full prepared record, then returns the signed base64 serialized transaction.
+The SDK does not load or store the signing key.
+
+## Secp256r1 and passkeys
+
+The passkey adapter requests an assertion from the application environment and
+patches the returned WebAuthn data into the prepared Swig transaction:
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+import {
+  createSecp256r1PasskeySigningFn,
+  signPreparedSwigTransaction,
+} from '@swig-wallet/developer-sdk/browser';
+
+const passkeySigner = createSecp256r1PasskeySigningFn({
+  allowCredentials: [{ id: credentialId, type: 'public-key' }],
+  userVerification: 'preferred',
+});
+
+const signed = await signPreparedSwigTransaction(prepared, {
+  secp256r1: passkeySigner,
+});
+```
+
+```python Python
+from swig_developer_sdk import (
+    create_secp256r1_passkey_signing_fn,
+    sign_prepared_swig_transaction,
+)
+
+passkey_signer = create_secp256r1_passkey_signing_fn(get_webauthn_assertion)
+
+signed = await sign_prepared_swig_transaction(
+    prepared,
+    secp256r1=passkey_signer,
+)
+```
+
+</CodeGroup>
+
+The TypeScript adapter is the only part of this flow intended for a WebAuthn
+browser environment. It has no access to the server client or API key. Python
+uses an application-provided assertion callback and does not initiate browser
+navigation itself.
+
+## Secp256k1 and EVM wallets
+
+The EVM adapter wraps an EIP-1193 provider with `personal_sign` and formats the
+result for a Swig `secp256k1` authority:
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+import {
+  createSecp256k1EvmSigningFn,
+  signPreparedSwigTransaction,
+} from '@swig-wallet/developer-sdk/browser';
+
+const evmSigner = createSecp256k1EvmSigningFn({
+  provider: window.ethereum,
+  address: evmAddress,
+});
+
+const signed = await signPreparedSwigTransaction(prepared, {
+  secp256k1: evmSigner,
+});
+```
+
+```python Python
+from swig_developer_sdk import (
+    create_secp256k1_evm_signing_fn,
+    sign_prepared_swig_transaction,
+)
+
+evm_signer = create_secp256k1_evm_signing_fn(
+    provider=eip1193_provider,
+    address=evm_address,
+)
+
+signed = await sign_prepared_swig_transaction(
+    prepared,
+    secp256k1=evm_signer,
+)
+```
+
+</CodeGroup>
+
+## Return to the server
+
+Send the signed serialized transaction back through an authenticated
+application route. The server can then call
+`swig.transactions.sponsor(...)`, submit through its own RPC path, and track
+confirmation or finality.
+
+Do not send the Swig developer API key, signer object, private key, or raw
+credential material across this boundary.
