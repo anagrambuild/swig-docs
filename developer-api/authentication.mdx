@@ -25,11 +25,40 @@ Send your API key as a bearer token:
 Authorization: Bearer sk_your_api_key
 ```
 
-Runtime API keys are created in the Developer Portal. Keep them on your server
-and send browser or mobile requests through your backend.
+Runtime API keys are created in the Developer Portal.
+
+<Warning>
+  API keys are server-only credentials. Do not ship one to a browser or mobile
+  bundle, and do not expose one through a public build-time variable such as
+  `NEXT_PUBLIC_*`. Route browser and mobile traffic through your own backend,
+  or use the [Developer SDK proxy helpers](/developer-sdk/framework-proxies),
+  which keep the key server-side for you.
+</Warning>
+
+The gateway also accepts `x-api-key`, but bearer auth is the documented and
+SDK-default form.
 
 This section covers runtime product APIs. Use the Developer Portal for
 administrative operations.
+
+## Retry safety
+
+Treat the two request classes differently:
+
+| Request | Safe to retry |
+| :--- | :--- |
+| `GET` | yes — reads are idempotent |
+| `POST` | not by default — a replay can duplicate work |
+| `POST /paymaster/sponsor`, `POST /paymaster/sponsor/bundle` | yes, when you send the same idempotency key |
+
+Sponsorship is the one write where a retry is explicitly safe, because a
+matching idempotency key returns the original response instead of spending
+again. Derive that key from something stable in your own domain, such as an
+order id, rather than generating a new value per attempt.
+
+The Developer SDKs encode exactly this policy: `GET` requests use the
+configured retry policy, `POST` requests do not retry, and sponsorship retries
+only when an idempotency key is present.
 
 ## JSON encoding
 

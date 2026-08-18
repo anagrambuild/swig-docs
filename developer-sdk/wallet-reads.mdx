@@ -1,0 +1,192 @@
+---
+title: "Read Wallet State"
+sidebarTitle: "Read Wallet State"
+---
+
+Every wallet read is an API-key `GET` against the wallet handle you already
+have. Reads follow the client's retry policy, so they are safe to repeat.
+
+## Start from a wallet handle
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const wallet = swig.wallets.use({
+  swigConfigAddress,
+  walletAddress,
+});
+```
+
+```python Python
+wallet = swig.wallets.use(swig_config_address)
+```
+
+</CodeGroup>
+
+Reads do not need a `requesterAuthority` / `requester_authority`. Only
+preparation calls do.
+
+## Balances
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const usd = await wallet.getUsdBalance();
+// usd.swigConfigAddress, usd.walletAddress, usd.usdValue
+
+const tokens = await wallet.listTokenBalances();
+for (const balance of tokens.balances) {
+  console.log(
+    balance.assetKind,
+    balance.tokenSymbol,
+    balance.uiAmount,
+  );
+}
+console.log(tokens.totalUsdValue);
+```
+
+```python Python
+usd = await wallet.get_usd_balance()
+# usd.swig_config_address, usd.wallet_address, usd.usd_value
+
+tokens = await wallet.list_token_balances()
+for balance in tokens.balances:
+    print(balance.asset_kind, balance.token_symbol, balance.ui_amount)
+print(tokens.total_usd_value)
+```
+
+</CodeGroup>
+
+Each balance carries `mintAddress` / `mint_address`, `tokenProgram` /
+`token_program`, `tokenSymbol`, `tokenName`, `decimals`, `amountRaw` /
+`amount_raw`, `uiAmount` / `ui_amount`, `usdPrice` / `usd_price`, and
+`usdValue` / `usd_value`, and `assetKind` / `asset_kind`. The SDK normalizes
+the asset discriminator to `token`, `native-sol`, or `unspecified`.
+
+Use `amountRaw` / `amount_raw` for arithmetic. It is the exact integer amount as
+a string; `uiAmount` / `ui_amount` is a display convenience.
+
+## Token activity
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const activity = await wallet.listTokenTransactions({ limit: 25 });
+
+for (const transaction of activity.transactions) {
+  console.log(
+    transaction.transactionSignature,
+    transaction.direction, // 'inflow' | 'outflow'
+    transaction.assetKind, // 'token' | 'native-sol' | 'unspecified'
+    transaction.uiAmount,
+    transaction.tokenSymbol,
+  );
+}
+```
+
+```python Python
+activity = await wallet.list_token_transactions(limit=25)
+
+for transaction in activity.transactions:
+    print(
+        transaction.transaction_signature,
+        transaction.direction,  # "inflow" | "outflow"
+        transaction.asset_kind,
+        transaction.ui_amount,
+        transaction.token_symbol,
+    )
+```
+
+</CodeGroup>
+
+Each entry also carries `slot`, optional `blockTime` / `block_time`,
+`ownerAddress` / `owner_address`, `tokenAccountAddress` /
+`token_account_address`, `isSubaccount` / `is_subaccount`, and the same
+amount, USD, and normalized asset-kind fields as a balance.
+
+`limit` is optional. Omit it for the backend default of 25. Values above 100
+are capped at 100.
+
+## Roles
+
+Roles are how you inspect who currently holds authority over a Swig and what
+each authority is allowed to do.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const { swigConfigAddress, walletAddress, roles } = await wallet.listRoles();
+
+for (const role of roles) {
+  console.log(role.roleId, role.authorityType, role.authorityValue);
+
+  for (const action of role.actions) {
+    console.log(action.actionIndex, action.actionCode, action.actionData);
+  }
+}
+```
+
+```python Python
+result = await wallet.list_roles()
+
+for role in result.roles:
+    print(role.role_id, role.authority_type, role.authority_value)
+
+    for action in role.actions:
+        print(action.action_index, action.action_code, action.action_data)
+```
+
+</CodeGroup>
+
+| Field | Meaning |
+| :--- | :--- |
+| `roleId` / `role_id` | the role's on-chain index |
+| `authorityType` / `authority_type` | protocol authority type discriminant |
+| `authorityValue` / `authority_value` | the authority's public key material |
+| `actions` | the permissions attached to that role |
+| `actionCode` / `action_code` | protocol action discriminant |
+| `actionData` / `action_data` | raw per-action payload |
+
+`actionData` / `action_data` is a raw object whose shape depends on the action.
+Read it against the protocol's
+[permissions model](/protocol/concepts-and-permissions) rather than assuming
+fixed keys.
+
+Common uses:
+
+- confirm a newly granted authority actually landed on-chain
+- render "who can spend from this wallet" in an admin view
+- check whether a passkey or EVM authority is still attached before preparing
+  a transaction it would need to sign
+
+## Policy metadata
+
+Policy reads are a separate, portal-scoped lookup rather than a wallet read:
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const policy = await swig.wallets.getPolicy(policyId);
+```
+
+```python Python
+policy = await swig.wallets.get_policy(policy_id)
+```
+
+</CodeGroup>
+
+See [Fetch a Policy](/examples/dev-portal/fetch-policy) for the portal side of
+policy management.
+
+## Underlying routes
+
+| Read | Route |
+| :--- | :--- |
+| USD balance | `GET /wallet/swig/{swig_config_address}/balance/usd` |
+| Token balances | `GET /wallet/swig/{swig_config_address}/token-balances` |
+| Token transactions | `GET /wallet/swig/{swig_config_address}/token-transactions` |
+| Roles | `GET /wallet/swig/{swig_config_address}/roles` |
+| Policy | `GET /wallet/policies/{policy_id}` |
+
+These are API-key routes. If you need them in the browser, expose them through
+your own proxy — see [Use Proxy Helpers](/developer-sdk/framework-proxies).

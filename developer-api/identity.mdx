@@ -1,89 +1,85 @@
 ---
-title: "Identity API"
+title: "Identity Boundary"
 sidebarTitle: "Identity"
 ---
 
-The Identity API starts login flows, completes OTP/passkey flows, manages role
-and invite operations, and reads identity policies through API-key guarded
-runtime endpoints.
+Runtime identity is **not** an API-key Developer API surface. The endpoints that
+start and complete a login are public IdP routes, called by the end user's
+browser or app, not by your server with a Swig API key.
 
-## Auth
+This page exists to mark that boundary so you do not wire identity into a
+server-to-server integration where it does not belong.
 
-Use an API key:
+## Who owns identity integration
 
-```text
-Authorization: Bearer sk_your_api_key
+The [IDP SDK](/idp-sdk) owns identity integration guidance: OAuth, email OTP,
+SMS OTP, session handling, and how a completed login becomes a Swig session.
+
+<Warning>
+  The currently published IDP SDK defaults still target retired
+  `/identity/api/*` routes and its endpoint model does not fully represent the
+  public OTP and setup contract below. Treat the route table on this page as
+  the current backend contract until the IDP SDK is refreshed.
+</Warning>
+
+Once a user has a session, the Developer SDK picks it up:
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const wallet = swig.wallets.fromIdpSession(session);
 ```
 
-Some identity flows may return or consume flow-specific tokens after the
-API-key-guarded start point. Developer-portal admin endpoints are intentionally
-omitted from this reference.
-
-## Start OAuth auth
-
-`GET /identity/api/auth/start`
-
-Query parameters:
-
-| Parameter | Type | Description |
-| :--- | :--- | :--- |
-| `provider` | string | Provider key |
-| `client_id` | string | Identity client id |
-| `redirect_uri` | string | Redirect URI registered for the client |
-| `state` | string | Client state returned with the redirect |
-| `network` | enum | `NETWORK_DEVNET` or `NETWORK_MAINNET` |
-| `flow` | string | Flow name such as `role` or `session` |
-| `policy_id` | string | Policy used for signup/session flow |
-| `skip_approval` | boolean | Skip approval when allowed |
-| `invite_token` | string | Invite token for invite acceptance flows |
-
-Response:
-
-```json
-{
-  "redirectUrl": "https://provider.example/authorize?...",
-  "state": "client_state",
-  "startToken": "start_token"
-}
+```python Python
+wallet = swig.wallets.from_idp_session(session)
 ```
 
-## Start email OTP
+</CodeGroup>
 
-`POST /identity/api/auth/email/start`
+That handoff is the only place identity and the Developer SDK meet.
 
-```json
-{
-  "provider": "email",
-  "clientId": "client_123",
-  "redirectUri": "https://app.example/callback",
-  "state": "client_state",
-  "network": "NETWORK_DEVNET",
-  "flow": "session",
-  "policyId": "policy_123",
-  "email": "user@example.com"
-}
-```
+## Public IdP routes
 
-The response includes `challengeId`, `maskedEmail`, `expiresAt`,
-`otpEntryUrl`, and `startToken`.
+These routes are public. They are listed here as the current backend contract.
 
-## Start passkey challenge
+| Method | Route |
+| :--- | :--- |
+| `POST` | `/identity/public/auth/start` |
+| `POST` | `/identity/public/auth/email/start` |
+| `POST` | `/identity/public/auth/email/verify` |
+| `POST` | `/identity/public/auth/email/resend` |
+| `POST` | `/identity/public/auth/sms/start` |
+| `POST` | `/identity/public/auth/sms/verify` |
+| `POST` | `/identity/public/auth/sms/resend` |
+| `POST` | `/identity/public/setup/sponsor` |
+| `GET` / `POST` | `/identity/public/callback/{provider}` |
+| `GET` | `/identity/public/verify_jwt/jwks.json` |
+| `GET` | `/identity/public/oidc/jwks.json` |
 
-`POST /identity/api/auth/passkey/start`
+The JWKS routes are what you use to verify identity tokens server-side.
 
-```json
-{
-  "clientId": "client_123",
-  "redirectUri": "https://app.example/callback",
-  "network": "NETWORK_DEVNET",
-  "ceremony": "PASSKEY_CEREMONY_REGISTRATION",
-  "clientState": "state",
-  "policyId": "policy_123"
-}
-```
+## Why this matters
 
-The response returns a `challengeId` and `webauthnOptionsJson` for
-`navigator.credentials`.
+- Do not send a Swig API key to these routes. They are not API-key guarded, and
+  doing so leaks a server credential into a client-facing call path.
+- Do not model login as a server-to-server call. The user's client completes the
+  flow; your server verifies the result.
+- Identity client and organization-provider configuration is a developer-portal
+  admin flow, not a runtime endpoint.
 
-Identity client and organization-provider configuration is handled through
-developer-portal admin surfaces, not API-key runtime endpoints.
+## What is not here
+
+There is no `/identity/api/auth/passkey/start` route. If you have an
+integration pointed at that path, it is targeting an endpoint that does not
+exist in the current backend.
+
+## Where to go instead
+
+<CardGroup cols={2}>
+  <Card title="IDP SDK" icon="fingerprint" href="/idp-sdk">
+    OAuth and OTP login flows that create Swig sessions
+  </Card>
+  <Card title="Server and Client Model" icon="server" href="/developer-sdk/server-and-client">
+    How a session becomes a Developer SDK wallet handle
+  </Card>
+</CardGroup>

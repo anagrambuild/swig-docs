@@ -42,6 +42,11 @@ The same handle shape works for `secp256k1` and `secp256r1` authorities too.
 If you already have an IDP session, the same model works through
 `swig.wallets.fromIdpSession(session)`.
 
+For direct server-side preparation, the session must include
+`requesterAuthority`, or you must pass a current authority override. A browser
+proxy may instead resolve the authority from authenticated role context on the
+server.
+
 ## SOL transfer
 
 <CodeGroup dropdown>

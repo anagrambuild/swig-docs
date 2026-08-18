@@ -3,18 +3,49 @@ title: "Wallet API"
 sidebarTitle: "Wallets"
 ---
 
-The Wallet API reads Swig wallet state through API-key guarded runtime
-endpoints.
+The Wallet API reads Swig wallet state. Most routes are API-key guarded; two
+are the public client boundary used by wallet front ends.
 
-## Auth
+## Routes
 
-Use an API key:
+| Method | Route | Authentication |
+| :--- | :--- | :--- |
+| `POST` | `/wallet/swig/lookup` | public client boundary |
+| `GET` | `/wallet/swig/status` | public client boundary |
+| `GET` | `/wallet/policies/{policy_id}` | API key |
+| `GET` | `/wallet/swig/{swig_config_address}/balance/usd` | API key |
+| `GET` | `/wallet/swig/{swig_config_address}/token-balances` | API key |
+| `GET` | `/wallet/swig/{swig_config_address}/token-transactions` | API key |
+| `GET` | `/wallet/swig/{swig_config_address}/roles` | API key |
+
+For the API-key routes, send:
 
 ```text
 Authorization: Bearer sk_your_api_key
 ```
 
+All API-key runtime routes listed above are `GET` reads, so they are safe to
+retry. The public lookup boundary is a `POST`.
+
 Developer-portal admin endpoints are intentionally omitted from this reference.
+
+## Get USD balance
+
+`GET /wallet/swig/{swig_config_address}/balance/usd`
+
+Query parameters:
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `network` | enum | `NETWORK_DEVNET` or `NETWORK_MAINNET` |
+
+Response fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `swigConfigAddress` | string | Swig config address |
+| `walletAddress` | string | Swig wallet address |
+| `usdValue` | number | Total USD value held by the wallet |
 
 ## List token balances
 
@@ -35,6 +66,12 @@ Response fields:
 | `balances` | array | Token and native SOL balances |
 | `totalUsdValue` | number | Total USD value across returned balances |
 
+Each balance carries `mintAddress`, `tokenProgram`, `tokenSymbol`, `tokenName`,
+`decimals`, `amountRaw`, `uiAmount`, `usdPrice`, `usdValue`, and `assetKind`.
+`assetKind` is the ProtoJSON enum `ASSET_KIND_TOKEN`,
+`ASSET_KIND_NATIVE_SOL`, or `ASSET_KIND_UNSPECIFIED`. Use `amountRaw` for
+arithmetic; it is the exact integer amount as a string.
+
 ## List token transactions
 
 `GET /wallet/swig/{swig_config_address}/token-transactions`
@@ -44,10 +81,60 @@ Query parameters:
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
 | `network` | enum | `NETWORK_DEVNET` or `NETWORK_MAINNET` |
-| `limit` | number | Maximum number of transactions to return |
+| `limit` | number | Optional result count; defaults to 25 and values above 100 are capped at 100 |
+
+Each entry carries `transactionSignature`, `slot`, `blockTime`,
+`ownerAddress`, `walletAddress`, `isSubaccount`, `tokenAccountAddress`,
+`mintAddress`, `tokenProgram`, `direction`, `amountRaw`, `decimals`,
+`uiAmount`, `usdPrice`, `usdValue`, `tokenSymbol`, `tokenName`, and `assetKind`.
+
+`direction` is an inflow or outflow relative to the wallet. `assetKind` uses
+the same ProtoJSON enum values as token balances.
+
+## List roles
+
+`GET /wallet/swig/{swig_config_address}/roles`
+
+Query parameters:
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `network` | enum | `NETWORK_DEVNET` or `NETWORK_MAINNET` |
+
+Response fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `swigConfigAddress` | string | Swig config address |
+| `walletAddress` | string | Swig wallet address |
+| `roles` | array | On-chain roles attached to the Swig |
+
+Each role carries `roleId`, `authorityType`, `authorityValue`, and `actions`.
+Each action carries `actionIndex`, `actionCode`, and `actionData`.
+
+`authorityValue` is the authority's public key material, and `actionData` is a
+raw per-action object whose shape depends on the action. Interpret both against
+the protocol
+[permissions model](/protocol/concepts-and-permissions).
+
+Use this endpoint to confirm which authorities currently control a wallet and
+what each one is allowed to do.
 
 ## Get policy
 
 `GET /wallet/policies/{policy_id}` reads a policy visible to the API-key
 organization. Policy creation and policy administration are portal-admin flows,
 not API-key runtime endpoints.
+
+## Public client boundary
+
+`POST /wallet/swig/lookup` and `GET /wallet/swig/status` sit on the public
+client boundary rather than behind an API key. They exist so a wallet front end
+can resolve and check a Swig without holding a server credential. Do not treat
+them as a substitute for the API-key reads above.
+
+## Not part of this reference
+
+Some paths exist in the backend but are not usable integration surfaces. In
+particular, `/wallet/swig/auth/check` and `/wallet/swig/session` are backend
+stubs. Do not build against them.

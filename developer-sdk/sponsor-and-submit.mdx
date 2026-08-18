@@ -3,67 +3,183 @@ title: "Submit and Sponsor Transactions"
 sidebarTitle: "Sponsor & Submit"
 ---
 
-The Developer SDK can prepare transactions, but your app still needs to submit
-them. There are two models:
+The Developer SDK prepares transactions; your app still submits them. There are
+two models:
 
 - send directly through your own RPC path
-- sponsor submission through Swig's paymaster route
+- sponsor submission through Swig's paymaster
 
-## Sponsor submission
+Client authority signing happens first either way. Sponsoring does not replace
+it.
 
-Use `swig.transactions.sponsor(...)` when your server should hand the signed
-transaction to Swig's sponsor path:
+## Sponsor one transaction
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const submitted = await swig.transactions.sponsor({
+  transaction: signed.transaction,
+  network: 'mainnet',
+  idempotencyKey,
+});
+
+// submitted.requestId
+// submitted.signature
+// submitted.spentByPaymaster
+```
+
+```python Python
+from swig_developer_sdk import SponsorSignedTransactionArgs
+
+submitted = await swig.transactions.sponsor(
+    SponsorSignedTransactionArgs(
+        transaction=signed.transaction,
+        network="mainnet",
+        idempotency_key=idempotency_key,
+    )
+)
+
+# submitted.request_id
+# submitted.signature
+# submitted.spent_by_paymaster
+```
+
+</CodeGroup>
+
+The SDK handles the base58 payload encoding the paymaster expects. The response
+carries the request id, the submitted signature, and what the paymaster spent.
+There is no status field. A returned signature means the Solana RPC accepted
+the transaction; it may still be pending and is not confirmation or finality.
+Track it through your RPC provider when your product needs either.
+
+For single-transaction sponsorship, `network` resolves from the call and then
+the client default. If neither is set, the paymaster defaults to mainnet.
+
+## Retry safely with an idempotency key
+
+Sponsorship is the one `POST` the SDKs will retry, and only when you pass an
+idempotency key.
 
 <CodeGroup dropdown>
 
 ```typescript TypeScript
 await swig.transactions.sponsor({
   transaction: signed.transaction,
-  transactionEncoding: signed.transactionEncoding,
-  network: signed.network,
+  network: 'mainnet',
+  idempotencyKey: `sponsor:${orderId}`,
 });
 ```
 
 ```python Python
-from swig_developer_sdk import SponsorSignedTransactionArgs
-
 await swig.transactions.sponsor(
     SponsorSignedTransactionArgs(
         transaction=signed.transaction,
-        transaction_encoding=signed.transaction_encoding,
-        network=signed.network,
+        network="mainnet",
+        idempotency_key=f"sponsor:{order_id}",
     )
 )
 ```
 
 </CodeGroup>
 
-The client still signs first when authority signatures are required. Sponsoring
-does not replace client authority signing.
+A matching retry returns the original paymaster response rather than spending
+again. Without a key, a failed sponsorship call is left to your app to decide
+about, because a blind replay could pay twice.
+
+Derive the key from something stable in your own domain — an order id, a
+payment id — not from a fresh random value per attempt.
+
+## Sponsor a bundle
+
+`sponsorBundle` / `sponsor_bundle` submits one to five signed transactions as a
+single bundle. Use it when several transactions must land together, such as the
+ordered plan returned by `wallet.prepare(...)`.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const bundle = await swig.transactions.sponsorBundle({
+  transactions: [signedFirst.transaction, signedSecond.transaction],
+  network: 'mainnet',
+  idempotencyKey,
+});
+
+// bundle.requestId
+// bundle.bundleId
+// bundle.signatures
+// bundle.estimatedSpentByPaymaster
+```
+
+```python Python
+from swig_developer_sdk import SponsorSignedTransactionBundleArgs
+
+bundle = await swig.transactions.sponsor_bundle(
+    SponsorSignedTransactionBundleArgs(
+        transactions=(signed_first.transaction, signed_second.transaction),
+        network="mainnet",
+        idempotency_key=idempotency_key,
+    )
+)
+
+# bundle.request_id
+# bundle.bundle_id
+# bundle.signatures
+# bundle.estimated_spent_by_paymaster
+```
+
+</CodeGroup>
+
+Constraints the SDK enforces before sending:
+
+| Constraint | Detail |
+| :--- | :--- |
+| Network | mainnet only; any other network raises |
+| Size | one to five transactions |
+| Order | `signatures` come back in bundle order |
+| Cost | `estimatedSpentByPaymaster` is an estimate, not a settled charge |
+
+A returned `bundleId` means Jito accepted the bundle. The bundle may still be
+pending; acceptance is not confirmation or finality.
+
+Sign each transaction in the bundle exactly as you would for single
+sponsorship.
 
 ## When sponsor submission fits
-
-Use it when:
 
 - your product wants gasless or paymaster-backed flows
 - your backend already owns the post-signing submission step
 - you want one server-owned path for ordered transaction submission
 
-## Transaction categories still matter
+## Check paymaster funding
 
-These categories tell you what can go straight to send or sponsor:
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const balance = await swig.paymaster.getBalance({ network: 'mainnet' });
+// balance.configured, balance.address, balance.balanceLamports, balance.balanceSol
+```
+
+```python Python
+balance = await swig.paymaster.get_balance(network="mainnet")
+# balance.configured, balance.address, balance.balance_lamports, balance.balance_sol
+```
+
+</CodeGroup>
+
+`getIdpBalance()` / `get_idp_balance()` reads the IdP paymaster instead of the
+API paymaster.
+
+## Transaction categories still matter
 
 - `clientAuthorityTransactions` / `client_authority_transactions` must be
   client-signed first
-- `feePayerOnlyTransactions` / `fee_payer_only_transactions` can go straight
-  to your fee payer or sponsor path
-- `operatorSignedTransactions` / `operator_signed_transactions` are already
-  operator-signed and just need final submission handling
+- `feePayerOnlyTransactions` / `fee_payer_only_transactions` can go straight to
+  your fee payer or sponsor path
 
 ## Portal admin vs runtime usage
 
-This page is about runtime submission. If you need to create or manage a
-paymaster in the dashboard, use the portal docs:
+This page is about runtime submission. To create or manage a paymaster in the
+dashboard, use the portal docs:
 
 - [Paymaster](/examples/dev-portal/paymaster-overview)
 - [Create Paymaster](/examples/dev-portal/create-paymaster)

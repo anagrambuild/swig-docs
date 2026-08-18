@@ -47,12 +47,20 @@ configured backend base URL and isolated-host URL.
 
 The default backend routes include:
 
-- `/identity/api/providers`
-- `/identity/api/auth/start`
-- `/identity/api/auth/email/start`
-- `/identity/api/auth/sms/start`
-- `/identity/api/signup`
-- `/identity/api/session`
+- `/identity/public/auth/start`
+- `/identity/public/auth/email/start`
+- `/identity/public/auth/sms/start`
+- `/identity/public/auth/email/verify`
+- `/identity/public/auth/sms/verify`
+- `/identity/public/callback/{provider}`
+
+<Warning>
+  The published `swig-idp-sdk` endpoint defaults still use the retired
+  `/identity/api/*` paths. Its current endpoint configuration type also does
+  not fully model the public OTP and setup routes above, so a simple endpoint
+  override is not a complete compatibility fix. Use the current backend route
+  contract deliberately until the IDP SDK is refreshed.
+</Warning>
 
 ## Configuration points
 

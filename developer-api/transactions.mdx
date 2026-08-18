@@ -4,8 +4,23 @@ sidebarTitle: "Transactions"
 ---
 
 The Transaction API prepares Solana transactions for Swig wallet creation,
-transfers, swaps, and recovery. It does not replace required client authority
-signatures; responses include signature requests when the client must sign.
+transfers, swaps, and custom instruction sets. It does not replace required
+client authority signatures; responses include signature requests when the
+client must sign.
+
+## Supported preparation routes
+
+| Method | Route |
+| :--- | :--- |
+| `POST` | `/transaction/prepare/batch` |
+| `POST` | `/transaction/wallet/create` |
+| `POST` | `/transaction/transfer/sol` |
+| `POST` | `/transaction/transfer/spl-token` |
+| `POST` | `/transaction/swap/jupiter` |
+| `POST` | `/transaction/prepare/custom` |
+
+Preparation requests are not retried automatically. A replay can duplicate
+work, so decide per call whether repeating is correct.
 
 ## Auth
 
@@ -35,9 +50,14 @@ transactions.
 | `transactionEncoding` | enum | Currently `TRANSACTION_ENCODING_BASE64` |
 | `wallet` | object | `swigConfigAddress` and `walletAddress` when known |
 | `expiresAt` | timestamp | Expiration for the prepared transaction |
+| `network` | enum | Network for which the transaction was prepared |
 | `recentBlockhash` | string | Recent blockhash used in the transaction |
 | `kind` | enum | Prepared transaction category |
 | `signatureRequests` | array | Client authority signatures required before submission |
+
+Each signature request carries `scheme`, `signer`, `messageHash`, `slot`, and
+`counter`. The signer is encoded for its signature scheme, and `messageHash`
+is the hex-encoded message to sign.
 
 ## Prepare a batch
 
@@ -57,6 +77,13 @@ an existing Swig.
       "transferSol": {
         "destination": "DestinationPublicKey",
         "lamports": "1000000"
+      }
+    },
+    {
+      "transferToken": {
+        "mint": "MintAddress",
+        "destinationOwner": "DestinationOwnerPublicKey",
+        "amount": "1000000"
       }
     }
   ]
@@ -110,9 +137,6 @@ client authority signature and chooses direct or sponsored submission.
 }
 ```
 
-If `policyId` is omitted, `initialUser` is required and the API creates a
-no-recovery wallet policy for the caller's organization.
-
 ## Transfer SOL
 
 `POST /transaction/transfer/sol`
@@ -163,19 +187,28 @@ no-recovery wallet policy for the caller's organization.
   "inputMint": "InputMintAddress",
   "outputMint": "OutputMintAddress",
   "amount": "1000000",
-  "slippageBps": 50,
-  "mode": "ExactIn"
+  "slippageBps": 50
 }
 ```
 
-## Recovery
+Optional Jupiter controls:
 
-Recovery endpoints prepare transactions for the guardian flow.
+| Field | Type | Purpose |
+| :--- | :--- | :--- |
+| `slippageBps` | number | Maximum slippage in basis points |
+| `wrapAndUnwrapSol` | boolean | Let Jupiter wrap or unwrap native SOL |
+| `tipAmountLamports` | integer string | Optional prioritization tip |
+| `computeUnitPricePercentile` | string | Jupiter compute-unit price percentile |
+| `maxAccounts` | number | Limit the accounts used by the route |
+| `mode` | string | Opaque swap mode forwarded to Jupiter |
+| `blockhashSlotsToExpiry` | number | Requested blockhash lifetime in slots |
+| `destinationAccount` | string | Destination owner; the backend derives the SPL token account, or uses the address for native SOL |
 
-| Endpoint | Required purpose fields |
-| :--- | :--- |
-| `/transaction/wallet/recovery-authority/add` | `swigAddress`, `requesterAuthority` |
-| `/transaction/recovery/configure` | `swigAddress`, `guardianPubkey`, `delaySeconds`, optional `targetRoleId` |
-| `/transaction/recovery/start` | `swigAddress`, `guardianPubkey` or `guardianSwigAddress`, `newAuthority`, `newAuthorityKind` |
-| `/transaction/recovery/cancel` | `swigAddress`, `requesterAuthority` |
-| `/transaction/recovery/execute` | `swigAddress`, `newAuthority`, `newAuthorityKind` |
+## After preparation
+
+The response is prepared only. Your application supplies any requested client
+authority signature, then submits the transactions in the returned order —
+directly, or through the [Paymaster API](/developer-api/paymaster).
+
+If `policyId` is omitted on wallet creation, `initialUser` is required and the
+API creates a wallet policy for the caller's organization.

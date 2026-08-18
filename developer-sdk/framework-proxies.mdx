@@ -3,13 +3,13 @@ title: "Use Proxy Helpers"
 sidebarTitle: "Use Proxy Helpers"
 ---
 
-If your app only needs a safe server-side proxy around transaction preparation,
-the SDK already ships it.
+If your app only needs a safe server-side proxy around the Developer SDK, the
+package already ships it.
 
 ## Use this path when
 
 - you want the API key to stay on the server
-- you want the SDK to wire the prepare routes
+- you want the SDK to wire the routes
 - you still want browser code to work with wallet handles and prepared results
 
 ## Next.js
@@ -20,15 +20,16 @@ Create one catch-all route:
 // app/api/swig/[...swig]/route.ts
 import { createSwigRouteHandlers } from '@swig-wallet/developer-sdk/next';
 
-export const { POST } = createSwigRouteHandlers();
+export const { GET, POST } = createSwigRouteHandlers();
 ```
 
 ## NestJS
 
-Create one controller mounted at your Swig proxy prefix:
+Create one controller mounted at your Swig proxy prefix. The handler routes
+`GET` and `POST` itself, so bind it with `@All`:
 
 ```typescript
-import { Controller, Post, Req, Res } from '@nestjs/common';
+import { All, Controller, Req, Res } from '@nestjs/common';
 import { createSwigNestHandler } from '@swig-wallet/developer-sdk/nest';
 import type { Request, Response } from 'express';
 
@@ -36,11 +37,23 @@ const swigHandler = createSwigNestHandler();
 
 @Controller('swig')
 export class SwigController {
-  @Post('*')
+  @All('*')
   handle(@Req() request: Request, @Res() response: Response) {
     return swigHandler(request, response);
   }
 }
+```
+
+## Any fetch runtime
+
+Both adapters wrap the same framework-neutral handlers, which you can mount
+directly in any `Request`/`Response` runtime:
+
+```typescript
+import {
+  createSwigFetchHandler,
+  createSwigGetHandler,
+} from '@swig-wallet/developer-sdk/server/fetch';
 ```
 
 ## Python
@@ -66,17 +79,68 @@ Return `response.body` with `response.status` from your framework route.
 
 ## Routes the helpers cover
 
-The framework helpers cover:
+Preparation:
 
-- `POST /wallet/create`
-- `POST /prepare`
-- `POST /transfer/sol`
-- `POST /transfer/spl-token`
-- `POST /swap/jupiter`
+```text
+POST /wallet/create
+POST /prepare
+POST /transfer/sol
+POST /transfer/spl-token
+POST /swap/jupiter
+```
+
+Reads:
+
+```text
+GET  /wallet/:swigConfigAddress/balance/usd
+GET  /wallet/:swigConfigAddress/token-balances
+GET  /wallet/:swigConfigAddress/token-transactions
+GET  /wallet/:swigConfigAddress/roles
+GET  /paymaster/balance
+```
+
+Ramp:
+
+```text
+GET  /ramp/onramp/options
+POST /ramp/onramp/quote
+POST /ramp/onramp/session
+GET  /ramp/onramp/session/:sessionId
+GET  /ramp/offramp/options
+POST /ramp/offramp/quote
+POST /ramp/offramp/session
+POST /ramp/offramp/session/:sessionId/prepare
+POST /ramp/offramp/session/:sessionId/submit
+GET  /ramp/offramp/session/:sessionId
+```
+
+Paths are relative to wherever you mount the handler — `/api/swig` for the
+Next.js example above, `/swig` for the Nest example.
+
+## Configuration
+
+All adapters read the same environment variables when a value is not passed
+explicitly:
+
+```bash
+SWIG_DEVELOPER_API_KEY=...   # or SWIG_API_KEY
+SWIG_TRANSACTION_API_URL=... # optional; defaults to https://api.onswig.com
+SWIG_FEE_PAYER=...           # optional
+```
+
+A fee payer is required for every preparation route. The handlers resolve it
+from the `feePayer` config value or function, then the request body, then the
+environment, and return a `400` if none of those produce a value.
+
+## Response shapes
+
+- preparation routes return `{ prepared: ... }`
+- read and ramp routes return the resource body directly
+- failures return `{ error: string }` with a `4xx` or `5xx` status
 
 ## Browser-side usage
 
-Once your proxy exists, browser code can use `SwigBrowserClient` and call only
+Once your proxy exists, browser code uses `SwigBrowserClient` and calls only
 your local app routes:
 
 <Note>
@@ -87,16 +151,19 @@ your local app routes:
 ```typescript
 import { SwigBrowserClient } from '@swig-wallet/developer-sdk/browser';
 
-const swig = new SwigBrowserClient({ network: 'devnet' });
+const swig = new SwigBrowserClient({ basePath: '/api/swig', network: 'devnet' });
 const wallet = swig.wallets.fromIdpSession(session);
 
 const prepared = await wallet.transfer.sol({
   destination,
   amount: 1_000_000n,
 });
+
+const { roles } = await wallet.listRoles();
 ```
 
-Then sign the returned prepared payload with the client helpers.
+Then sign the returned prepared payload with the
+[client helpers](/developer-sdk/client-signing).
 
 ## Server-side requester resolution
 
@@ -112,3 +179,4 @@ createSwigRouteHandlers({
 ```
 
 Use this when auth context or role mapping should stay on the server.
+`feePayer` accepts the same function form when the payer depends on the caller.

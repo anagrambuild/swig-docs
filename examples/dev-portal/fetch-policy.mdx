@@ -190,7 +190,7 @@ const policy = await getPolicy('clx1234567890abcdef');
 
 If your app already uses `@swig-wallet/developer-sdk` for prepared wallet
 operations, you can read the same raw policy metadata the SDK uses during
-wallet creation and recovery flows:
+wallet creation:
 
 ```typescript
 import { SwigClient } from '@swig-wallet/developer-sdk/server/typescript';
@@ -202,10 +202,33 @@ const swig = new SwigClient({
 
 const policy = await swig.wallets.getPolicy('clx1234567890abcdef');
 
+console.log(policy.id);
 console.log(policy.name);
-console.log(policy.guardianEnabled);
-console.log(policy.guardianDelaySeconds);
+console.log(policy.description);
+// Current SDK authority uses the WalletAuthority oneof.
+console.log(policy.authority);
 console.log(policy.actions);
+```
+
+Unlike the portal response above, the current Developer SDK calls the API
+Wallet service at `GET /wallet/policies/{policyId}`. Its TypeScript client
+preserves the ProtoJSON wallet-authority oneof:
+
+```json
+{
+  "id": "clx1234567890abcdef",
+  "name": "user-wallet-policy",
+  "description": "Standard user wallet with transfer limits",
+  "initialKeySource": "WALLET_POLICY_KEY_SOURCE_STORED",
+  "authority": {
+    "ed25519": {
+      "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
+    }
+  },
+  "actions": [
+    { "type": "SolLimit", "amount": "1000000000" }
+  ]
+}
 ```
 
 Use this when policy lookup is part of a prepared-wallet flow. For standalone
@@ -227,7 +250,11 @@ actions and authorities, use the legacy `@swig-wallet/developer` client.
   policy reads as a supporting detail rather than the primary interface.
 </Tip>
 
-## Response Types
+## Portal Response Types
+
+The types below describe the portal REST endpoint and its portal-facing
+clients. They do not describe the current Developer SDK's ProtoJSON response
+shown above.
 
 ### Policy
 
