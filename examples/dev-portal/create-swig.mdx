@@ -12,7 +12,7 @@ This guide shows how to create Swig wallets programmatically using the Developer
   (<code>@swig-wallet/developer-sdk</code> and
   <code>swig-developer-sdk</code>, in
   [anagrambuild/swig-developer-sdk](https://github.com/anagrambuild/swig-developer-sdk)),
-  start with [What the Developer SDK Does](/developer-sdk).
+  start with the [Server-Side Developer SDK](/developer-sdk).
   Treat <code>@swig-wallet/developer</code> as the legacy developer SDK for
   existing integrations.
 </Note>
@@ -77,7 +77,8 @@ The current package is prepare-first:
 
 1. your server uses an API key
 2. the server prepares wallet transactions
-3. the client signs only the required transactions
+3. application-owned signing code satisfies the transaction signer set and any
+   embedded signature requests
 4. your app submits them directly or through a sponsor flow
 
 Minimal server-side example:
@@ -102,16 +103,21 @@ const created = await swig.wallets.create({
 return {
   wallet: created.wallet,
   transactions: created.transactions,
-  clientAuthorityTransactions: created.clientAuthorityTransactions,
 };
 ```
 
+Do not use an empty `created.clientAuthorityTransactions` array to infer that
+no application signature is needed. That collection tracks explicit embedded
+signature requests; inspect each serialized transaction's required signer set
+as well. A plain create normally requires only the fee payer, while policy-led
+follow-up instructions can add other required signers.
+
 Use this page when you specifically want the developer-portal create-wallet
-endpoint or its older portal clients. Use [What the Developer SDK Does](/developer-sdk)
+endpoint or its older portal clients. Use the [Server-Side Developer SDK](/developer-sdk)
 for the current product surface.
 
 For the current hosted operation flows after wallet creation, see
-[Transfers and Swaps](/developer-sdk/transfers-swaps-and-signing) and
+[Transfers and Swaps](/developer-sdk/transfers-and-swaps) and
 [Read Wallet State](/developer-sdk/wallet-reads).
 
 ## Specifying the Wallet Authority

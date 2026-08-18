@@ -70,15 +70,16 @@ prepared = await wallet.build_transaction(
 
 The SDK normalizes the instruction input and sends it to
 `POST /transaction/prepare/custom`. The API returns the prepared transaction
-for your client-signing and submission flow.
+for your application-owned signing and submission flow.
 
 ## What still applies
 
-This is still a prepared transaction result. That means:
-
-- your app still checks `signatureRequests` / `signature_requests`
-- the client still signs if required
-- your app still chooses direct submission or sponsor submission
+This is still a prepared transaction result. Your application must inspect the
+serialized transaction's required signer set and process every
+`signatureRequests` / `signature_requests` record. The array covers embedded
+`secp256r1` and `secp256k1` signatures; an Ed25519 requirement appears in the
+Solana transaction instead. Your application then chooses direct or sponsored
+submission.
 
 ## Full protocol control
 

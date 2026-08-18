@@ -1,38 +1,47 @@
 ---
-title: "Choose an Integration Path"
-sidebarTitle: "Choose a Path"
+title: "Choose a Server Integration"
+sidebarTitle: "Choose a Server Path"
 ---
 
-There are three normal ways to use the Developer SDK.
+There are two supported ways to use the Developer SDK. Both execute in a
+trusted server runtime and keep the API key out of shipped application code.
 
-## 1. Server SDK
+## 1. Call the server client directly
 
-Use the server SDK when you want full control over your backend route shape,
-auth checks, request validation, and response format.
-
-Main entrypoint:
+Choose the direct client when your application owns its route shape,
+authentication checks, validation, and response format.
 
 <CodeGroup dropdown>
 
 ```typescript TypeScript
-import { SwigClient } from '@swig-wallet/developer-sdk/server/typescript';
+import { SwigClient } from '@swig-wallet/developer-sdk';
+
+const swig = new SwigClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  network: 'devnet',
+});
 ```
 
 ```python Python
+import os
+
 from swig_developer_sdk import SwigClient
+
+swig = SwigClient(
+    api_key=os.environ["SWIG_API_KEY"],
+    network="devnet",
+)
 ```
 
 </CodeGroup>
 
-This is the only path that gives you every surface: preparation, wallet reads,
-ramp, paymaster balance, and sponsorship.
+This path exposes the full server surface: preparation, custom transactions,
+wallet reads, ramp, paymaster balance, and sponsorship.
 
-## 2. Proxy helpers
+## 2. Mount a server route adapter
 
-Use the framework helpers when you want the API key to stay on the server and
-the SDK to implement the routes for you.
-
-Main entrypoints:
+Choose an adapter when you want the SDK to parse a bounded set of application
+routes for you.
 
 <CodeGroup dropdown>
 
@@ -44,45 +53,40 @@ import { createSwigNestHandler } from '@swig-wallet/developer-sdk/nest';
 ```python Python
 from swig_developer_sdk import SwigProxyConfig, create_swig_proxy_handler
 
-handler = create_swig_proxy_handler(SwigProxyConfig())
+handler = create_swig_proxy_handler(
+    SwigProxyConfig(api_key=swig_api_key, network="devnet")
+)
 ```
 
 </CodeGroup>
 
-The helpers cover preparation, wallet reads, paymaster balance, and the ramp
-routes. Sponsorship stays on your server, where the API key already is.
+<Warning>
+  A route adapter is server infrastructure, not an authentication layer. Put
+  your own authentication, authorization, request validation, and rate limiting
+  in front of every mounted route.
+</Warning>
 
-## 3. Browser client against your own proxy
-
-Use the browser client when your frontend should work with wallet handles and
-prepared results, while still calling only your own app routes.
-
-<Note>
-  The browser client is TypeScript-only. Python provides the equivalent
-  server-side proxy handler, while browser signing remains in your frontend.
-</Note>
-
-Main entrypoint:
-
-```typescript
-import { SwigBrowserClient } from '@swig-wallet/developer-sdk/browser';
-```
-
-## Practical rule
-
-- choose the server SDK if you want maximum control
-- choose the framework helpers if you want the fastest route-based setup
-- choose the browser client only together with one of the server-side options
+The adapters cover preparation, wallet reads, paymaster balance, and ramp
+operations. Sponsorship remains an explicit server call.
 
 ## Comparison
 
-| | Server SDK | Proxy helpers | Browser client |
-| :--- | :--- | :--- | :--- |
-| Holds the API key | yes | yes | no |
-| Runs in the browser | no | no | yes |
-| Custom route shape | yes | no | n/a |
-| Wallet preparation | yes | yes | yes |
-| Wallet reads | yes | yes | yes |
-| Ramp | yes | yes | yes |
-| Custom transactions | yes | no | no |
-| Sponsorship | yes | no | no |
+| | Direct server client | Server route adapter |
+| :--- | :--- | :--- |
+| Holds the API key | yes | yes |
+| Runs in a browser | no | no |
+| Custom application route shape | yes | no |
+| Wallet preparation | yes | yes |
+| Wallet reads and ramp | yes | yes |
+| Custom transactions | yes | no |
+| Sponsorship | yes | no |
+| Application auth required | yes | yes |
+
+Use the direct client unless the adapter's fixed route surface is a good fit.
+See [Server Route Adapters](/developer-sdk/server-route-adapters) for the
+mounting contract.
+
+The `/browser` signing utilities are not a third API integration path. They do
+not accept an API key or call Swig's hosted API; they only adapt signatures
+produced by application-owned signers. See
+[Browser Signers](/developer-sdk/browser-signing).

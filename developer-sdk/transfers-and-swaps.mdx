@@ -1,0 +1,104 @@
+---
+title: "Transfer SOL and Tokens"
+sidebarTitle: "Transfer SOL and Tokens"
+---
+
+Prepare wallet movements from a trusted server. The SDK returns unsigned
+transactions; signing stays in application-owned wallet or custody code.
+
+## Start from a wallet handle
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const wallet = swig.wallets.use({
+  swigConfigAddress,
+  walletAddress,
+  requesterAuthority: {
+    ed25519: { publicKey: authorityPublicKey },
+  },
+});
+```
+
+```python Python
+from swig_developer_sdk import WalletReference
+
+wallet = swig.wallets.use(
+    WalletReference(
+        swig_config_address=swig_config_address,
+        wallet_address=wallet_address,
+        requester_authority={
+            "ed25519": {"publicKey": authority_public_key},
+        },
+    )
+)
+```
+
+</CodeGroup>
+
+The authority shape may also be `secp256k1` or `secp256r1`. The SDK uses the
+public authority value to prepare the correct request; it never accesses the
+corresponding private key or authenticator.
+
+## SOL transfer
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const prepared = await wallet.transfer.sol({
+  feePayer,
+  destination,
+  amount: 1_000_000n,
+});
+```
+
+```python Python
+prepared = await wallet.transfer.sol(
+    fee_payer=fee_payer,
+    destination=destination,
+    amount=1_000_000,
+)
+```
+
+</CodeGroup>
+
+## Token transfer
+
+Token transfers are owner-based. The backend derives the token program,
+source associated token account, destination associated token account, and any
+destination account creation it needs.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const prepared = await wallet.transfer.token({
+  feePayer,
+  mint,
+  destinationOwner,
+  amount: 10_000n,
+});
+```
+
+```python Python
+prepared = await wallet.transfer.token(
+    fee_payer=fee_payer,
+    mint=mint,
+    destination_owner=destination_owner,
+    amount=10_000,
+)
+```
+
+</CodeGroup>
+
+## Continue the flow
+
+Use the requester authority and the serialized transaction's required signer
+set to coordinate signing in your application. For `secp256r1` and
+`secp256k1`, also process every `signatureRequests` / `signature_requests`
+record. The optional [browser signing helpers](/developer-sdk/browser-signing)
+can adapt application-provided signatures. Return the signed base64 transaction
+to the server, then use
+[Sponsor & Submit](/developer-sdk/sponsor-and-submit) or your own RPC path.
+
+For Jupiter swaps and multi-operation preparation, continue to
+[Swaps and Batches](/developer-sdk/swaps-and-batches).

@@ -5,8 +5,9 @@ sidebarTitle: "Transactions"
 
 The Transaction API prepares Solana transactions for Swig wallet creation,
 transfers, swaps, and custom instruction sets. It does not replace required
-client authority signatures; responses include signature requests when the
-client must sign.
+application signatures. Responses include explicit signature requests for
+embedded `secp256r1` and `secp256k1` authorization; native Ed25519 signers are
+represented in the serialized Solana transaction instead.
 
 ## Supported preparation routes
 
@@ -53,11 +54,14 @@ transactions.
 | `network` | enum | Network for which the transaction was prepared |
 | `recentBlockhash` | string | Recent blockhash used in the transaction |
 | `kind` | enum | Prepared transaction category |
-| `signatureRequests` | array | Client authority signatures required before submission |
+| `signatureRequests` | array | Embedded `secp256r1` or `secp256k1` signatures to obtain and patch before submission |
 
 Each signature request carries `scheme`, `signer`, `messageHash`, `slot`, and
 `counter`. The signer is encoded for its signature scheme, and `messageHash`
-is the hex-encoded message to sign.
+is the hex-encoded message to sign. An empty array does not prove that the
+transaction needs no application signature; inspect the Solana transaction's
+required signer set for native Ed25519 authorities and other transaction-level
+signers.
 
 ## Prepare a batch
 
@@ -119,8 +123,9 @@ the Solana instructions supplied by the application.
 }
 ```
 
-The response is prepared only. The application still supplies any requested
-client authority signature and chooses direct or sponsored submission.
+The response is prepared only. The application still supplies every embedded
+signature request and transaction-level signer, then chooses direct or
+sponsored submission.
 
 ## Create a wallet
 
@@ -206,9 +211,10 @@ Optional Jupiter controls:
 
 ## After preparation
 
-The response is prepared only. Your application supplies any requested client
-authority signature, then submits the transactions in the returned order —
-directly, or through the [Paymaster API](/developer-api/paymaster).
+The response is prepared only. Your application supplies every embedded
+signature request and transaction-level signer, then submits the transactions
+in the returned order — directly, or through the
+[Paymaster API](/developer-api/paymaster).
 
 If `policyId` is omitted on wallet creation, `initialUser` is required and the
 API creates a wallet policy for the caller's organization.
