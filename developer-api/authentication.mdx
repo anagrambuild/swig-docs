@@ -30,9 +30,8 @@ Runtime API keys are created in the Developer Portal.
 <Warning>
   API keys are server-only credentials. Do not ship one to a browser or mobile
   bundle, and do not expose one through a public build-time variable such as
-  `NEXT_PUBLIC_*`. Route browser and mobile traffic through your own backend,
-  or use the [Developer SDK server route adapters](/developer-sdk/server-route-adapters),
-  which keep the key server-side for you.
+  `NEXT_PUBLIC_*`. Route browser and mobile traffic through your own backend so
+  the key remains server-side.
 </Warning>
 
 The gateway also accepts `x-api-key`, but bearer auth is the documented and

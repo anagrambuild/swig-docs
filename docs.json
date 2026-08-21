@@ -176,8 +176,7 @@
             "group": "Start Here",
             "pages": [
               "developer-sdk/index",
-              "developer-sdk/integration-paths",
-              "developer-sdk/server-runtime"
+              "developer-sdk/integration-paths"
             ]
           },
           {
@@ -218,12 +217,6 @@
                   "examples/dev-portal/transaction-history"
                 ]
               }
-            ]
-          },
-          {
-            "group": "Migrate and Compare",
-            "pages": [
-              "developer-sdk/portal-clients"
             ]
           },
           {
@@ -321,14 +314,6 @@
     {
       "source": "/developer-sdk/framework-proxies",
       "destination": "/developer-sdk/integration-paths"
-    },
-    {
-      "source": "/developer-sdk/server-route-adapters",
-      "destination": "/developer-sdk/integration-paths"
-    },
-    {
-      "source": "/developer-sdk/server-and-client",
-      "destination": "/developer-sdk/server-runtime"
     },
     {
       "source": "/developer-sdk/transfers-swaps-and-signing",
