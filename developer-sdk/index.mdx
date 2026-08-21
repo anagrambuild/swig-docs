@@ -7,12 +7,6 @@ The Swig Developer SDK is a strict server-side product for TypeScript and
 Python. It authenticates to Swig's hosted API, prepares wallet operations,
 reads wallet state, and submits application-signed transactions.
 
-<Warning>
-  Never import a server entrypoint or place a Swig developer API key in browser
-  or mobile code. The narrow `/browser` signing helpers accept no API key and
-  cannot call Swig's hosted API.
-</Warning>
-
 ## Install
 
 <Tabs>
@@ -23,10 +17,9 @@ reads wallet state, and submits application-signed transactions.
 bun add @swig-wallet/developer-sdk
 ```
 
-These docs target `@swig-wallet/developer-sdk` version `0.8.0` from the
-standalone repository. npm currently resolves this install to `0.7.0`; do not
-rely on the new TypeScript `0.8.0` server surfaces until that version is
-published.
+These docs target `@swig-wallet/developer-sdk` version `0.9.0` from the
+standalone repository. npm currently resolves this install to `0.7.0`; the
+`0.9.0` surface becomes available after its release.
 
 </Tab>
 
@@ -55,8 +48,7 @@ and default to `https://api.onswig.com`.
 - wallet, role, paymaster, and ramp reads
 - fiat on-ramp and off-ramp server operations
 - sponsorship of application-signed transactions and mainnet bundles
-- optional server route adapters for Next.js, NestJS, Fetch, and Python
-- optional Browser Signers that combine application-provided signatures with
+- optional signing helpers that combine application-provided signatures with
   prepared transactions
 
 ## What your application owns
@@ -83,8 +75,8 @@ API key or private key.
 ## Where to go next
 
 <CardGroup cols={2}>
-  <Card title="Choose a Server Path" icon="signs-post" href="/developer-sdk/integration-paths">
-    Direct server client or server route adapter
+  <Card title="Choose a Language" icon="signs-post" href="/developer-sdk/integration-paths">
+    TypeScript or Python server SDK
   </Card>
   <Card title="Understand the Runtime" icon="server" href="/developer-sdk/server-runtime">
     Credentials, prepared data, retries, and signing boundary
@@ -92,7 +84,7 @@ API key or private key.
   <Card title="Create Wallets" icon="wallet" href="/developer-sdk/create-wallets">
     Prepare your first wallet on the server
   </Card>
-  <Card title="Browser Signers" icon="signature" href="/developer-sdk/browser-signing">
+  <Card title="Signers" icon="signature" href="/developer-sdk/signers">
     Basic signing support for application-owned wallets and passkeys
   </Card>
   <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">

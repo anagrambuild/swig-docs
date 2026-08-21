@@ -95,7 +95,7 @@ prepared = await wallet.transfer.token(
 Use the requester authority and the serialized transaction's required signer
 set to coordinate signing in your application. For `secp256r1` and
 `secp256k1`, also process every `signatureRequests` / `signature_requests`
-record. The optional [browser signing helpers](/developer-sdk/browser-signing)
+record. The optional [signing helpers](/developer-sdk/signers)
 can adapt application-provided signatures. Return the signed base64 transaction
 to the server, then use
 [Sponsor & Submit](/developer-sdk/sponsor-and-submit) or your own RPC path.

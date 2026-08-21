@@ -254,7 +254,7 @@ The prepared authorization follows the same boundary as every other prepared
 transaction. Inspect its signature metadata, obtain the required signature
 from application-owned signing code, and return only the signed serialized
 transaction to the server. The optional
-[browser signing helpers](/developer-sdk/browser-signing) can assemble that
+[signing helpers](/developer-sdk/signers) can assemble that
 result. See [Server Runtime](/developer-sdk/server-runtime) for the trust
 boundary.
 
@@ -287,5 +287,5 @@ A settled off-ramp session also exposes `solanaSignature` /
 Treat `launchUrl` / `launch_url`, quotes, and session state as user-scoped
 data. If another application runtime needs them, return only the authorized
 fields through your own server API. Do not import the Developer SDK's API
-client or expose the Swig API key outside the server. The optional `/browser`
+client or expose the Swig API key outside the server. The optional `/signers`
 signing helpers remain limited to local transaction assembly.

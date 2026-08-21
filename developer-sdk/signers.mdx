@@ -1,11 +1,11 @@
 ---
-title: "Browser Signers"
-sidebarTitle: "Browser Signers"
+title: "Signers"
+sidebarTitle: "Signers"
 ---
 
 The Developer SDK remains a server-side product: `SwigClient` and the API key
 stay on your server. After the server prepares a transaction, the TypeScript
-`/browser` entrypoint provides a small set of signers for application-owned
+`/signers` entrypoint provides a small set of helpers for application-owned
 wallets and passkeys.
 
 The helpers accept no API key, cannot call Swig's hosted API, and never receive
@@ -35,7 +35,7 @@ serialized Solana transaction:
 import {
   signPreparedTransaction,
   type PreparedTransaction,
-} from '@swig-wallet/developer-sdk/browser';
+} from '@swig-wallet/developer-sdk/signers';
 
 declare const prepared: PreparedTransaction;
 
@@ -75,7 +75,7 @@ patches the returned WebAuthn data into the prepared Swig transaction:
 import {
   createSecp256r1PasskeySigningFn,
   signPreparedSwigTransaction,
-} from '@swig-wallet/developer-sdk/browser';
+} from '@swig-wallet/developer-sdk/signers';
 
 const passkeySigner = createSecp256r1PasskeySigningFn({
   allowCredentials: [{ id: credentialId, type: 'public-key' }],
@@ -103,10 +103,9 @@ signed = await sign_prepared_swig_transaction(
 
 </CodeGroup>
 
-The TypeScript adapter is the only part of this flow intended for a WebAuthn
-browser environment. It has no access to the server client or API key. Python
-uses an application-provided assertion callback and does not initiate browser
-navigation itself.
+The TypeScript passkey adapter can run in a WebAuthn environment. It has no
+access to the server client or API key. Python uses an application-provided
+assertion callback and does not initiate browser navigation itself.
 
 ## Secp256k1 and EVM wallets
 
@@ -119,7 +118,7 @@ result for a Swig `secp256k1` authority:
 import {
   createSecp256k1EvmSigningFn,
   signPreparedSwigTransaction,
-} from '@swig-wallet/developer-sdk/browser';
+} from '@swig-wallet/developer-sdk/signers';
 
 const evmSigner = createSecp256k1EvmSigningFn({
   provider: window.ethereum,
@@ -157,5 +156,5 @@ application route. The server can then call
 `swig.transactions.sponsor(...)`, submit through its own RPC path, and track
 confirmation or finality.
 
-Do not send the Swig developer API key, signer object, private key, or raw
-credential material across this boundary.
+Keep the Swig developer API key, signer object, private key, and raw credential
+material inside their owning trust boundaries.
