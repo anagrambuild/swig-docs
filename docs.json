@@ -177,8 +177,7 @@
             "pages": [
               "developer-sdk/index",
               "developer-sdk/integration-paths",
-              "developer-sdk/server-runtime",
-              "developer-sdk/server-route-adapters"
+              "developer-sdk/server-runtime"
             ]
           },
           {
@@ -193,7 +192,7 @@
             "group": "Build Wallet Flows",
             "pages": [
               "developer-sdk/create-wallets",
-              "developer-sdk/browser-signing",
+              "developer-sdk/signers",
               "developer-sdk/transfers-and-swaps",
               "developer-sdk/swaps-and-batches",
               "developer-sdk/custom-execution"
@@ -313,11 +312,19 @@
   "redirects": [
     {
       "source": "/developer-sdk/client-signing",
-      "destination": "/developer-sdk/browser-signing"
+      "destination": "/developer-sdk/signers"
+    },
+    {
+      "source": "/developer-sdk/browser-signing",
+      "destination": "/developer-sdk/signers"
     },
     {
       "source": "/developer-sdk/framework-proxies",
-      "destination": "/developer-sdk/server-route-adapters"
+      "destination": "/developer-sdk/integration-paths"
+    },
+    {
+      "source": "/developer-sdk/server-route-adapters",
+      "destination": "/developer-sdk/integration-paths"
     },
     {
       "source": "/developer-sdk/server-and-client",

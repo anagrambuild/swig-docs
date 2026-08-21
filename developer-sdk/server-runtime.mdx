@@ -15,7 +15,7 @@ flowchart TD
   B --> C["Unsigned transaction and signature metadata"]
   C --> D["Application-owned signer produces signature"]
   D --> E["Application assembles signed transaction"]
-  D -. "optional browser path" .-> F["Browser Signer helper"]
+  D -. "optional helper path" .-> F["Signer helper"]
   F --> E
   E --> G["Trusted server sponsors or submits"]
 ```
@@ -127,5 +127,5 @@ Reads do not require a requester authority. Preparation calls do. If the
 authority comes from application auth or role mapping, resolve and validate it
 on the server before calling the SDK.
 
-Continue to [Browser Signers](/developer-sdk/browser-signing) for the optional
+Continue to [Signers](/developer-sdk/signers) for the optional
 no-API-key helper surface.

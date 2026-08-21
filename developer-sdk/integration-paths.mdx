@@ -1,19 +1,14 @@
 ---
-title: "Choose a Server Integration"
-sidebarTitle: "Choose a Server Path"
+title: "Choose an SDK Language"
+sidebarTitle: "Choose a Language"
 ---
 
-There are two supported ways to use the Developer SDK. Both execute in a
-trusted server runtime and keep the API key out of shipped application code.
+TypeScript and Python expose the same prepare-first server model. Choose the
+language that owns your trusted application runtime.
 
-## 1. Call the server client directly
+## TypeScript
 
-Choose the direct client when your application owns its route shape,
-authentication checks, validation, and response format.
-
-<CodeGroup dropdown>
-
-```typescript TypeScript
+```typescript
 import { SwigClient } from '@swig-wallet/developer-sdk';
 
 const swig = new SwigClient({
@@ -22,7 +17,13 @@ const swig = new SwigClient({
 });
 ```
 
-```python Python
+Install from npm with `bun add @swig-wallet/developer-sdk`. Import the API-key
+client from the package root. Application-owned signing helpers are available
+from `@swig-wallet/developer-sdk/signers`.
+
+## Python
+
+```python
 import os
 
 from swig_developer_sdk import SwigClient
@@ -33,60 +34,20 @@ swig = SwigClient(
 )
 ```
 
-</CodeGroup>
-
-This path exposes the full server surface: preparation, custom transactions,
-wallet reads, ramp, paymaster balance, and sponsorship.
-
-## 2. Mount a server route adapter
-
-Choose an adapter when you want the SDK to parse a bounded set of application
-routes for you.
-
-<CodeGroup dropdown>
-
-```typescript TypeScript
-import { createSwigRouteHandlers } from '@swig-wallet/developer-sdk/next';
-import { createSwigNestHandler } from '@swig-wallet/developer-sdk/nest';
-```
-
-```python Python
-from swig_developer_sdk import SwigProxyConfig, create_swig_proxy_handler
-
-handler = create_swig_proxy_handler(
-    SwigProxyConfig(api_key=swig_api_key, network="devnet")
-)
-```
-
-</CodeGroup>
-
-<Warning>
-  A route adapter is server infrastructure, not an authentication layer. Put
-  your own authentication, authorization, request validation, and rate limiting
-  in front of every mounted route.
-</Warning>
-
-The adapters cover preparation, wallet reads, paymaster balance, and ramp
-operations. Sponsorship remains an explicit server call.
+Install from PyPI with `pip install swig-developer-sdk`. Python exposes signing
+helpers from the package root.
 
 ## Comparison
 
-| | Direct server client | Server route adapter |
+| Capability | TypeScript | Python |
 | :--- | :--- | :--- |
-| Holds the API key | yes | yes |
-| Runs in a browser | no | no |
-| Custom application route shape | yes | no |
 | Wallet preparation | yes | yes |
 | Wallet reads and ramp | yes | yes |
-| Custom transactions | yes | no |
-| Sponsorship | yes | no |
-| Application auth required | yes | yes |
+| Custom transactions | yes | yes |
+| Sponsorship | yes | yes |
+| Application-owned signing helpers | `/signers` | package root |
 
-Use the direct client unless the adapter's fixed route surface is a good fit.
-See [Server Route Adapters](/developer-sdk/server-route-adapters) for the
-mounting contract.
-
-The `/browser` signing utilities are not a third API integration path. They do
-not accept an API key or call Swig's hosted API; they only adapt signatures
-produced by application-owned signers. See
-[Browser Signers](/developer-sdk/browser-signing).
+Both SDKs expose the full server surface: preparation, custom transactions,
+wallet reads, ramp, paymaster balance, and sponsorship. Your application owns
+its HTTP routes, authentication, authorization, validation, and response
+format.
