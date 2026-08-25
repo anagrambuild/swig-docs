@@ -58,6 +58,49 @@ Actions are typed permission records attached to roles.
 | Sub-accounts | `SubAccount` | sub-account creation, signing, and control |
 | Lifecycle and recovery | `CloseSwigAuthority`, `RecoveryAuthority` | closing wallets and constrained recovery |
 
+## Time-based limits are measured in slots
+
+Every time-bounded permission in Swig counts **slots**, not seconds. This
+applies to `SolRecurringLimit`, `TokenRecurringLimit`, `StakeRecurringLimit`,
+their destination variants, and session durations on `*Session` authorities.
+
+<Warning>
+Solana is reducing slot time from 400ms to 200ms in four steps
+([SIMD-0525](https://solana.com/200ms)). The first step is live: mainnet moved
+to 350ms at epoch 1020. Any window sized against a 400ms assumption is already
+elapsing early, and will elapse in **half** the intended wall-clock time once
+the rollout completes.
+</Warning>
+
+A window is stored as a fixed slot count and does not rescale when slot time
+changes. A monthly subscription sized at 400ms already resets closer to every
+26 days, and will reset every 15 days once slot time reaches 200ms. This
+affects wallets that already exist as well as new ones.
+
+### Which way the drift cuts
+
+The two permission families fail in opposite directions, so round accordingly:
+
+- **Recurring spend limits** reset *more often* than intended. The role can
+  spend more per calendar month than you granted. This is the over-permissive
+  direction — size for 200ms to stay conservative.
+- **Session durations** expire *sooner* than intended. Sessions are shorter,
+  not longer, so the risk is a broken flow rather than a widened one. Size for
+  400ms and re-issue sessions on expiry.
+
+### Working with the drift
+
+- Do not hardcode a slots-per-second constant. Derive it at configuration time
+  by sampling `getBlockTime` across a known slot delta, or read it from a
+  config value you can update without redeploying.
+- Prefer shorter windows that you renew, over long windows sized once. A
+  one-day window drifts by hours; a one-year window drifts by months.
+- If a permission must track a real calendar period, enforce that period in
+  your own service and use the on-chain window as an upper bound, not as the
+  clock.
+- Re-check windows on existing wallets at each rollout step. Updating a role's
+  actions requires `ManageAuthority`.
+
 ## Permission distinctions that matter
 
 - `All` is the broadest role marker.
