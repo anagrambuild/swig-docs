@@ -15,6 +15,9 @@ represented in the serialized Solana transaction instead.
 | :--- | :--- |
 | `POST` | `/transaction/prepare/batch` |
 | `POST` | `/transaction/wallet/create` |
+| `POST` | `/transaction/wallet/participant-set/create` |
+| `POST` | `/transaction/wallet/role/add` |
+| `POST` | `/transaction/wallet/participant-set/compile` |
 | `POST` | `/transaction/transfer/sol` |
 | `POST` | `/transaction/transfer/spl-token` |
 | `POST` | `/transaction/swap/jupiter` |
@@ -22,6 +25,12 @@ represented in the serialized Solana transaction instead.
 
 Preparation requests are not retried automatically. A replay can duplicate
 work, so decide per call whether repeating is correct.
+
+The ParticipantSet routes create one threshold set for a Swig config, attach
+that set to a role through the general add-role route, and compile detached
+member approvals into a simulated transaction. See
+[Participant Sets](/developer-sdk/participant-sets) for the complete lifecycle,
+member challenge rules, and current operation support.
 
 ## Auth
 

@@ -1,0 +1,242 @@
+---
+title: "Participant Sets"
+sidebarTitle: "Participant Sets"
+---
+
+A ParticipantSet lets several independent members authorize one Swig role with
+an M-of-N threshold. The set belongs to one Swig config, and the role controls
+what the set may do through the same typed actions used by any other role.
+
+Members can use Ed25519, secp256k1, or secp256r1/passkeys. Each member signs a
+challenge bound to the prepared operation, while every challenge in the plan
+commits to the same shared ParticipantSet nonce.
+
+<Note>
+  This interface is available on the Developer SDK `main` branch and will ship
+  in the next package release. The currently published TypeScript `0.9.0` and
+  Python `0.8.0` packages predate ParticipantSet support.
+</Note>
+
+## Create the set and add its role
+
+First prepare the ParticipantSet creation transaction. After that transaction
+lands, use the general role endpoint to attach the set to a role and choose its
+permissions.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const createdSet = await swig.participantSets.create({
+  swigConfigAddress,
+  feePayer,
+  threshold: 2,
+  members: [
+    { ed25519: { publicKey: recoveryPublicKey } },
+    { secp256r1: { publicKey: clientPublicKey } },
+    { secp256k1: { publicKey: serverPublicKey } },
+  ],
+});
+
+const wallet = swig.wallets.use(swigConfigAddress, {
+  requesterAuthority,
+});
+const addRole = await wallet.roles.add({
+  feePayer,
+  authority: {
+    participantSet: { address: createdSet.participantSetAddress },
+  },
+  actions: [
+    { type: 'solLimit', amount: 1_000_000n },
+    { type: 'program', programId },
+  ],
+});
+```
+
+```python Python
+from swig_developer_sdk import ProgramAction, SolLimitAction
+
+created_set = await swig.participant_sets.create(
+    swig_config_address=swig_config_address,
+    fee_payer=fee_payer,
+    threshold=2,
+    members=(
+        {"ed25519": {"publicKey": recovery_public_key}},
+        {"secp256r1": {"publicKey": client_public_key}},
+        {"secp256k1": {"publicKey": server_public_key}},
+    ),
+)
+
+wallet = swig.wallets.use(
+    swig_config_address,
+    requester_authority=requester_authority,
+)
+add_role = await wallet.roles.add(
+    fee_payer=fee_payer,
+    authority={
+        "participantSet": {"address": created_set.participant_set_address}
+    },
+    actions=(
+        SolLimitAction(amount=1_000_000),
+        ProgramAction(program_id=program_id),
+    ),
+)
+```
+
+</CodeGroup>
+
+Both calls return prepared transactions. Sign and submit
+`createdSet.transaction` / `created_set.transaction` first, then sign and submit
+`addRole` / `add_role` through your normal transaction flow. Creating the set
+does not add a Swig role automatically.
+
+The add-role requester must currently be an Ed25519 or secp256r1 authority. A
+ParticipantSet can be the new role authority, but cannot request the add-role
+operation itself.
+
+## Prepare an operation
+
+After both setup transactions land, select the ParticipantSet as the requester.
+Supported preparation routes return a normal prepared transaction with a
+`participantSetApprovalPlan` / `participant_set_approval_plan`.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const participantWallet = swig.wallets.use(swigConfigAddress, {
+  requesterAuthority: {
+    participantSet: { address: createdSet.participantSetAddress },
+  },
+});
+
+const prepared = await participantWallet.transfer.sol({
+  feePayer,
+  destination,
+  amount: 1_000_000n,
+});
+
+const plan = prepared.participantSetApprovalPlan;
+if (!plan) throw new Error('ParticipantSet approval plan is missing');
+```
+
+```python Python
+participant_wallet = swig.wallets.use(
+    swig_config_address,
+    requester_authority={
+        "participantSet": {"address": created_set.participant_set_address}
+    },
+)
+
+prepared = await participant_wallet.transfer.sol(
+    fee_payer=fee_payer,
+    destination=destination,
+    amount=1_000_000,
+)
+
+plan = prepared.participant_set_approval_plan
+if plan is None:
+    raise RuntimeError("ParticipantSet approval plan is missing")
+```
+
+</CodeGroup>
+
+ParticipantSet preparation currently supports SOL transfers, token transfers,
+transfer batches, and custom instructions without address lookup tables. Swaps,
+recovery operations, and custom transactions with address lookup tables require
+a direct non-ParticipantSet requester.
+
+## Collect member approvals
+
+Send each selected member only its own approval request. The detached signer
+helpers verify that the signer type and public key match that request before
+asking the application-owned signer to approve it.
+
+| Member | Helper behavior |
+| :--- | :--- |
+| Ed25519 | Signs the decoded 32-byte challenge |
+| secp256r1 | Uses the decoded challenge in a WebAuthn assertion and preserves its exact assertion data |
+| secp256k1 | Applies `personal_sign` to the lowercase 64-character hex challenge |
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+import {
+  createParticipantEd25519Signer,
+  signParticipantSetApproval,
+} from '@swig-wallet/developer-sdk/signers';
+
+const signer = createParticipantEd25519Signer({
+  publicKey: recoveryPublicKey,
+  signMessage: signEd25519,
+});
+const approval = await signParticipantSetApproval(
+  plan.members[0]!,
+  signer,
+);
+
+// Collect at least plan.threshold approvals for this same plan.
+const approvals = [approval, ...otherApprovals];
+```
+
+```python Python
+from swig_developer_sdk.signers import (
+    create_participant_ed25519_signer,
+    sign_participant_set_approval,
+)
+
+signer = create_participant_ed25519_signer(
+    public_key=recovery_public_key,
+    sign_message=sign_ed25519,
+)
+approval = await sign_participant_set_approval(plan.members[0], signer)
+
+# Collect at least plan.threshold approvals for this same plan.
+approvals = (approval, *other_approvals)
+```
+
+</CodeGroup>
+
+Your application remains responsible for passkey credential selection and its
+RP ID/origin policy. Do not ask a member to sign the raw serialized transaction
+or another member's challenge.
+
+## Compile and submit
+
+Return the detached approvals with the original prepared transaction. The API
+validates the plan and simulates the final transaction before returning it.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const compiled = await swig.transactions.compileParticipantSetApprovals({
+  preparedTransaction: prepared,
+  approvals,
+});
+
+console.log(compiled.authorizationExpirationSlot);
+```
+
+```python Python
+compiled = await swig.transactions.compile_participant_set_approvals(
+    prepared_transaction=prepared,
+    approvals=approvals,
+)
+
+print(compiled.authorization_expiration_slot)
+```
+
+</CodeGroup>
+
+Compilation does not sponsor, broadcast, or confirm the transaction. Add every
+remaining Solana transaction signature, then submit directly or use
+[Sponsor & Submit](/developer-sdk/sponsor-and-submit) before the authorization
+expiration slot. If the slot has passed, prepare a fresh operation and collect
+fresh approvals.
+
+## What this does not cover
+
+- A ParticipantSet is not a reusable approval for unrelated transactions.
+- Approvals from different plans or shared nonces cannot be mixed.
+- The detached signer helpers never receive your Swig API key and do not call
+  the hosted API.
+- Compilation does not replace transaction-level signatures such as the fee
+  payer or another required Ed25519 signer.
