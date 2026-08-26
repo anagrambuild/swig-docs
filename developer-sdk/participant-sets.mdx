@@ -144,6 +144,9 @@ transfer batches, and custom instructions without address lookup tables. Swaps,
 recovery operations, and custom transactions with address lookup tables require
 a direct non-ParticipantSet requester.
 
+Serialize ParticipantSet operations per set. Concurrent plans use the same next
+nonce; after one transaction lands, prepare and approve the others again.
+
 ## Collect member approvals
 
 Send each selected member only its own approval request. The detached signer
@@ -154,7 +157,7 @@ asking the application-owned signer to approve it.
 | :--- | :--- |
 | Ed25519 | Signs the decoded 32-byte challenge |
 | secp256r1 | Uses the decoded challenge in a WebAuthn assertion and preserves its exact assertion data |
-| secp256k1 | Applies `personal_sign` to the lowercase 64-character hex challenge |
+| secp256k1 | Passes the lowercase 64-character ASCII hex challenge to your `personal_sign` callback; the callback must apply EIP-191 |
 
 <CodeGroup dropdown>
 
@@ -232,11 +235,12 @@ remaining Solana transaction signature, then submit directly or use
 expiration slot. If the slot has passed, prepare a fresh operation and collect
 fresh approvals.
 
-## What this does not cover
+## Approval and submission boundaries
 
-- A ParticipantSet is not a reusable approval for unrelated transactions.
-- Approvals from different plans or shared nonces cannot be mixed.
-- The detached signer helpers never receive your Swig API key and do not call
-  the hosted API.
-- Compilation does not replace transaction-level signatures such as the fee
-  payer or another required Ed25519 signer.
+- Prepare a fresh plan and collect fresh approvals for each distinct
+  transaction.
+- Keep every approval with its original plan and shared nonce.
+- Keep the Swig API key in the server client; detached signer helpers accept no
+  API key and make no hosted API calls.
+- Add transaction-level signatures such as the fee payer or another required
+  Ed25519 signer after compilation.
