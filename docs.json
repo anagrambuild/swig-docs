@@ -192,6 +192,7 @@
             "pages": [
               "developer-sdk/create-wallets",
               "developer-sdk/signers",
+              "developer-sdk/participant-sets",
               "developer-sdk/transfers-and-swaps",
               "developer-sdk/swaps-and-batches",
               "developer-sdk/custom-execution"

@@ -17,9 +17,9 @@ reads wallet state, and submits application-signed transactions.
 bun add @swig-wallet/developer-sdk
 ```
 
-These docs target `@swig-wallet/developer-sdk` version `0.9.0` from the
-standalone repository. npm currently resolves this install to `0.7.0`; the
-`0.9.0` surface becomes available after its release.
+Published package `@swig-wallet/developer-sdk`, version `0.9.0`. The
+ParticipantSet interface documented here landed after that release and will be
+included in the next package release.
 
 </Tab>
 
@@ -30,7 +30,8 @@ pip install swig-developer-sdk
 ```
 
 Published package `swig-developer-sdk`, version `0.8.0`. Requires Python 3.10 or
-later.
+later. The ParticipantSet interface documented here landed after that release
+and will be included in the next package release.
 
 </Tab>
 
@@ -45,6 +46,7 @@ and default to `https://api.onswig.com`.
 - API-key authentication and retry behavior
 - wallet creation and unsigned transaction preparation
 - transfers, swaps, grouped operations, and custom instructions
+- threshold ParticipantSet creation, role assignment, and approval compilation
 - wallet, role, paymaster, and ramp reads
 - fiat on-ramp and off-ramp server operations
 - sponsorship of application-signed transactions and mainnet bundles
@@ -83,6 +85,9 @@ API key or private key.
   </Card>
   <Card title="Signers" icon="signature" href="/developer-sdk/signers">
     Basic signing support for application-owned wallets and passkeys
+  </Card>
+  <Card title="Participant Sets" icon="users" href="/developer-sdk/participant-sets">
+    Add threshold authorization to a Swig role
   </Card>
   <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">
     Submit application-signed transactions
