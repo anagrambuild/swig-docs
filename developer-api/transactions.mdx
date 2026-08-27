@@ -26,11 +26,14 @@ represented in the serialized Solana transaction instead.
 Preparation requests are not retried automatically. A replay can duplicate
 work, so decide per call whether repeating is correct.
 
-The ParticipantSet routes create one threshold set for a Swig config, attach
-that set to a role through the general add-role route, and compile detached
-member approvals into a simulated transaction. See
-[Participant Sets](/developer-sdk/participant-sets) for the complete lifecycle,
-member challenge rules, and current operation support.
+The general add-role route attaches a supported authority and one or more typed
+actions to an existing Swig. The ParticipantSet routes create one threshold set,
+attach it through that general route, and compile detached member approvals
+into a simulated transaction. See
+[Add Roles and Permissions](/developer-sdk/add-roles-and-permissions) for the
+general role flow and requester constraints, or
+[Participant Sets](/developer-sdk/participant-sets) for the complete threshold
+lifecycle, member challenge rules, and current operation support.
 
 ## Auth
 

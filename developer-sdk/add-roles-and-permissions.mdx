@@ -1,0 +1,189 @@
+---
+title: "Add Roles and Permissions"
+sidebarTitle: "Add Roles and Permissions"
+---
+
+A role combines one authority with one or more actions. The authority identifies
+who can request wallet operations, while the actions define what that authority
+may do.
+
+Use the wallet handle's `roles.add()` method to prepare the transaction that
+adds a role to an existing Swig wallet. The same call accepts the new authority
+and every action assigned to it in both SDKs.
+
+<Note>
+  This interface will ship in the next Developer SDK package release. The
+  currently published TypeScript `0.9.0` and Python `0.8.0` packages predate
+  general role creation.
+</Note>
+
+## Before you begin
+
+You need:
+
+- an existing Swig config address
+- the fee payer public key
+- an existing Ed25519 or secp256r1 requester authority whose role includes
+  `manageAuthority` or `all`
+- the public authority value for the new role
+- one or more actions for the new role
+
+The address variables below are base58 strings. `signAndSubmit` /
+`sign_and_submit` represents your application-owned signing, RPC submission,
+and confirmation helper.
+
+## Add a scoped SOL-transfer role
+
+This example gives a new Ed25519 authority permission to transfer up to
+1,000,000 lamports through Solana's System Program.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+import { SystemProgram } from '@solana/web3.js';
+
+const wallet = swig.wallets.use(swigConfigAddress, {
+  requesterAuthority: {
+    ed25519: { publicKey: adminPublicKey },
+  },
+});
+
+const prepared = await wallet.roles.add({
+  feePayer,
+  authority: {
+    ed25519: { publicKey: newRolePublicKey },
+  },
+  actions: [
+    {
+      type: 'program',
+      programId: SystemProgram.programId.toBase58(),
+    },
+    { type: 'solLimit', amount: 1_000_000n },
+  ],
+});
+
+await signAndSubmit(prepared);
+```
+
+```python Python
+from solders.system_program import ID as SYSTEM_PROGRAM_ID
+from swig_developer_sdk import ProgramAction, SolLimitAction
+
+wallet = swig.wallets.use(
+    swig_config_address,
+    requester_authority={
+        "ed25519": {"publicKey": admin_public_key}
+    },
+)
+
+prepared = await wallet.roles.add(
+    fee_payer=fee_payer,
+    authority={
+        "ed25519": {"publicKey": new_role_public_key}
+    },
+    actions=(
+        ProgramAction(program_id=str(SYSTEM_PROGRAM_ID)),
+        SolLimitAction(amount=1_000_000),
+    ),
+)
+
+await sign_and_submit(prepared)
+```
+
+</CodeGroup>
+
+Both actions belong to the same new role. `program` permits the System Program
+invocation, while `solLimit` provides the role's remaining one-time SOL budget.
+Each successful transfer decrements that budget. SignV2 checks program access
+and SOL spending independently, so the transfer needs both permissions.
+
+The Developer SDK calls the program permission `program`. The Protocol SDK
+builder calls the same permission `programLimit`.
+
+## Choose the new authority
+
+The new role may use any of these authority shapes:
+
+| Authority | New-role shape | Typical use |
+| :--- | :--- | :--- |
+| Ed25519 | `{ ed25519: { publicKey } }` | Solana keypair or custody signer |
+| secp256r1 | `{ secp256r1: { publicKey } }` | Passkey-backed signer |
+| secp256k1 | `{ secp256k1: { publicKey } }` | EVM-compatible signer |
+| ParticipantSet | `{ participantSet: { address } }` | M-of-N threshold authorization |
+
+For a ParticipantSet role, create the set first and pass its address without a
+role ID. Adding the authority creates a new role whose ID is assigned by Swig.
+Continue to [Participant Sets](/developer-sdk/participant-sets) for member
+approval collection and compilation.
+
+<Note>
+  The authority being added may use any supported shape above. The existing
+  authority requesting the add-role operation must use Ed25519 or secp256r1.
+</Note>
+
+## Compose the permissions
+
+Every entry in `actions` applies to the same role. Combine narrow actions when
+an operation crosses more than one permission boundary, as the SOL example
+combines program access with a spending limit.
+
+The Developer SDK accepts management, SOL, token, program, staking, and
+sub-account actions. Prefer the narrowest combination that supports the
+operation. Use `all` only when the new authority is intended to have full wallet
+control.
+
+See the Protocol SDK's
+[TypeScript Actions reference](/reference/typescript/actions) for on-chain
+permission semantics, limit variants, recurring windows, and
+destination-scoped actions. The Developer SDK expresses the same permissions
+with the typed action shapes and Python constructors used above.
+
+## Confirm the role
+
+The add-role call returns a prepared transaction; it does not broadcast or
+confirm it. After your signing helper submits the transaction and it lands,
+read the wallet roles to confirm the new authority and actions.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const { roles } = await wallet.roles.list();
+console.log(roles);
+```
+
+```python Python
+roles_result = await wallet.roles.list()
+print(roles_result.roles)
+```
+
+</CodeGroup>
+
+Wait for the add-role transaction to confirm before using the new authority.
+Keep every private key, passkey assertion, and authorization decision in your
+application-owned signing layer.
+
+## Request boundaries
+
+- Supply at least one action.
+- Use an existing Ed25519 or secp256r1 authority as the requester.
+- Pass a ParticipantSet address without a role ID when adding it as the new
+  authority.
+- Add the transaction-level signatures required by the serialized transaction
+  before submission.
+
+## What to read next
+
+<CardGroup cols={2}>
+  <Card title="Participant Sets" icon="users" href="/developer-sdk/participant-sets">
+    Add M-of-N threshold authorization to a role
+  </Card>
+  <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-and-swaps">
+    Use a configured role for wallet transfers
+  </Card>
+  <Card title="Protocol Actions" icon="sliders" href="/reference/typescript/actions">
+    Review permission and limit semantics
+  </Card>
+  <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">
+    Submit application-signed transactions
+  </Card>
+</CardGroup>
