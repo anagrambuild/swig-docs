@@ -1,4 +1,7 @@
-# Swig Actions Documentation
+---
+title: "Actions"
+sidebarTitle: "Actions"
+---
 
 This document provides comprehensive documentation for all available Swig Actions, including their inputs, outputs, and usage examples.
 
@@ -90,8 +93,10 @@ Grants permission to interact with a specific program.
 
 **Usage:**
 ```typescript
+import { SystemProgram } from '@solana/web3.js';
+
 const programActions = Actions.set()
-  .programLimit({ programId: 'SystemProgram11111111111111111111111111111' })
+  .programLimit({ programId: SystemProgram.programId })
   .get();
 ```
 
@@ -241,6 +246,12 @@ const solActions = Actions.set()
 
 **Permissions Granted:**
 - Spend up to the specified amount of SOL once
+
+<Note>
+  For a scoped role that signs a System Program SOL transfer, combine this
+  spending limit with `.programLimit({ programId: SystemProgram.programId })`.
+  `SignV2` checks program access and the SOL spending limit independently.
+</Note>
 
 ---
 
