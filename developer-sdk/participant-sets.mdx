@@ -7,38 +7,53 @@ A ParticipantSet lets several independent members authorize one Swig role with
 an M-of-N threshold. The set belongs to one Swig config, and the role controls
 what the set may do through the same typed actions used by any other role.
 
-Members can use Ed25519, secp256k1, or secp256r1/passkeys. Each member signs a
+Members can use Ed25519, secp256r1/passkeys, or secp256k1. Each member signs a
 challenge bound to the prepared operation, while every challenge in the plan
 commits to the same shared ParticipantSet nonce.
 
 <Note>
-  This interface is available on the Developer SDK `main` branch and will ship
-  in the next package release. The currently published TypeScript `0.9.0` and
-  Python `0.8.0` packages predate ParticipantSet support.
+  This interface will ship in the next Developer SDK package release. The
+  currently published TypeScript `0.9.0` and Python `0.8.0` packages predate
+  ParticipantSet support.
 </Note>
 
 ## Create the set and add its role
 
-First prepare the ParticipantSet creation transaction. After that transaction
-lands, use the general role endpoint to attach the set to a role and choose its
-permissions.
+This 2-of-2 example prepares a SOL-transfer role using two Ed25519 members. First
+prepare and submit the ParticipantSet creation transaction. After that
+transaction lands, use the general role endpoint to attach the set to a role
+and choose its permissions.
+
+The address variables below are base58 strings. `adminPublicKey` /
+`admin_public_key` identifies the existing role allowed to add the new role.
+`signAndSubmit` / `sign_and_submit` represents your application-owned signing,
+RPC submission, and confirmation helper.
+
+`wallets.use` accepts the bare Swig config address used below. Pass a full
+wallet reference instead when your application already has both the config and
+wallet addresses.
 
 <CodeGroup dropdown>
 
 ```typescript TypeScript
+import { SystemProgram } from '@solana/web3.js';
+
 const createdSet = await swig.participantSets.create({
   swigConfigAddress,
   feePayer,
   threshold: 2,
   members: [
-    { ed25519: { publicKey: recoveryPublicKey } },
-    { secp256r1: { publicKey: clientPublicKey } },
-    { secp256k1: { publicKey: serverPublicKey } },
+    { ed25519: { publicKey: participantAPublicKey } },
+    { ed25519: { publicKey: participantBPublicKey } },
   ],
 });
 
+await signAndSubmit(createdSet.transaction);
+
 const wallet = swig.wallets.use(swigConfigAddress, {
-  requesterAuthority,
+  requesterAuthority: {
+    ed25519: { publicKey: adminPublicKey },
+  },
 });
 const addRole = await wallet.roles.add({
   feePayer,
@@ -46,29 +61,38 @@ const addRole = await wallet.roles.add({
     participantSet: { address: createdSet.participantSetAddress },
   },
   actions: [
+    {
+      type: 'program',
+      programId: SystemProgram.programId.toBase58(),
+    },
     { type: 'solLimit', amount: 1_000_000n },
-    { type: 'program', programId },
   ],
 });
+
+await signAndSubmit(addRole);
 ```
 
 ```python Python
 from swig_developer_sdk import ProgramAction, SolLimitAction
+from solders.system_program import ID as SYSTEM_PROGRAM_ID
 
 created_set = await swig.participant_sets.create(
     swig_config_address=swig_config_address,
     fee_payer=fee_payer,
     threshold=2,
     members=(
-        {"ed25519": {"publicKey": recovery_public_key}},
-        {"secp256r1": {"publicKey": client_public_key}},
-        {"secp256k1": {"publicKey": server_public_key}},
+        {"ed25519": {"publicKey": participant_a_public_key}},
+        {"ed25519": {"publicKey": participant_b_public_key}},
     ),
 )
 
+await sign_and_submit(created_set.transaction)
+
 wallet = swig.wallets.use(
     swig_config_address,
-    requester_authority=requester_authority,
+    requester_authority={
+        "ed25519": {"publicKey": admin_public_key}
+    },
 )
 add_role = await wallet.roles.add(
     fee_payer=fee_payer,
@@ -76,18 +100,32 @@ add_role = await wallet.roles.add(
         "participantSet": {"address": created_set.participant_set_address}
     },
     actions=(
+        ProgramAction(program_id=str(SYSTEM_PROGRAM_ID)),
         SolLimitAction(amount=1_000_000),
-        ProgramAction(program_id=program_id),
     ),
 )
+
+await sign_and_submit(add_role)
 ```
 
 </CodeGroup>
 
-Both calls return prepared transactions. Sign and submit
-`createdSet.transaction` / `created_set.transaction` first, then sign and submit
-`addRole` / `add_role` through your normal transaction flow. Creating the set
-does not add a Swig role automatically.
+Both SDK calls return prepared transactions. Wait for the ParticipantSet
+creation transaction to confirm before preparing the add-role transaction.
+Creating the set does not add a Swig role automatically.
+
+<Note>
+  Keep both actions on a scoped SOL-transfer role. The `program` action permits
+  the wallet to invoke Solana's System Program, while `solLimit` caps the
+  lamports that may leave the wallet. SignV2 checks these permissions
+  independently, so `solLimit` alone does not authorize the program invocation.
+  The Developer SDK calls this action `program`; the Protocol SDK builder calls
+  the same permission `programLimit`.
+</Note>
+
+`solLimit` is the role's remaining one-time SOL budget. Each successful transfer
+decrements it, so size the initial allowance for the operations the role should
+perform.
 
 The add-role requester must currently be an Ed25519 or secp256r1 authority. A
 ParticipantSet can be the new role authority, but cannot request the add-role
@@ -111,7 +149,7 @@ const participantWallet = swig.wallets.use(swigConfigAddress, {
 const prepared = await participantWallet.transfer.sol({
   feePayer,
   destination,
-  amount: 1_000_000n,
+  amount: 1_000n,
 });
 
 const plan = prepared.participantSetApprovalPlan;
@@ -129,7 +167,7 @@ participant_wallet = swig.wallets.use(
 prepared = await participant_wallet.transfer.sol(
     fee_payer=fee_payer,
     destination=destination,
-    amount=1_000_000,
+    amount=1_000,
 )
 
 plan = prepared.participant_set_approval_plan
@@ -167,17 +205,33 @@ import {
   signParticipantSetApproval,
 } from '@swig-wallet/developer-sdk/signers';
 
-const signer = createParticipantEd25519Signer({
-  publicKey: recoveryPublicKey,
-  signMessage: signEd25519,
-});
-const approval = await signParticipantSetApproval(
-  plan.members[0]!,
-  signer,
-);
+const memberSigners = new Map([
+  [
+    participantAPublicKey,
+    createParticipantEd25519Signer({
+      publicKey: participantAPublicKey,
+      signMessage: participantASignMessage,
+    }),
+  ],
+  [
+    participantBPublicKey,
+    createParticipantEd25519Signer({
+      publicKey: participantBPublicKey,
+      signMessage: participantBSignMessage,
+    }),
+  ],
+]);
 
-// Collect at least plan.threshold approvals for this same plan.
-const approvals = [approval, ...otherApprovals];
+const approvals = await Promise.all(
+  plan.members.map(async (request) => {
+    if (!('ed25519' in request.authority)) {
+      throw new Error('Expected an Ed25519 ParticipantSet member');
+    }
+    const signer = memberSigners.get(request.authority.ed25519.publicKey);
+    if (!signer) throw new Error('Approval plan returned an unknown member');
+    return signParticipantSetApproval(request, signer);
+  }),
+);
 ```
 
 ```python Python
@@ -186,17 +240,34 @@ from swig_developer_sdk.signers import (
     sign_participant_set_approval,
 )
 
-signer = create_participant_ed25519_signer(
-    public_key=recovery_public_key,
-    sign_message=sign_ed25519,
-)
-approval = await sign_participant_set_approval(plan.members[0], signer)
+member_signers = {
+    participant_a_public_key: create_participant_ed25519_signer(
+        public_key=participant_a_public_key,
+        sign_message=participant_a_sign_message,
+    ),
+    participant_b_public_key: create_participant_ed25519_signer(
+        public_key=participant_b_public_key,
+        sign_message=participant_b_sign_message,
+    ),
+}
 
-# Collect at least plan.threshold approvals for this same plan.
-approvals = (approval, *other_approvals)
+approvals = []
+for request in plan.members:
+    authority = request.authority.get("ed25519")
+    if authority is None:
+        raise RuntimeError("Expected an Ed25519 ParticipantSet member")
+    public_key = authority["publicKey"]
+    signer = member_signers.get(public_key)
+    if signer is None:
+        raise RuntimeError("Approval plan returned an unknown member")
+    approvals.append(await sign_participant_set_approval(request, signer))
 ```
 
 </CodeGroup>
+
+Production applications normally distribute each request to its owning member
+and collect the resulting approvals out of band. The in-process 2-of-2 example
+keeps both Ed25519 callbacks together only to show the complete data flow.
 
 Your application remains responsible for passkey credential selection and its
 RP ID/origin policy. Do not ask a member to sign the raw serialized transaction
@@ -216,6 +287,7 @@ const compiled = await swig.transactions.compileParticipantSetApprovals({
 });
 
 console.log(compiled.authorizationExpirationSlot);
+await signAndSubmit(compiled.transaction);
 ```
 
 ```python Python
@@ -225,6 +297,7 @@ compiled = await swig.transactions.compile_participant_set_approvals(
 )
 
 print(compiled.authorization_expiration_slot)
+await sign_and_submit(compiled.transaction)
 ```
 
 </CodeGroup>
@@ -234,6 +307,10 @@ remaining Solana transaction signature, then submit directly or use
 [Sponsor & Submit](/developer-sdk/sponsor-and-submit) before the authorization
 expiration slot. If the slot has passed, prepare a fresh operation and collect
 fresh approvals.
+
+Compilation also rejects insufficient or duplicate approvals and a plan whose
+shared nonce no longer matches the on-chain ParticipantSet. Prepare a fresh
+operation after another transaction consumes the nonce.
 
 ## Approval and submission boundaries
 

@@ -92,6 +92,11 @@ prepared = await wallet.transfer.token(
 
 ## Continue the flow
 
+For threshold-authorized SOL or token transfers, follow the
+[Participant Sets](/developer-sdk/participant-sets) flow for role creation,
+approval collection, and compilation. A scoped SOL-transfer role carries both
+System Program access and a SOL spending limit.
+
 Use the requester authority and the serialized transaction's required signer
 set to coordinate signing in your application. For `secp256r1` and
 `secp256k1`, also process every `signatureRequests` / `signature_requests`
