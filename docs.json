@@ -192,6 +192,7 @@
             "pages": [
               "developer-sdk/create-wallets",
               "developer-sdk/signers",
+              "developer-sdk/add-roles-and-permissions",
               "developer-sdk/transfers-and-swaps",
               "developer-sdk/swaps-and-batches",
               "developer-sdk/participant-sets",
