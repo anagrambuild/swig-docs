@@ -3,288 +3,291 @@ title: "Add and Withdraw Funds"
 sidebarTitle: "Ramp (On/Off)"
 ---
 
-The ramp clients build a headless fiat on-ramp and off-ramp around a Swig
-wallet. Every ramp client call runs on your server. Your application decides
-how to present authorized quote, launch URL, and session data to a user.
+The ramp client builds a headless fiat on-ramp and off-ramp around a Swig
+wallet. Every ramp call runs on your server. Your application decides how to
+present quotes, the launch URL, and order state to a user.
 
-Ramp is split by direction. There is no generic ramp client:
-
-- `swig.ramp.onramp` — fiat in, crypto to the Swig
-- `swig.ramp.offramp` — crypto out of the Swig, fiat to the user
+`swig.ramp` covers both directions. Direction is carried by the buy or sell
+order you pass, so there is no separate on-ramp or off-ramp client.
 
 ## Required configuration
 
-Every ramp call requires `environment`. Options, quotes, and session creation
-also require the organization's MELD configuration id:
+`getOptions` / `get_options`, `getQuotes` / `get_quotes`, and `createOrder` /
+`create_order` require both fields below.
 
 | Field | Value |
 | :--- | :--- |
+| `configurationId` / `configuration_id` | the organization's ramp configuration id |
 | `environment` | `sandbox` or `production` |
-| `organizationMeldConfigurationId` / `organization_meld_configuration_id` | required for options, quotes, and session creation |
 
-The SDK encodes `environment` as the MELD enum on the wire, so pass the plain
-string.
+`getOrder` / `get_order`, `prepareTransfer` / `prepare_transfer`, and
+`submitTransfer` / `submit_transfer` identify the stored order in the route and
+require neither field.
 
-Quote calls additionally require:
+The provider environment is not a Solana cluster. A sandbox order still settles
+on mainnet.
 
-| Field | Value |
-| :--- | :--- |
-| `externalCustomerId` / `external_customer_id` | your identifier for the end customer |
-| `swigConfigAddress` / `swig_config_address` | the Swig receiving or sending funds |
-| `network` | `devnet` or `mainnet`, from the call or the client default |
-| `sourceAmount`, `sourceCurrencyCode`, `destinationCurrencyCode`, `countryCode` | the quote request itself |
+## Amounts and assets
 
-`subdivision` and `paymentMethodType` / `payment_method_type` are optional.
+Amounts are integers in the smallest unit — `minorUnits` for fiat (cents for
+USD, whole yen for JPY) and `baseUnits` for crypto. They cross the wire as
+decimal strings so a value above 2^53 survives, and an amount finer than the
+currency's minor unit is refused rather than rounded. In TypeScript, use a
+`bigint` or decimal string above the safe-integer range; unsafe `number` values
+are rejected before the request is sent.
+
+Crypto is a two-case asset: native SOL, or an SPL mint.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const sol = { type: 'sol' } as const;
+const usdc = { type: 'token', mint: usdcMint } as const;
+```
+
+```python Python
+sol = NativeSolAsset()
+usdc = SplTokenAsset(mint=usdc_mint)
+```
+
+</CodeGroup>
+
+## Read the options
+
+Read the options first, so currency, payment-method, and asset values come from
+the API rather than a hardcoded list. `decimals` and `exponent` are the scales
+you need to build a valid amount.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const options = await swig.ramp.getOptions({
+  configurationId,
+  environment: 'sandbox',
+  direction: 'buy',
+  countryCode: 'US',
+});
+```
+
+```python Python
+options = await swig.ramp.get_options(
+    configuration_id=configuration_id,
+    environment="sandbox",
+    direction="buy",
+    country_code="US",
+)
+```
+
+</CodeGroup>
+
+You get `countries` (each with `subdivisions`), `fiatCurrencies` /
+`fiat_currencies`, `paymentMethods` / `payment_methods`, and `assets`.
+
+## Quote a route
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const quotes = await swig.ramp.getQuotes({
+  configurationId,
+  environment: 'sandbox',
+  location: { countryCode: 'US' },
+  order: {
+    type: 'buy',
+    spend: { currencyCode: 'USD', minorUnits: 10_000n },
+    receive: { type: 'token', mint: usdcMint },
+  },
+});
+```
+
+```python Python
+quotes = await swig.ramp.get_quotes(
+    configuration_id=configuration_id,
+    environment="sandbox",
+    location=RampLocation(country_code="US"),
+    order=RampBuyOrderRequest(
+        spend=FiatAmountInput(currency_code="USD", minor_units=10_000),
+        receive=SplTokenAsset(mint=usdc_mint),
+    ),
+)
+```
+
+</CodeGroup>
+
+Each quote carries a `route` and a `details` arm holding the priced amounts, the
+total fee, and the exchange rate.
 
 <Warning>
-  A `launchUrl` / `launch_url` is a user-specific session URL. Hand it to the
-  customer who owns the session and keep it out of logs and analytics.
+  Quotes carry no identifier and must never be cached. Pass the chosen `route`
+  to order creation; it is re-priced there.
 </Warning>
 
-## On-ramp
+## Create an order
 
-Read the available options first, so currency and payment-method codes come
-from the API rather than from a hardcoded list.
+`requestId` / `request_id` is your idempotency key and is unique within the
+configuration. Repeating it returns the stored order; repeating it with
+different inputs is refused. Mint it before the first attempt and reuse it
+across retries — the SDK retries this call for you on a transient failure.
 
 <CodeGroup dropdown>
 
 ```typescript TypeScript
-const environment = 'sandbox';
-
-const options = await swig.ramp.onramp.getOptions({
-  organizationMeldConfigurationId,
-  environment,
-  countryCode: 'US',
-});
-
-const { quotes } = await swig.ramp.onramp.quote({
-  organizationMeldConfigurationId,
-  environment,
-  externalCustomerId,
-  swigConfigAddress,
-  network: 'devnet',
-  sourceAmount: '100.00',
-  sourceCurrencyCode: options.fiatCurrencyCodes[0]!,
-  destinationCurrencyCode: options.cryptoCurrencyCodes[0]!,
-  countryCode: 'US',
-  paymentMethodType: options.paymentMethodTypes[0],
-});
-
-const session = await swig.ramp.onramp.createSession({
-  organizationMeldConfigurationId,
-  environment,
-  quoteId: quotes[0]!.quoteId,
-});
-
-// Send session.launchUrl to the customer.
-const state = await swig.ramp.onramp.getSession({
-  sessionId: session.sessionId,
-  environment,
+const order = await swig.ramp.createOrder({
+  requestId: crypto.randomUUID(),
+  configurationId,
+  environment: 'sandbox',
+  context: {
+    customerId,
+    swigConfigAddress,
+    location: { countryCode: 'US' },
+  },
+  route: quotes[0].route,
+  order: {
+    type: 'buy',
+    spend: { currencyCode: 'USD', minorUnits: 10_000n },
+    receive: { type: 'token', mint: usdcMint },
+  },
 });
 ```
 
 ```python Python
-from swig_developer_sdk import QuoteRampArgs
-
-environment = "sandbox"
-
-options = await swig.ramp.onramp.get_options(
-    organization_meld_configuration_id=configuration_id,
-    environment=environment,
-    country_code="US",
-)
-
-result = await swig.ramp.onramp.quote(
-    QuoteRampArgs(
-        organization_meld_configuration_id=configuration_id,
-        environment=environment,
-        external_customer_id=external_customer_id,
+order = await swig.ramp.create_order(
+    request_id=str(uuid.uuid4()),
+    configuration_id=configuration_id,
+    environment="sandbox",
+    context=RampOrderContext(
+        customer_id=customer_id,
         swig_config_address=swig_config_address,
-        network="devnet",
-        source_amount="100.00",
-        source_currency_code=options.fiat_currency_codes[0],
-        destination_currency_code=options.crypto_currency_codes[0],
-        country_code="US",
-        payment_method_type=options.payment_method_types[0],
-    )
-)
-
-session = await swig.ramp.onramp.create_session(
-    organization_meld_configuration_id=configuration_id,
-    quote_id=result.quotes[0].quote_id,
-    environment=environment,
-)
-
-# Send session.launch_url to the customer.
-state = await swig.ramp.onramp.get_session(
-    session_id=session.session_id,
-    environment=environment,
+        location=RampLocation(country_code="US"),
+    ),
+    route=quotes[0].route,
+    order=RampBuyOrderRequest(
+        spend=FiatAmountInput(currency_code="USD", minor_units=10_000),
+        receive=SplTokenAsset(mint=usdc_mint),
+    ),
 )
 ```
 
 </CodeGroup>
 
-Each quote carries `quoteId`, `serviceProvider`, `paymentMethodType`,
-`sourceAmount`, `sourceCurrencyCode`, `destinationAmount`,
-`destinationCurrencyCode`, `exchangeRate`, and `totalFee` (snake_case in
-Python).
+A buy sends the customer to `order.launchUrl` / `order.launch_url`.
 
-On-ramp session status is one of:
+<Warning>
+  A launch URL is a user-specific session URL. Hand it to the customer who owns
+  the order and keep it out of logs and analytics.
+</Warning>
 
-```text
-unspecified  created  pending  settling  settled
-failed  declined  cancelled  refunded
-```
+## Follow the order
 
-## Off-ramp
-
-Off-ramp adds an on-chain step. The customer's wallet must authorize the
-transfer to the provider before the session can settle, so the flow is:
-quote → session → prepare authorization → application-owned signer → submit
-authorization. It settles on mainnet even when `environment` is `sandbox`, so
-use `mainnet` for the quote network.
+Poll the order until its status is final. A read of a non-final order also
+reconciles it against the provider, so polling is what advances it.
 
 <CodeGroup dropdown>
 
 ```typescript TypeScript
-const options = await swig.ramp.offramp.getOptions({
-  organizationMeldConfigurationId,
-  environment,
-  countryCode: 'US',
-});
+const current = await swig.ramp.getOrder({ orderId: order.id });
+```
 
-const { quotes } = await swig.ramp.offramp.quote({
-  organizationMeldConfigurationId,
-  environment,
-  externalCustomerId,
-  swigConfigAddress,
-  network: 'mainnet',
-  sourceAmount: '25.00',
-  sourceCurrencyCode: options.cryptoCurrencies[0]!.currencyCode,
-  destinationCurrencyCode: options.fiatCurrencyCodes[0]!,
-  countryCode: 'US',
-  paymentMethodType: options.paymentMethodTypes[0],
-});
+```python Python
+current = await swig.ramp.get_order(order_id=order.id)
+```
 
-const session = await swig.ramp.offramp.createSession({
-  organizationMeldConfigurationId,
-  environment,
-  quoteId: quotes[0]!.quoteId,
-});
+</CodeGroup>
 
-const authorization = await swig.ramp.offramp.prepareAuthorization({
-  sessionId: session.sessionId,
-  environment,
+Statuses are `unspecified`, `creating`, `creation-uncertain`,
+`awaiting-customer`, `awaiting-transfer`, `processing`, `settling`, `settled`,
+`declined`, `cancelled`, `failed`, and `refunded`. `refunded` can follow
+`settled`, so a settled order is not necessarily the last word.
+
+## Sell: prepare, sign, submit
+
+A sell waits for `awaiting-transfer` and a deposit, then moves the crypto out of
+the Swig. Your application owns the signing step; the SDK never holds a key.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+import { signPreparedTransaction } from '@swig-wallet/developer-sdk/signers';
+
+const prepared = await swig.ramp.prepareTransfer({
+  orderId: order.id,
+  requesterAuthority: { ed25519: { publicKey: requester } },
   feePayer,
-  requesterAuthority: { secp256r1: { publicKey: passkeyPublicKey } },
 });
 
-// After authorized confirmation, coordinate signing in application-owned code.
-const signedBase64Transaction = await applicationSigner(
-  authorization.preparedTransaction,
-);
+const signed = await signPreparedTransaction(prepared.preparedTransaction, {
+  signTransaction,
+});
 
-const { solanaSignature } = await swig.ramp.offramp.submitAuthorization({
-  sessionId: session.sessionId,
-  environment,
-  authorizationId: authorization.authorizationId,
-  signedTransaction: signedBase64Transaction,
+const transfer = await swig.ramp.submitTransfer({
+  orderId: order.id,
+  transferId: prepared.transfer.transferId,
+  signedTransaction: signed.transaction,
 });
 ```
 
 ```python Python
-from swig_developer_sdk import QuoteRampArgs
+from swig_developer_sdk.signers import sign_prepared_transaction
 
-options = await swig.ramp.offramp.get_options(
-    organization_meld_configuration_id=configuration_id,
-    environment=environment,
-    country_code="US",
-)
-
-result = await swig.ramp.offramp.quote(
-    QuoteRampArgs(
-        organization_meld_configuration_id=configuration_id,
-        environment=environment,
-        external_customer_id=external_customer_id,
-        swig_config_address=swig_config_address,
-        network="mainnet",
-        source_amount="25.00",
-        source_currency_code=options.crypto_currencies[0].currency_code,
-        destination_currency_code=options.fiat_currency_codes[0],
-        country_code="US",
-        payment_method_type=options.payment_method_types[0],
-    )
-)
-
-session = await swig.ramp.offramp.create_session(
-    organization_meld_configuration_id=configuration_id,
-    quote_id=result.quotes[0].quote_id,
-    environment=environment,
-)
-
-authorization = await swig.ramp.offramp.prepare_authorization(
-    session_id=session.session_id,
-    environment=environment,
+prepared = await swig.ramp.prepare_transfer(
+    order_id=order.id,
+    requester_authority={"ed25519": {"publicKey": requester}},
     fee_payer=fee_payer,
-    requester_authority={"secp256r1": {"publicKey": passkey_public_key}},
 )
 
-# After authorized confirmation, coordinate signing in application-owned code.
-signed_base64_transaction = await application_signer(
-    authorization.prepared_transaction
+signed = await sign_prepared_transaction(
+    prepared.prepared_transaction,
+    sign_transaction=sign_transaction,
 )
 
-submitted = await swig.ramp.offramp.submit_authorization(
-    session_id=session.session_id,
-    environment=environment,
-    authorization_id=authorization.authorization_id,
-    signed_transaction=signed_base64_transaction,
+transfer = await swig.ramp.submit_transfer(
+    order_id=order.id,
+    transfer_id=prepared.transfer.transfer_id,
+    signed_transaction=signed.transaction,
 )
 ```
 
 </CodeGroup>
 
-`authorization.display` is the human-readable transfer summary to show before
-signing: `sourceWalletAddress`, `destinationWalletAddress`, `sourceAmount`,
-`sourceCurrencyCode`, `destinationAmount`, `destinationCurrencyCode`,
-`serviceProvider`, and optional `paymentMethodType` and
-`providerDestinationAmount`.
+The transfer is built from the provider's canonical record rather than the
+quote, so a repriced amount funds the deposit correctly. Transfer states are
+`unspecified`, `prepared`, `submitted`, `landed`, `failed`, and `expired`; a
+transfer settles only at `confirmed` or better.
 
-The prepared authorization follows the same boundary as every other prepared
-transaction. Inspect its signature metadata, obtain the required signature
-from application-owned signing code, and return only the signed serialized
-transaction to the server. The optional
-[signing helpers](/developer-sdk/signers) can assemble that
-result.
+The prepared transaction is handed over exactly once. If you broadcast it and
+then lose it, submit again without a signed transaction to resolve the attempt
+that is already live.
 
-Off-ramp session status adds three states to the on-ramp set:
+<CodeGroup dropdown>
 
-```text
-provider-session-created  transfer-required  transfer-submitted
+```typescript TypeScript
+await swig.ramp.submitTransfer({
+  orderId: order.id,
+  transferId: prepared.transfer.transferId,
+});
 ```
 
-A settled off-ramp session also exposes `solanaSignature` /
-`solana_signature` for the on-chain transfer.
+```python Python
+await swig.ramp.submit_transfer(
+    order_id=order.id,
+    transfer_id=prepared.transfer.transfer_id,
+)
+```
+
+</CodeGroup>
 
 ## Routes behind the clients
 
 | Client method | Route |
 | :--- | :--- |
-| `onramp.getOptions` | `GET /wallet/api/ramp/onramp/options` |
-| `onramp.quote` | `POST /wallet/api/ramp/onramp/quote` |
-| `onramp.createSession` | `POST /wallet/api/ramp/onramp/session` |
-| `onramp.getSession` | `GET /wallet/api/ramp/onramp/session/{session_id}` |
-| `offramp.getOptions` | `GET /wallet/api/ramp/offramp/options` |
-| `offramp.quote` | `POST /wallet/api/ramp/offramp/quote` |
-| `offramp.createSession` | `POST /wallet/api/ramp/offramp/session` |
-| `offramp.prepareAuthorization` | `POST /wallet/api/ramp/offramp/session/{session_id}/prepare` |
-| `offramp.submitAuthorization` | `POST /wallet/api/ramp/offramp/session/{session_id}/submit` |
-| `offramp.getSession` | `GET /wallet/api/ramp/offramp/session/{session_id}` |
+| `getOptions` / `get_options` | `GET /wallet/api/ramp/options` |
+| `getQuotes` / `get_quotes` | `POST /wallet/api/ramp/quotes` |
+| `createOrder` / `create_order` | `POST /wallet/api/ramp/orders` |
+| `getOrder` / `get_order` | `GET /wallet/api/ramp/orders/{order_id}` |
+| `prepareTransfer` / `prepare_transfer` | `POST /wallet/api/ramp/orders/{order_id}/transfer/prepare` |
+| `submitTransfer` / `submit_transfer` | `POST /wallet/api/ramp/orders/{order_id}/transfer/submit` |
 
-## Application delivery
-
-Treat `launchUrl` / `launch_url`, quotes, and session state as user-scoped
-data. If another application runtime needs them, return only the authorized
-fields through your own server API. Do not import the Developer SDK's API
-client or expose the Swig API key outside the server. The optional `/signers`
-signing helpers remain limited to local transaction assembly.
+Your application owns the API key, the customer identifier it sends as
+`customerId`, and the signing key for a sell. Keep the API key on the server and
+out of any browser bundle. See the [Ramp API](/developer-api/ramp) for the raw
+REST contract.

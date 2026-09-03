@@ -3,9 +3,10 @@ title: "Ramp API"
 sidebarTitle: "Ramp"
 ---
 
-The Ramp API exposes the MELD-backed fiat on-ramp and off-ramp used by Swig
-wallet integrations. Routes are split by direction; there is no generic ramp
-endpoint.
+The Ramp API buys and sells crypto against fiat through a ramp provider. One
+service covers both directions: direction is carried by the `buy` or `sell`
+order you send, not by the route, so the two cannot disagree. Assets are Solana
+only.
 
 ## Auth
 
@@ -19,206 +20,224 @@ Authorization: Bearer sk_your_api_key
 
 | Method | Route |
 | :--- | :--- |
-| `GET` | `/wallet/api/ramp/onramp/options` |
-| `POST` | `/wallet/api/ramp/onramp/quote` |
-| `POST` | `/wallet/api/ramp/onramp/session` |
-| `GET` | `/wallet/api/ramp/onramp/session/{session_id}` |
-| `GET` | `/wallet/api/ramp/offramp/options` |
-| `POST` | `/wallet/api/ramp/offramp/quote` |
-| `POST` | `/wallet/api/ramp/offramp/session` |
-| `POST` | `/wallet/api/ramp/offramp/session/{session_id}/prepare` |
-| `POST` | `/wallet/api/ramp/offramp/session/{session_id}/submit` |
-| `GET` | `/wallet/api/ramp/offramp/session/{session_id}` |
+| `GET` | `/wallet/api/ramp/options` |
+| `POST` | `/wallet/api/ramp/quotes` |
+| `POST` | `/wallet/api/ramp/orders` |
+| `GET` | `/wallet/api/ramp/orders/{order_id}` |
+| `POST` | `/wallet/api/ramp/orders/{order_id}/transfer/prepare` |
+| `POST` | `/wallet/api/ramp/orders/{order_id}/transfer/submit` |
 
-## Required fields
+## Configuration fields
 
-Every ramp request requires an `environment`. Options, quotes, and session
-creation also require the organization's MELD configuration id:
+The options, quotes, and order-creation routes require both fields below.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
-| `environment` | enum | `MELD_ENVIRONMENT_SANDBOX` or `MELD_ENVIRONMENT_PRODUCTION` |
-| `organizationMeldConfigurationId` | string | Required for options, quotes, and session creation |
+| `configurationId` | string | The organization's ramp configuration id |
+| `environment` | enum | `RAMP_ENVIRONMENT_SANDBOX` or `RAMP_ENVIRONMENT_PRODUCTION` |
 
-On options routes these values are query parameters. On quote and session
-creation routes they are body fields. Session reads and off-ramp authorization
-actions identify the session in the route path and require only `environment`
-from this table.
+On the options route these are query parameters; on the quote and order routes
+they are body fields. Order reads and transfer actions identify the stored
+order in the route path and require **neither** field.
 
-Quote requests additionally require `externalCustomerId`, `swigConfigAddress`,
-and `network`.
+The provider environment is not a Solana cluster. A sandbox order still settles
+on mainnet.
+
+## Amounts
+
+Amounts are unsigned integers in the smallest unit the thing has, encoded as
+decimal strings:
+
+| Type | Fields | Unit |
+| :--- | :--- | :--- |
+| `FiatAmount` | `currencyCode`, `minorUnits` | cents for USD, whole yen for JPY |
+| `CryptoAmount` | `asset`, `baseUnits` | the asset's base units |
+
+An amount finer than the currency's minor unit is refused, never rounded. Read
+`AssetOption.decimals` and `FiatCurrencyOption.exponent` from the options route
+to build a valid value.
+
+A crypto asset is one of two shapes. Native SOL carries no mint:
+
+```json
+{ "sol": {} }
+{ "token": { "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" } }
+```
+
+`exchangeRate` is the one decimal string that is not an integer: a rate is a
+ratio and has no minor unit to scale to. It is display-only.
 
 ## Get options
 
-`GET /wallet/api/ramp/onramp/options`
-`GET /wallet/api/ramp/offramp/options`
+`GET /wallet/api/ramp/options`
 
 Query parameters:
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `organizationMeldConfigurationId` | string | Required MELD configuration id |
-| `environment` | enum | Required MELD environment |
-| `countryCode` | string | Optional ISO country filter |
-| `fiatCurrencyCode` | string | Optional fiat currency filter |
+| `configurationId` | string | Required |
+| `environment` | enum | Required |
+| `direction` | enum | `RAMP_DIRECTION_BUY` or `RAMP_DIRECTION_SELL` |
+| `countryCode` | string | ISO 3166-1 alpha-2. Omit to list countries alone |
+| `fiatCurrencyCode` | string | ISO 4217 alpha-3, optional filter |
 
-Both directions return `countries` (each with `countryCode`, `countryName`, and
-`subdivisions`), `fiatCurrencyCodes`, and `paymentMethodTypes`. On-ramp adds
-`cryptoCurrencyCodes`; off-ramp adds `cryptoCurrencies`, each with
-`currencyCode`, `currencyName`, `iconUrl`, and `contractAddress`.
+Response fields:
 
-Read options first so currency and payment-method codes come from the API
-rather than from a hardcoded list.
-
-## Quote
-
-### On-ramp quote
-
-`POST /wallet/api/ramp/onramp/quote`
-
-```json
-{
-  "organizationMeldConfigurationId": "meld_config_123",
-  "environment": "MELD_ENVIRONMENT_SANDBOX",
-  "externalCustomerId": "customer_123",
-  "swigConfigAddress": "SwigConfigAddress",
-  "network": "NETWORK_DEVNET",
-  "sourceAmount": "100.00",
-  "sourceCurrencyCode": "USD",
-  "destinationCurrencyCode": "USDC",
-  "countryCode": "US",
-  "subdivision": "US-CA",
-  "paymentMethodType": "CREDIT_DEBIT_CARD"
-}
-```
-
-### Off-ramp quote
-
-`POST /wallet/api/ramp/offramp/quote`
-
-Off-ramp reverses the currency direction: the source is the crypto asset being
-sold and the destination is fiat. It settles on mainnet even in the MELD sandbox
-environment, so `network` must be `NETWORK_MAINNET`.
-
-```json
-{
-  "organizationMeldConfigurationId": "meld_config_123",
-  "environment": "MELD_ENVIRONMENT_SANDBOX",
-  "externalCustomerId": "customer_123",
-  "swigConfigAddress": "SwigConfigAddress",
-  "network": "NETWORK_MAINNET",
-  "sourceAmount": "25.00",
-  "sourceCurrencyCode": "USDC_SOLANA",
-  "destinationCurrencyCode": "USD",
-  "countryCode": "US",
-  "subdivision": "US-CA",
-  "paymentMethodType": "PAYOUT_TO_CARD"
-}
-```
-
-`subdivision` and `paymentMethodType` are optional. Take currency and payment
-method values from the matching options response.
-
-The response returns `quotes`, each with `quoteId`, `serviceProvider`,
-`paymentMethodType`, `sourceAmount`, `sourceCurrencyCode`,
-`destinationAmount`, `destinationCurrencyCode`, `exchangeRate`, and
-`totalFee`.
-
-## Create a session
-
-`POST /wallet/api/ramp/onramp/session`
-`POST /wallet/api/ramp/offramp/session`
-
-```json
-{
-  "organizationMeldConfigurationId": "meld_config_123",
-  "environment": "MELD_ENVIRONMENT_SANDBOX",
-  "quoteId": "quote_123"
-}
-```
-
-The response returns `sessionId` and `launchUrl`.
-
-<Warning>
-  A `launchUrl` is a user-specific session URL. Return it only to the customer
-  who owns the session, and keep it out of logs and analytics.
-</Warning>
-
-## Read a session
-
-`GET /wallet/api/ramp/onramp/session/{session_id}`
-`GET /wallet/api/ramp/offramp/session/{session_id}`
-
-Query parameters:
-
-| Parameter | Type | Description |
+| Field | Type | Description |
 | :--- | :--- | :--- |
-| `environment` | enum | Required MELD environment |
+| `countries` | array | `code`, `name`, and `subdivisions` of `code` and `name` |
+| `fiatCurrencies` | array | `currencyCode` and `exponent` |
+| `paymentMethods` | array | Opaque provider payment-method identifiers |
+| `assets` | array | `asset`, `name`, `decimals`, and an optional `iconUrl` |
 
-On-ramp sessions return `sessionId`, `status`, `createdAt`, and `updatedAt`.
-Status values are:
+`decimals` is Swig's own value for the asset, not the provider's.
 
-```text
-ONRAMP_SESSION_STATUS_UNSPECIFIED  ..._CREATED  ..._PENDING
-..._SETTLING  ..._SETTLED  ..._FAILED  ..._DECLINED
-..._CANCELLED  ..._REFUNDED
-```
+## Get quotes
 
-Off-ramp sessions return the same base fields plus `sourceAmount`,
-`sourceCurrencyCode`, `destinationAmount`, `destinationCurrencyCode`,
-`serviceProvider`, and optional `paymentMethodType`, `solanaSignature`, and
-`providerDestinationAmount`. Off-ramp adds three states:
-
-```text
-OFFRAMP_SESSION_STATUS_PROVIDER_SESSION_CREATED
-OFFRAMP_SESSION_STATUS_TRANSFER_REQUIRED
-OFFRAMP_SESSION_STATUS_TRANSFER_SUBMITTED
-```
-
-## Off-ramp authorization
-
-Off-ramp requires an on-chain transfer from the Swig to the provider before the
-session can settle.
-
-### Prepare
-
-`POST /wallet/api/ramp/offramp/session/{session_id}/prepare`
+`POST /wallet/api/ramp/quotes`
 
 ```json
 {
-  "environment": "MELD_ENVIRONMENT_PRODUCTION",
-  "feePayer": "FeePayerPublicKey",
-  "requesterAuthority": {
-    "ed25519": { "publicKey": "RequesterPublicKey" }
+  "configurationId": "018f-config",
+  "environment": "RAMP_ENVIRONMENT_SANDBOX",
+  "location": { "countryCode": "US", "subdivisionCode": "US-CA" },
+  "buy": {
+    "spend": { "currencyCode": "USD", "minorUnits": "10000" },
+    "receive": { "token": { "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" } }
   }
 }
 ```
 
-The response returns `authorizationId`, a `preparedTransaction`, and a
-`display` object describing the transfer: `sourceWalletAddress`,
-`destinationWalletAddress`, `sourceAmount`, `sourceCurrencyCode`,
-`destinationAmount`, `destinationCurrencyCode`, `serviceProvider`, and optional
-`paymentMethodType` and `providerDestinationAmount`.
-
-Show `display` to the customer before signing.
-
-### Submit
-
-`POST /wallet/api/ramp/offramp/session/{session_id}/submit`
+Send `sell` instead of `buy` for the other direction:
 
 ```json
 {
-  "environment": "MELD_ENVIRONMENT_PRODUCTION",
-  "authorizationId": "authorization_123",
-  "signedTransaction": "BASE64_SIGNED_TRANSACTION"
+  "sell": {
+    "sell": { "asset": { "sol": {} }, "baseUnits": "1000000000" },
+    "receiveFiatCurrencyCode": "USD"
+  }
 }
 ```
 
-The response returns `solanaSignature`.
+The response carries `quotes`, each with a `route` of `provider` and
+`paymentMethod`, plus a `buy` or `sell` arm holding the priced amounts, the
+`totalFee`, and the `exchangeRate`.
+
+<Warning>
+  Quotes carry no identifier and must never be cached. The provider mints none
+  and documents that they must not be reused, so the route you choose is
+  re-priced when the order is created.
+</Warning>
+
+## Create an order
+
+`POST /wallet/api/ramp/orders`
+
+```json
+{
+  "requestId": "0f1c6f1e-8b5a-4d1b-9f0d-3a2f6a1b7c44",
+  "configurationId": "018f-config",
+  "environment": "RAMP_ENVIRONMENT_SANDBOX",
+  "context": {
+    "customerId": "your-customer-id",
+    "swigConfigAddress": "SwigConfigAddress",
+    "network": "NETWORK_MAINNET",
+    "location": { "countryCode": "US" }
+  },
+  "route": { "provider": "PROVIDER", "paymentMethod": "CARD" },
+  "buy": {
+    "spend": { "currencyCode": "USD", "minorUnits": "10000" },
+    "receive": { "token": { "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" } }
+  }
+}
+```
+
+`requestId` is your idempotency key and is unique within the configuration.
+Repeating it returns the stored order; repeating it with different inputs is
+refused with `ALREADY_EXISTS`. Mint it before the first attempt and reuse it
+across retries.
+
+The response is `{ "order": ... }`. An order carries `id`, `status`,
+`createdAt`, `updatedAt`, and a `buy` or `sell` detail arm.
+
+## Read an order
+
+`GET /wallet/api/ramp/orders/{order_id}`
+
+Returns `{ "order": ... }`. A read of a non-final order refetches the provider's
+record first, so polling this route is what advances the order and fills in the
+deposit address a sell needs.
+
+| Status | Meaning |
+| :--- | :--- |
+| `RAMP_ORDER_STATUS_UNSPECIFIED` | No order status was supplied |
+| `RAMP_ORDER_STATUS_CREATING` | The provider session is being created |
+| `RAMP_ORDER_STATUS_CREATION_UNCERTAIN` | The provider call gave no answer that can be trusted; it is never retried |
+| `RAMP_ORDER_STATUS_AWAITING_CUSTOMER` | Waiting on the customer at the provider |
+| `RAMP_ORDER_STATUS_AWAITING_TRANSFER` | Sell only: waiting for the crypto transfer |
+| `RAMP_ORDER_STATUS_PROCESSING` | The provider is processing |
+| `RAMP_ORDER_STATUS_SETTLING` | Funds are moving |
+| `RAMP_ORDER_STATUS_SETTLED` | Complete |
+| `RAMP_ORDER_STATUS_DECLINED` | The provider declined |
+| `RAMP_ORDER_STATUS_CANCELLED` | Cancelled |
+| `RAMP_ORDER_STATUS_FAILED` | Failed |
+| `RAMP_ORDER_STATUS_REFUNDED` | Refunded; this is the one transition reachable out of `SETTLED` |
+
+A buy carries the quote and an optional `launchUrl`. A sell also carries
+`deposit` once the provider assigns one, and `transfer` once one is prepared.
+
+<Warning>
+  A `launchUrl` is a user-specific session URL. Hand it to the customer who owns
+  the order and keep it out of logs and analytics.
+</Warning>
+
+## Prepare a transfer
+
+`POST /wallet/api/ramp/orders/{order_id}/transfer/prepare`
+
+Sell only. Call it once the order reaches `AWAITING_TRANSFER` and carries a
+`deposit`.
+
+```json
+{
+  "requesterAuthority": { "ed25519": { "publicKey": "RequesterPublicKey" } },
+  "feePayer": "FeePayerPublicKey"
+}
+```
+
+The response is `{ "preparedTransfer": ... }`, carrying the `transfer`, the
+`preparedTransaction` to sign, and the canonical `deposit`. The transfer is
+built from the provider's own record rather than the quote, so a repriced amount
+funds the deposit correctly. `transfer.expiresAt` is the prepared blockhash's
+lifetime.
+
+## Submit a transfer
+
+`POST /wallet/api/ramp/orders/{order_id}/transfer/submit`
+
+```json
+{
+  "transferId": "018f-transfer",
+  "signedTransaction": "base64-signed-transaction"
+}
+```
+
+Returns `{ "transfer": ... }` with a `state` of `TRANSFER_STATE_UNSPECIFIED`,
+`PREPARED`, `SUBMITTED`, `LANDED`, `FAILED`, or `EXPIRED`, and a
+`solanaSignature` once one exists. A transfer settles only at `confirmed` or
+better, so a `processed` signature still reads as in-flight.
+
+The prepared transaction is handed over exactly once. If you broadcast it and
+then lose it, submit again with an empty `signedTransaction` to resolve the
+attempt that is already live.
+
+## Errors
+
+Validation failures return `INVALID_ARGUMENT`. A configuration that is disabled
+or not approved returns `FAILED_PRECONDITION`, and that stops orders already in
+flight, not only new ones. See [Errors](/developer-api/errors).
 
 ## SDK equivalent
 
-The Developer SDKs wrap these routes as `swig.ramp.onramp` and
-`swig.ramp.offramp`, and accept `sandbox` / `production` as plain strings while
-encoding the MELD enum for you. See
-[Add and Withdraw Funds](/developer-sdk/ramp).
+The [Developer SDK](/developer-sdk/ramp) wraps these routes as `swig.ramp` in
+TypeScript and Python.
