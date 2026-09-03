@@ -12,13 +12,17 @@ order you pass, so there is no separate on-ramp or off-ramp client.
 
 ## Required configuration
 
+`getOptions` / `get_options`, `getQuotes` / `get_quotes`, and `createOrder` /
+`create_order` require both fields below.
+
 | Field | Value |
 | :--- | :--- |
 | `configurationId` / `configuration_id` | the organization's ramp configuration id |
 | `environment` | `sandbox` or `production` |
 
-`getOrder`, `prepareTransfer`, and `submitTransfer` identify the order in the
-route and take no environment; it is a property of the stored order.
+`getOrder` / `get_order`, `prepareTransfer` / `prepare_transfer`, and
+`submitTransfer` / `submit_transfer` identify the stored order in the route and
+require neither field.
 
 The provider environment is not a Solana cluster. A sandbox order still settles
 on mainnet.
@@ -28,7 +32,9 @@ on mainnet.
 Amounts are integers in the smallest unit — `minorUnits` for fiat (cents for
 USD, whole yen for JPY) and `baseUnits` for crypto. They cross the wire as
 decimal strings so a value above 2^53 survives, and an amount finer than the
-currency's minor unit is refused rather than rounded.
+currency's minor unit is refused rather than rounded. In TypeScript, use a
+`bigint` or decimal string above the safe-integer range; unsafe `number` values
+are rejected before the request is sent.
 
 Crypto is a two-case asset: native SOL, or an SPL mint.
 
@@ -188,10 +194,10 @@ current = await swig.ramp.get_order(order_id=order.id)
 
 </CodeGroup>
 
-Statuses are `creating`, `creation-uncertain`, `awaiting-customer`,
-`awaiting-transfer`, `processing`, `settling`, `settled`, `declined`,
-`cancelled`, `failed`, and `refunded`. `refunded` can follow `settled`, so a
-settled order is not necessarily the last word.
+Statuses are `unspecified`, `creating`, `creation-uncertain`,
+`awaiting-customer`, `awaiting-transfer`, `processing`, `settling`, `settled`,
+`declined`, `cancelled`, `failed`, and `refunded`. `refunded` can follow
+`settled`, so a settled order is not necessarily the last word.
 
 ## Sell: prepare, sign, submit
 
@@ -201,13 +207,17 @@ the Swig. Your application owns the signing step; the SDK never holds a key.
 <CodeGroup dropdown>
 
 ```typescript TypeScript
+import { signPreparedTransaction } from '@swig-wallet/developer-sdk/signers';
+
 const prepared = await swig.ramp.prepareTransfer({
   orderId: order.id,
   requesterAuthority: { ed25519: { publicKey: requester } },
   feePayer,
 });
 
-const signed = await signPreparedTransaction(prepared.preparedTransaction, signer);
+const signed = await signPreparedTransaction(prepared.preparedTransaction, {
+  signTransaction,
+});
 
 const transfer = await swig.ramp.submitTransfer({
   orderId: order.id,
@@ -217,13 +227,18 @@ const transfer = await swig.ramp.submitTransfer({
 ```
 
 ```python Python
+from swig_developer_sdk.signers import sign_prepared_transaction
+
 prepared = await swig.ramp.prepare_transfer(
     order_id=order.id,
     requester_authority={"ed25519": {"publicKey": requester}},
     fee_payer=fee_payer,
 )
 
-signed = sign_prepared_transaction(prepared.prepared_transaction, signer)
+signed = await sign_prepared_transaction(
+    prepared.prepared_transaction,
+    sign_transaction=sign_transaction,
+)
 
 transfer = await swig.ramp.submit_transfer(
     order_id=order.id,
@@ -236,8 +251,8 @@ transfer = await swig.ramp.submit_transfer(
 
 The transfer is built from the provider's canonical record rather than the
 quote, so a repriced amount funds the deposit correctly. Transfer states are
-`prepared`, `submitted`, `landed`, `failed`, and `expired`; a transfer settles
-only at `confirmed` or better.
+`unspecified`, `prepared`, `submitted`, `landed`, `failed`, and `expired`; a
+transfer settles only at `confirmed` or better.
 
 The prepared transaction is handed over exactly once. If you broadcast it and
 then lose it, submit again without a signed transaction to resolve the attempt

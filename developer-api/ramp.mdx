@@ -27,7 +27,9 @@ Authorization: Bearer sk_your_api_key
 | `POST` | `/wallet/api/ramp/orders/{order_id}/transfer/prepare` |
 | `POST` | `/wallet/api/ramp/orders/{order_id}/transfer/submit` |
 
-## Required fields
+## Configuration fields
+
+The options, quotes, and order-creation routes require both fields below.
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
@@ -35,8 +37,8 @@ Authorization: Bearer sk_your_api_key
 | `environment` | enum | `RAMP_ENVIRONMENT_SANDBOX` or `RAMP_ENVIRONMENT_PRODUCTION` |
 
 On the options route these are query parameters; on the quote and order routes
-they are body fields. Order reads and transfer actions identify the order in the
-route path and take **no** environment — it is a property of the stored order.
+they are body fields. Order reads and transfer actions identify the stored
+order in the route path and require **neither** field.
 
 The provider environment is not a Solana cluster. A sandbox order still settles
 on mainnet.
@@ -168,6 +170,7 @@ deposit address a sell needs.
 
 | Status | Meaning |
 | :--- | :--- |
+| `RAMP_ORDER_STATUS_UNSPECIFIED` | No order status was supplied |
 | `RAMP_ORDER_STATUS_CREATING` | The provider session is being created |
 | `RAMP_ORDER_STATUS_CREATION_UNCERTAIN` | The provider call gave no answer that can be trusted; it is never retried |
 | `RAMP_ORDER_STATUS_AWAITING_CUSTOMER` | Waiting on the customer at the provider |
@@ -219,10 +222,10 @@ lifetime.
 }
 ```
 
-Returns `{ "transfer": ... }` with a `state` of `TRANSFER_STATE_PREPARED`,
-`SUBMITTED`, `LANDED`, `FAILED`, or `EXPIRED`, and a `solanaSignature` once one
-exists. A transfer settles only at `confirmed` or better, so a `processed`
-signature still reads as in-flight.
+Returns `{ "transfer": ... }` with a `state` of `TRANSFER_STATE_UNSPECIFIED`,
+`PREPARED`, `SUBMITTED`, `LANDED`, `FAILED`, or `EXPIRED`, and a
+`solanaSignature` once one exists. A transfer settles only at `confirmed` or
+better, so a `processed` signature still reads as in-flight.
 
 The prepared transaction is handed over exactly once. If you broadcast it and
 then lose it, submit again with an empty `signedTransaction` to resolve the

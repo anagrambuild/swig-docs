@@ -11,12 +11,6 @@ Members can use Ed25519, secp256r1/passkeys, or secp256k1. Each member signs a
 challenge bound to the prepared operation, while every challenge in the plan
 commits to the same shared ParticipantSet nonce.
 
-<Note>
-  This interface will ship in the next Developer SDK package release. The
-  currently published TypeScript `0.9.0` and Python `0.8.0` packages predate
-  ParticipantSet support.
-</Note>
-
 ## Create the set and add its role
 
 This 2-of-2 example prepares a SOL-transfer role using two Ed25519 members. First
