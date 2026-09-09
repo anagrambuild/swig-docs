@@ -53,9 +53,9 @@ Authorization: Bearer sk_your_api_key
 | `swigAddress` | string | Swig config address for existing-wallet operations |
 | `requesterAuthority` | object | Wallet authority requesting the operation |
 
-The x402 preparation route does not accept a top-level `feePayer`. It uses
-`paymentRequired.accepts[].extra.feePayer` from the selected payment
-requirement.
+The x402 preparation route takes its fee payer from the selected offer's
+`extra.feePayer` in `paymentRequired.accepts`. This route has no top-level
+`feePayer` request field.
 
 ## Prepared transaction response
 
@@ -229,7 +229,14 @@ Optional Jupiter controls:
 ## Prepare an x402 payment
 
 `POST /transaction/payment/x402/prepare` prepares a Swig token-payment
-transaction from a decoded x402 version 2 `PaymentRequired` challenge.
+transaction from a decoded x402 version 2 `PaymentRequired` challenge. It
+supports the `exact` payment scheme on Solana.
+
+This route supports Ed25519 and secp256r1 requester authorities only.
+
+Decode the resource provider's `PAYMENT-REQUIRED` header with your x402
+library's header decoder, or Base64-decode the header value and parse its JSON.
+Pass the resulting object as `paymentRequired`.
 
 ```json
 {
@@ -268,19 +275,34 @@ transaction from a decoded x402 version 2 `PaymentRequired` challenge.
 | `paymentRequired` | object | Decoded x402 version 2 challenge. |
 | `acceptedIndex` | number | Optional zero-based index in `paymentRequired.accepts`. |
 
-The selected requirement uses:
+The selected offer uses:
 
 - `amount` as the payment amount in atomic token units
 - `asset` as the token mint address
 - `payTo` as the destination owner rather than its token account
 - `extra.feePayer` as the facilitator fee payer
 
-When `acceptedIndex` is omitted, Swig selects the first eligible exact-SVM
-requirement matching `network`. When provided, Swig validates that entry
-without falling back to another requirement.
+An eligible offer must use the `exact` scheme and the requested Solana network.
+Its `amount` must be a canonical positive integer string that fits in an
+unsigned 64-bit integer. `asset`, `payTo`, and `extra.feePayer` must be valid
+Solana public keys. `extra` is required, `maxTimeoutSeconds` must be a positive
+unsigned 32-bit integer, and an optional `memo` must not exceed 256 UTF-8 bytes.
 
-On success, the response always contains the resolved index, including index
-zero:
+The `network` field inside each offer uses a CAIP-2 identifier. In this example,
+`solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1` corresponds to `NETWORK_DEVNET` in the
+request's top-level `network` field.
+
+When `acceptedIndex` is omitted, Swig selects the first eligible offer on the
+Solana network specified by the request's top-level `network`. With an explicit
+index, that offer must match the requested network; Swig returns an error
+instead of selecting another offer.
+
+Offer selection evaluates these request fields only. Account and balance
+validation happens after selection; if that validation fails, Swig does not
+try the next offer.
+
+On success, `acceptedIndex` is always present, including when the selected
+offer is at index `0`:
 
 ```json
 {

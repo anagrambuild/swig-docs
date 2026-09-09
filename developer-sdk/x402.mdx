@@ -3,10 +3,11 @@ title: "Pay for x402 Resources"
 sidebarTitle: "x402 Payments"
 ---
 
-Use a Swig wallet to pay for an HTTP resource protected by x402. The Developer
-SDK reads the resource provider's payment challenge, prepares a Swig payment
-transaction, and assembles the header for the paid request. Your application
-owns authorization, signing, and the resource-request retry.
+Use a Swig wallet to pay for APIs and other HTTP resources that return
+`402 Payment Required`. Pass the response to the Developer SDK to prepare a
+payment transaction. Your application authorizes and signs the payment, then
+sends the original request again with a `PAYMENT-SIGNATURE` header. The resource
+provider's facilitator verifies and settles the payment.
 
 ## How the payment flow works
 
@@ -37,29 +38,42 @@ sequenceDiagram
 ```
 
 The Swig API prepares the payment transaction but does not submit or settle it.
-The resource provider defines the payment requirements, your application signs
-the prepared transaction, and the resource provider's facilitator verifies and
-settles the payment.
 
 ## Before you begin
 
 You need:
 
 - a configured `SwigClient` and an existing Swig wallet
-- an Ed25519 or secp256r1 authority assigned to the wallet
-- enough of the requested token in the wallet's canonical associated token
-  account
-- an x402 version 2 resource offering an exact-SVM payment on the wallet's
-  Solana network, backed by a facilitator that can verify Swig transactions
-- an existing canonical associated token account for the `payTo` owner and mint
+- an Ed25519 or secp256r1 authority assigned to a role permitted to invoke the
+  token program and spend the selected mint
+- an x402 version 2 resource offering the `exact` payment scheme on the wallet's
+  Solana mainnet or devnet network
+- the wallet's canonical associated token account, already created and funded
+  with enough of the requested token
+- the recipient's canonical associated token account, already created for the
+  `payTo` owner and mint
+- a legacy SPL Token mint or a Token-2022 mint with no extensions; Token-2022
+  token accounts may have no extensions or only `ImmutableOwner`
+- a facilitator that supports Swig smart-wallet verification
 
-For passkey payments, the facilitator must also support Solana's secp256r1
+Other Token-2022 mint and token-account extensions are not supported.
+
+For passkey payments, the facilitator must also permit Solana's secp256r1
 signature-verification program.
 
-The current flow supports x402 version 2 exact-SVM token payments on Solana
-mainnet and devnet.
-
 ## Pay for a resource
+
+These examples use an Ed25519 requester and assume your application provides
+the Swig wallet identifiers, requester public key, resource URL, and signing
+callback.
+
+`signTransaction` / `sign_transaction` receives the base64 serialized
+transaction and prepared record, then returns the signed base64 transaction.
+See [Signers](/developer-sdk/signers) for Ed25519 and passkey signing patterns.
+
+The examples request a resource with `GET` and no additional headers. In your
+integration, repeat the original request with the same URL, method, body, and
+existing headers, adding the generated `PAYMENT-SIGNATURE` header.
 
 <CodeGroup dropdown>
 
@@ -106,6 +120,7 @@ const paymentResponse = paidResponse.headers.get('PAYMENT-RESPONSE');
 ```
 
 ```python Python
+import asyncio
 import os
 
 import httpx
@@ -125,35 +140,33 @@ wallet = swig.wallets.use(
     },
 )
 
-async with httpx.AsyncClient() as http:
-    challenge = await http.get(resource_url)
-    prepared = await wallet.x402.prepare_from_response(challenge)
+async def main() -> None:
+    async with httpx.AsyncClient() as http:
+        challenge = await http.get(resource_url)
+        prepared = await wallet.x402.prepare_from_response(challenge)
 
-    signed = await sign_prepared_transaction(
-        prepared.prepared_transaction,
-        sign_transaction=sign_transaction,
-    )
+        signed = await sign_prepared_transaction(
+            prepared.prepared_transaction,
+            sign_transaction=sign_transaction,
+        )
 
-    payment = create_x402_payment(prepared, signed)
+        payment = create_x402_payment(prepared, signed)
 
-    paid_response = await http.get(
-        resource_url,
-        headers=payment.payment_signature_headers,
-    )
-    paid_response.raise_for_status()
+        paid_response = await http.get(
+            resource_url,
+            headers=payment.payment_signature_headers,
+        )
+        paid_response.raise_for_status()
 
-    resource = paid_response.json()
-    payment_response = paid_response.headers.get("PAYMENT-RESPONSE")
+        resource = paid_response.json()
+        payment_response = paid_response.headers.get("PAYMENT-RESPONSE")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
 </CodeGroup>
-
-Retry the original request with its URL, method, and headers unchanged and,
-when applicable, the same body. Merge the generated `PAYMENT-SIGNATURE` header
-into that request.
-
-The signing step uses the same helpers as other prepared Swig transactions.
-See [Signers](/developer-sdk/signers) for Ed25519 and passkey signing patterns.
 
 ## Understand the prepared result
 
@@ -169,14 +182,15 @@ After signing, `createX402Payment()` / `create_x402_payment()` returns:
 
 | Field | Description |
 | :--- | :--- |
-| `paymentPayload` / `payment_payload` | The x402 payment payload containing the selected requirement and signed transaction |
+| `paymentPayload` / `payment_payload` | The x402 payment payload containing the selected offer and signed transaction |
 | `paymentSignatureHeaders` / `payment_signature_headers` | A `PAYMENT-SIGNATURE` header ready to merge into the resource retry |
 
 ## Choose a payment offer
 
-When the index is omitted, Swig selects the first supported exact-SVM offer
-that matches the wallet's network. The result preserves that offer's position
-in the resource provider's original `accepts` array.
+Each entry in the challenge's `accepts` array is a payment offer. When the index
+is omitted, Swig selects the first supported offer using the `exact` scheme on
+the wallet's Solana network. The result preserves that offer's position in the
+original `accepts` array.
 
 Pass an index when your application has already chosen an offer:
 
@@ -197,9 +211,9 @@ prepared = await wallet.x402.prepare_from_response(
 
 </CodeGroup>
 
-An explicit index must identify a supported exact-SVM offer on the wallet's
-network. Swig returns an error instead of falling back to another offer when
-the selected entry is incompatible.
+An explicit index must identify a supported `exact` offer on the wallet's
+Solana network. Swig returns an error instead of falling back to another offer
+when the selected offer is incompatible.
 
 ## Run the complete example
 
