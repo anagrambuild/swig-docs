@@ -168,23 +168,6 @@ if __name__ == "__main__":
 
 </CodeGroup>
 
-## Understand the prepared result
-
-`prepareFromResponse()` / `prepare_from_response()` returns:
-
-| Field | Description |
-| :--- | :--- |
-| `preparedTransaction` / `prepared_transaction` | The unsigned Swig payment transaction and any embedded signature requests |
-| `paymentRequired` / `payment_required` | The validated x402 payment challenge used during preparation |
-| `acceptedIndex` / `accepted_index` | The selected offer's position in the original `accepts` array |
-
-After signing, `createX402Payment()` / `create_x402_payment()` returns:
-
-| Field | Description |
-| :--- | :--- |
-| `paymentPayload` / `payment_payload` | The x402 payment payload containing the selected offer and signed transaction |
-| `paymentSignatureHeaders` / `payment_signature_headers` | A `PAYMENT-SIGNATURE` header ready to merge into the resource retry |
-
 ## Choose a payment offer
 
 Each entry in the challenge's `accepts` array is a payment offer. When the index
@@ -214,6 +197,23 @@ prepared = await wallet.x402.prepare_from_response(
 An explicit index must identify a supported `exact` offer on the wallet's
 Solana network. Swig returns an error instead of falling back to another offer
 when the selected offer is incompatible.
+
+## Understand the prepared result
+
+`prepareFromResponse()` / `prepare_from_response()` returns:
+
+| Field | Description |
+| :--- | :--- |
+| `preparedTransaction` / `prepared_transaction` | The unsigned Swig payment transaction and any embedded signature requests |
+| `paymentRequired` / `payment_required` | The validated x402 payment challenge used during preparation |
+| `acceptedIndex` / `accepted_index` | The selected offer's position in the original `accepts` array |
+
+After signing, `createX402Payment()` / `create_x402_payment()` returns:
+
+| Field | Description |
+| :--- | :--- |
+| `paymentPayload` / `payment_payload` | The x402 payment payload containing the selected offer and signed transaction |
+| `paymentSignatureHeaders` / `payment_signature_headers` | A `PAYMENT-SIGNATURE` header ready to merge into the resource retry |
 
 ## Run the complete example
 
