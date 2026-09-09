@@ -4,10 +4,10 @@ sidebarTitle: "Transactions"
 ---
 
 The Transaction API prepares Solana transactions for Swig wallet creation,
-transfers, swaps, and custom instruction sets. It does not replace required
-application signatures. Responses include explicit signature requests for
-embedded `secp256r1` and `secp256k1` authorization; native Ed25519 signers are
-represented in the serialized Solana transaction instead.
+transfers, swaps, x402 payments, and custom instruction sets. It does not
+replace required application signatures. Responses include explicit signature
+requests for embedded `secp256r1` and `secp256k1` authorization; native
+Ed25519 signers are represented in the serialized Solana transaction instead.
 
 ## Supported preparation routes
 
@@ -22,6 +22,7 @@ represented in the serialized Solana transaction instead.
 | `POST` | `/transaction/transfer/spl-token` |
 | `POST` | `/transaction/swap/jupiter` |
 | `POST` | `/transaction/prepare/custom` |
+| `POST` | `/transaction/payment/x402/prepare` |
 
 Preparation requests are not retried automatically. A replay can duplicate
 work, so decide per call whether repeating is correct.
@@ -51,6 +52,10 @@ Authorization: Bearer sk_your_api_key
 | `feePayer` | string | Fee payer public key used in the prepared Solana transaction |
 | `swigAddress` | string | Swig config address for existing-wallet operations |
 | `requesterAuthority` | object | Wallet authority requesting the operation |
+
+The x402 preparation route does not accept a top-level `feePayer`. It uses
+`paymentRequired.accepts[].extra.feePayer` from the selected payment
+requirement.
 
 ## Prepared transaction response
 
@@ -221,12 +226,95 @@ Optional Jupiter controls:
 | `blockhashSlotsToExpiry` | number | Requested blockhash lifetime in slots |
 | `destinationAccount` | string | Destination owner; the backend derives the SPL token account, or uses the address for native SOL |
 
+## Prepare an x402 payment
+
+`POST /transaction/payment/x402/prepare` prepares a Swig token-payment
+transaction from a decoded x402 version 2 `PaymentRequired` challenge.
+
+```json
+{
+  "paymentRequired": {
+    "x402Version": 2,
+    "resource": {
+      "url": "https://api.example.com/weather"
+    },
+    "accepts": [
+      {
+        "scheme": "exact",
+        "network": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1",
+        "amount": "1000",
+        "asset": "TokenMintAddress",
+        "payTo": "ResourceProviderPublicKey",
+        "maxTimeoutSeconds": 300,
+        "extra": {
+          "feePayer": "FacilitatorPublicKey",
+          "memo": "order-123"
+        }
+      }
+    ]
+  },
+  "network": "NETWORK_DEVNET",
+  "swigAddress": "SwigConfigAddress",
+  "requesterAuthority": {
+    "ed25519": {
+      "publicKey": "RequesterPublicKey"
+    }
+  }
+}
+```
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `paymentRequired` | object | Decoded x402 version 2 challenge. |
+| `acceptedIndex` | number | Optional zero-based index in `paymentRequired.accepts`. |
+
+The selected requirement uses:
+
+- `amount` as the payment amount in atomic token units
+- `asset` as the token mint address
+- `payTo` as the destination owner rather than its token account
+- `extra.feePayer` as the facilitator fee payer
+
+When `acceptedIndex` is omitted, Swig selects the first eligible exact-SVM
+requirement matching `network`. When provided, Swig validates that entry
+without falling back to another requirement.
+
+On success, the response always contains the resolved index, including index
+zero:
+
+```json
+{
+  "preparedTransaction": {
+    "transaction": "Base64EncodedTransaction",
+    "transactionEncoding": "TRANSACTION_ENCODING_BASE64",
+    "wallet": {
+      "swigConfigAddress": "SwigConfigAddress",
+      "walletAddress": "SwigWalletAddress"
+    },
+    "expiresAt": "2026-09-09T12:00:00Z",
+    "network": "NETWORK_DEVNET",
+    "recentBlockhash": "RecentBlockhash",
+    "kind": "PREPARED_TRANSACTION_KIND_X402_PAYMENT",
+    "signatureRequests": []
+  },
+  "acceptedIndex": 0
+}
+```
+
+See [x402 Payments](/developer-sdk/x402) for decoding the resource response,
+signing the prepared transaction, creating the `PAYMENT-SIGNATURE` header, and
+retrying the protected request.
+
 ## After preparation
 
-The response is prepared only. Your application supplies every embedded
+For most prepared transactions, your application supplies every embedded
 signature request and transaction-level signer, then submits the transactions
-in the returned order — directly, or through the
+in the returned order—directly or through the
 [Paymaster API](/developer-api/paymaster).
+
+For x402 payments, sign the prepared transaction, create the
+`PAYMENT-SIGNATURE` header, and retry the protected resource request. The
+resource provider's facilitator verifies and settles the transaction.
 
 If `policyId` is omitted on wallet creation, `initialUser` is required and the
 API creates a wallet policy for the caller's organization.
