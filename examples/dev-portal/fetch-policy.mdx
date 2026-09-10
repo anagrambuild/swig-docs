@@ -1,22 +1,24 @@
 ---
-title: "Read Policies"
-sidebarTitle: "Read Policies"
+title: "Read Policy Templates"
+sidebarTitle: "Read Policy Templates"
 description: "Read saved wallet-creation configuration with the TypeScript or Python Developer SDK."
 ---
 
-Read a policy to inspect the authority and actions saved for wallet creation.
+Read a policy template to inspect the authority and actions saved for wallet
+creation. This metadata describes a template, not an existing wallet's
+on-chain permissions.
 Use the same Developer SDK client that prepares your wallet operations.
-Reading a policy requires an API key with access to that policy; it does not
+Reading a template requires an API key with access to it; it does not
 require a wallet signature.
 
 ## Before you begin
 
 - Initialize the [TypeScript or Python client](/developer-sdk/integration-paths)
   on your server with an [API key](/examples/dev-portal/create-api-key).
-- [Create a policy](/examples/dev-portal/create-policy) in the Developer Portal
+- [Create a policy template](/examples/dev-portal/create-policy) in the Developer Portal
   and copy its policy ID.
 
-## Fetch a policy
+## Fetch a template
 
 The following examples use your initialized `swig` client and policy ID.
 
@@ -48,6 +50,12 @@ Both clients call `GET /wallet/policies/{policyId}` on the hosted API.
 TypeScript returns the policy metadata directly; Python exposes a `Policy`
 object and normalizes its top-level field names to snake case.
 
+This SDK lookup returns initial-user policy metadata and recovery fields;
+it does not return the additional users saved in the portal template. Keep
+the authorities and actions needed for your add-role requests in your
+application's configuration. See [Policy Templates](/examples/dev-portal/create-policy)
+for the wallet-creation and additional-user setup boundaries.
+
 ## Understand the result
 
 The response describes stored configuration. For example, a template created
@@ -71,7 +79,7 @@ preserves the API's wallet-authority shape:
 }
 ```
 
-A policy can omit the authority so that your application supplies the initial
+A template can omit the authority so that your application supplies the initial
 user at wallet creation. The `actions` list contains saved action data. See
 [Permissions](/developer-sdk/permissions) for the meaning of each grant, its
 units, and the Developer SDK inputs used when adding a role.
@@ -106,8 +114,8 @@ Check the API key and its resource access for `401` or `403` responses. For a
 `404`, check that the policy ID exists and is visible to the caller. See
 [Developer API Errors](/developer-api/errors) for other response statuses.
 
-## Continue with the policy
+## Continue with the template
 
 Pass the policy ID when you [Create Wallets](/developer-sdk/create-wallets).
-The SDK reads the policy as part of wallet preparation. Your application then
+The SDK reads the template as part of wallet preparation. Your application then
 signs and submits the returned transactions.

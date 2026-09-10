@@ -1,13 +1,16 @@
 ---
-title: "Policies"
-sidebarTitle: "Policies"
+title: "Policy Templates"
+sidebarTitle: "Policy Templates"
 description: "Save wallet-creation templates in the Developer Portal."
 ---
 
-A policy stores reusable wallet-creation configuration. The Developer Portal
-calls these policies **Wallet templates**: each template defines an initial
-wallet user and can include additional users with their own allowed actions.
-Pass the policy ID when you [Create Wallets](/developer-sdk/create-wallets).
+A policy template stores reusable configuration for creating wallets. It does
+not set or update permissions directly on an existing wallet. The Developer
+Portal lists these under **Wallet templates**.
+
+Each template defines an initial wallet user and can store additional users
+with their own allowed actions. Pass its policy ID when you
+[Create Wallets](/developer-sdk/create-wallets).
 
 An [API key](/examples/dev-portal/create-api-key) authenticates your server's
 requests. The template supplies wallet configuration; your application still
@@ -23,6 +26,13 @@ Additional wallet users have separate authorities and allowed actions. Use
 [Permissions](/developer-sdk/permissions) to understand those grants. The
 reference describes the Developer SDK's complete action list; the portal
 provides a smaller set of controls for common configurations.
+
+<Note>
+  The Developer SDK's template-based wallet creation prepares the initial user.
+  Additional users saved in the template are not automatically added by this
+  flow. After wallet creation confirms, use [Add Roles](/developer-sdk/add-roles-and-permissions)
+  for each additional authority and verify its on-chain actions.
+</Note>
 
 ## Create a template
 
@@ -47,10 +57,13 @@ Open **Wallet templates** in your project in the
     for scoped key replacement and the additional integration required for
     single-guardian and multiple-approval recovery.
   </Step>
-  <Step title="Add other wallet users if needed">
+  <Step title="Save other wallet users if needed">
     Additional users must have a public key set in the template. Choose each
     user's key type, public key, and allowed actions. Each additional user
     needs at least one action.
+
+    These entries are saved in the template. Provision them separately with
+    the Developer SDK's add-role flow after creating the wallet.
 
     For spending limits or program access, review the selected fields against
     [Permissions](/developer-sdk/permissions). The portal's SOL amount input
@@ -75,9 +88,9 @@ After submitting the add-role transaction, read the wallet's roles to verify
 that the new authority has the intended actions. A template's stored metadata
 and a wallet's confirmed on-chain roles are separate records.
 
-## Read and use a policy
+## Read and use a template
 
-Use [Read Policies](/examples/dev-portal/fetch-policy) to inspect saved policy
+Use [Read Policy Templates](/examples/dev-portal/fetch-policy) to inspect saved template
 metadata. Use [Create Wallets](/developer-sdk/create-wallets) to prepare a wallet
 from the policy ID, then sign and submit its transactions.
 
