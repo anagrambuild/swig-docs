@@ -3,9 +3,10 @@ title: "Server-Side Developer SDK"
 sidebarTitle: "Overview"
 ---
 
-The Swig Developer SDK is a strict server-side product for TypeScript and
-Python. It authenticates to Swig's hosted API, prepares wallet operations,
-reads wallet state, and submits application-signed transactions.
+The Swig Developer SDK is a server-side toolkit for TypeScript and Python.
+It authenticates to Swig's hosted API, prepares wallet operations as unsigned
+transactions, reads wallet state, and submits transactions your application
+has signed.
 
 ## Install
 
@@ -72,34 +73,46 @@ API key or private key.
   with the on-chain protocol and owns the full transaction lifecycle.
 - Use the [IDP SDK](/idp-sdk) for browser or mobile authentication flows.
 
-## Where to go next
+## Set up your integration
+
+Start with an SDK language and an API key for your trusted server. Then choose
+what each wallet role may do and how its authority will sign. An API key
+authenticates hosted API requests; wallet operations still require the
+appropriate authority's signature or approval proofs.
 
 <CardGroup cols={2}>
   <Card title="Choose a Language" icon="signs-post" href="/developer-sdk/integration-paths">
-    TypeScript or Python server SDK
+    Initialize a TypeScript or Python server client
   </Card>
-  <Card title="Create Wallets" icon="wallet" href="/developer-sdk/create-wallets">
-    Prepare your first wallet on the server
-  </Card>
-  <Card title="Signers" icon="signature" href="/developer-sdk/signers">
-    Basic signing support for application-owned wallets and passkeys
-  </Card>
-  <Card title="Add Roles and Permissions" icon="user-shield" href="/developer-sdk/add-roles-and-permissions">
-    Attach a scoped role to an existing wallet
-  </Card>
-  <Card title="Participant Sets" icon="users" href="/developer-sdk/participant-sets">
-    Add threshold authorization to a Swig role
+  <Card title="API Keys" icon="key" href="/examples/dev-portal/create-api-key">
+    Connect your server to Swig's hosted API
   </Card>
   <Card title="Permissions" icon="sliders" href="/developer-sdk/permissions">
-    Review every SDK action and the guardian recovery model
+    Choose what each wallet role may do
+  </Card>
+  <Card title="Create Wallets" icon="wallet" href="/developer-sdk/create-wallets">
+    Prepare a wallet from a template or an inline authority
+  </Card>
+  <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-and-swaps">
+    Prepare a transfer for your application to sign
   </Card>
   <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">
-    Submit application-signed transactions
+    Sponsor and submit signed transactions
   </Card>
 </CardGroup>
 
+## Configure wallet access
+
+Use [Policy Templates](/examples/dev-portal/create-policy) to save wallet-creation
+configuration and [Read Policy Templates](/examples/dev-portal/fetch-policy) to inspect
+it. For an existing wallet, use [Add Roles](/developer-sdk/add-roles-and-permissions)
+to attach an authority and its permissions. [Signers](/developer-sdk/signers)
+explains application-owned signing; [Participant Sets](/developer-sdk/participant-sets)
+extends one role to require M-of-N approvals.
+
 <Note>
-  Legacy recovery API types remain for backend compatibility, but that recovery
-  flow is currently broken. See [Guardian recovery](/developer-sdk/permissions#guardian-recovery)
-  for the scoped key replacement model and the remaining SDK integration work.
+  Guardian recovery requires additional protocol and SDK integration.
+  See [Guardian recovery](/developer-sdk/permissions#guardian-recovery) for
+  scoped key replacement, the proposed multiple-approval extension, and
+  current support boundaries.
 </Note>

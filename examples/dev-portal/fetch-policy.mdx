@@ -1,224 +1,72 @@
 ---
-title: "Read Policies"
-sidebarTitle: "Read Policies"
+title: "Read Policy Templates"
+sidebarTitle: "Read Policy Templates"
+description: "Read saved wallet-creation configuration with the TypeScript or Python Developer SDK."
 ---
 
-Once you've created policies in the Developer Portal, you can fetch their
-details programmatically. This guide shows the current package choices for
-policy reads and how to retrieve policy information through the REST API and
-TypeScript clients.
+Read a policy template to inspect the authority and actions saved for wallet
+creation. This metadata describes a template, not an existing wallet's
+on-chain permissions.
+Use the same Developer SDK client that prepares your wallet operations.
+Reading a template requires an API key with access to it; it does not
+require a wallet signature.
 
-<Note>
-  This page covers the portal-facing clients
-  <code>@swig-wallet/api</code> and <code>@swig-wallet/developer</code>. For the
-  primary prepare-first Swig Developer SDK, see
-  the [Server-Side Developer SDK](/developer-sdk).
-  Treat <code>@swig-wallet/developer</code> as the legacy SDK for new
-  integrations. The current <code>@swig-wallet/developer-sdk</code> package is
-  optimized for prepared wallet operations. It does expose
-  <code>swig.wallets.getPolicy(policyId)</code>, but it returns raw policy
-  metadata rather than the richer helper surface from the legacy SDK.
-</Note>
+## Before you begin
 
-## Prerequisites
+- Initialize the [TypeScript or Python client](/developer-sdk/integration-paths)
+  on your server with an [API key](/examples/dev-portal/create-api-key).
+- [Create a policy template](/examples/dev-portal/create-policy) in the Developer Portal
+  and copy its policy ID.
 
-Before fetching policies, ensure you have:
+## Fetch a template
 
-- An [API key](./create-api-key) created in the Developer Portal
-- A [policy](./create-policy) created that you want to fetch
-- The policy ID (visible in the portal's policy details)
+The following examples use your initialized `swig` client and policy ID.
 
-## Choose the Right Package
+<CodeGroup dropdown>
 
-<Tabs>
-  <Tab title="API SDK">
-```bash
-npm install @swig-wallet/api
-# or
-bun add @swig-wallet/api
-```
-  </Tab>
-  <Tab title="Current SDK">
-```bash
-npm install @swig-wallet/developer-sdk
-# or
-bun add @swig-wallet/developer-sdk
-```
-  </Tab>
-  <Tab title="Legacy SDK">
-```bash
-npm install @swig-wallet/developer
-# or
-bun add @swig-wallet/developer
-```
-  </Tab>
-</Tabs>
-
-## Fetching a Policy
-
-### Using the REST API
-
-Make a GET request to the policies endpoint:
-
-```bash
-curl -X GET "https://dashboard.onswig.com/api/v1/policies/{policyId}" \
-  -H "Authorization: Bearer sk_your_api_key"
-```
-
-Replace `{policyId}` with your actual policy ID (e.g., `clx1234567890abcdef`).
-
-**Example Response:**
-
-```json
-{
-  "id": "clx1234567890abcdef",
-  "name": "user-wallet-policy",
-  "description": "Standard user wallet with transfer limits",
-  "authority": {
-    "type": "Ed25519",
-    "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
-  },
-  "actions": [
-    { "type": "SolLimit", "amount": "1000000000" },
-    { "type": "TokenLimit", "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "amount": "1000000" }
-  ]
-}
-```
-
-### Using a Portal Client
-
-<Tabs>
-  <Tab title="API SDK">
-```typescript
-import { SwigApiClient } from '@swig-wallet/api';
-
-// Initialize the client
-const client = new SwigApiClient({
-  apiKey: 'sk_your_api_key',
-  portalUrl: 'https://dashboard.onswig.com',
-});
-
-// Fetch a policy
-async function getPolicy(policyId: string) {
-  const { data: policy, error } = await client.policies.get(policyId);
-
-  if (error) {
-    console.error(`Error fetching policy: ${error.message}`);
-    console.error(`Error code: ${error.code}, Status: ${error.status}`);
-    return null;
-  }
-
-  console.log('Policy:', policy.name);
-  console.log('Description:', policy.description);
-
-  if (policy.authority) {
-    console.log('Authority Type:', policy.authority.type);
-    console.log('Authority Key:', policy.authority.publicKey);
-  } else {
-    console.log('Authority: Not configured (provide at wallet creation)');
-  }
-
-  console.log('Actions:', policy.actions.map(a => a.type).join(', '));
-
-  return policy;
-}
-
-// Usage
-const policy = await getPolicy('clx1234567890abcdef');
-```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-import { SwigClient, SwigError } from '@swig-wallet/developer';
-
-// Initialize the client
-const client = new SwigClient({
-  apiKey: 'sk_your_api_key',
-  baseUrl: 'https://dashboard.onswig.com',
-});
-
-// Fetch a policy
-async function getPolicy(policyId: string) {
-  try {
-    const policy = await client.getPolicy(policyId);
-
-    console.log('Policy:', policy.name);
-
-    // Rich authority methods
-    if (policy.authority) {
-      console.log('Authority Type:', policy.authority.type);
-
-      if (policy.authority.isSession()) {
-        console.log('Session Duration:', policy.authority.maxDurationSlots, 'slots');
-      }
-
-      if (policy.authority.isEd25519()) {
-        console.log('Using Ed25519 signature scheme');
-      }
-    }
-
-    // Rich action query methods
-    if (policy.actions.canSpendSol(1_000_000_000n)) {
-      console.log('Can spend up to 1 SOL');
-    }
-
-    const solLimit = policy.actions.solSpendLimit();
-    if (solLimit) {
-      console.log('SOL limit:', solLimit, 'lamports');
-    }
-
-    if (policy.actions.canUseProgram('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA')) {
-      console.log('Can interact with Token program');
-    }
-
-    return policy;
-  } catch (error) {
-    if (error instanceof SwigError) {
-      console.error(`Error: ${error.code} - ${error.message}`);
-    }
-    return null;
-  }
-}
-
-// Usage
-const policy = await getPolicy('clx1234567890abcdef');
-```
-  </Tab>
-</Tabs>
-
-### If You're Already Using the Current SDK
-
-If your app already uses `@swig-wallet/developer-sdk` for prepared wallet
-operations, you can read the same raw policy metadata the SDK uses during
-wallet creation:
-
-```typescript
-import { SwigClient } from '@swig-wallet/developer-sdk/server/typescript';
-
-const swig = new SwigClient({
-  apiKey: process.env.SWIG_API_KEY!,
-  network: 'devnet',
-});
-
-const policy = await swig.wallets.getPolicy('clx1234567890abcdef');
+```typescript TypeScript
+const policy = await swig.wallets.getPolicy(policyId);
 
 console.log(policy.id);
 console.log(policy.name);
 console.log(policy.description);
-// Current SDK authority uses the WalletAuthority oneof.
 console.log(policy.authority);
 console.log(policy.actions);
 ```
 
-Unlike the portal response above, the current Developer SDK calls the API
-Wallet service at `GET /wallet/policies/{policyId}`. Its TypeScript client
-preserves the ProtoJSON wallet-authority oneof:
+```python Python
+policy = await swig.wallets.get_policy(policy_id)
+
+print(policy.id)
+print(policy.name)
+print(policy.description)
+print(policy.authority)
+print(policy.actions)
+```
+
+</CodeGroup>
+
+Both clients call `GET /wallet/policies/{policyId}` on the hosted API.
+TypeScript returns the policy metadata directly; Python exposes a `Policy`
+object and normalizes its top-level field names to snake case.
+
+This SDK lookup returns initial-user policy metadata and recovery fields;
+it does not return the additional users saved in the portal template. Keep
+the authorities and actions needed for your add-role requests in your
+application's configuration. See [Policy Templates](/examples/dev-portal/create-policy)
+for the wallet-creation and additional-user setup boundaries.
+
+## Understand the result
+
+The response describes stored configuration. For example, a template created
+in the portal gives its initial user full root access. The TypeScript client
+preserves the API's wallet-authority shape:
 
 ```json
 {
   "id": "clx1234567890abcdef",
   "name": "user-wallet-policy",
-  "description": "Standard user wallet with transfer limits",
+  "description": "Initial wallet user with root access",
   "initialKeySource": "WALLET_POLICY_KEY_SOURCE_STORED",
   "authority": {
     "ed25519": {
@@ -226,311 +74,48 @@ preserves the ProtoJSON wallet-authority oneof:
     }
   },
   "actions": [
-    { "type": "SolLimit", "amount": "1000000000" }
+    { "type": "All" }
   ]
 }
 ```
 
-Use this when policy lookup is part of a prepared-wallet flow. For standalone
-policy inspection, prefer `@swig-wallet/api`. For richer helper methods around
-actions and authorities, use the legacy `@swig-wallet/developer` client.
+A template can omit the authority so that your application supplies the initial
+user at wallet creation. The `actions` list contains saved action data. See
+[Permissions](/developer-sdk/permissions) for the meaning of each grant, its
+units, and the Developer SDK inputs used when adding a role.
 
-## Package Fit
+Policy response actions use stored action names and fields. When adding a
+role, map them to the typed SDK inputs shown in the reference rather than
+forwarding stored action data unchanged.
 
-| Package | Primary job | Policy surface |
-|---------|-------------|----------------|
-| `@swig-wallet/api` | Raw portal endpoint access | `client.policies.get()` returns raw policy JSON |
-| `@swig-wallet/developer-sdk` | Prepared wallet operations | `swig.wallets.getPolicy()` returns raw policy metadata used by hosted flows |
-| `@swig-wallet/developer` (legacy) | Existing rich portal integrations | `client.getPolicy()` returns richer helper types and query methods |
+To inspect the authorities and permissions currently attached to a wallet,
+use [Read Wallet State](/developer-sdk/wallet-reads#roles).
 
-<Tip>
-  If you are starting fresh and only need to fetch policies, prefer
-  <code>@swig-wallet/api</code>. If you are starting fresh and need hosted
-  wallet operations, use <code>@swig-wallet/developer-sdk</code> and treat
-  policy reads as a supporting detail rather than the primary interface.
-</Tip>
+## Handle read errors
 
-## Portal Response Types
-
-The types below describe the portal REST endpoint and its portal-facing
-clients. They do not describe the current Developer SDK's ProtoJSON response
-shown above.
-
-### Policy
+The TypeScript client throws `SwigDeveloperSdkError` for failed API requests:
 
 ```typescript
-interface Policy {
-  /** Unique policy ID */
-  id: string;
-  /** Policy name */
-  name: string;
-  /** Optional description */
-  description: string | null;
-  /** Authority configuration (signer) - null if not configured */
-  authority: AuthorityConfig | null;
-  /** Action configurations (permissions) */
-  actions: ActionConfig[];
-}
-```
-
-### Authority Configuration
-
-The `authority` field can be one of several types:
-
-```typescript
-type AuthorityConfig =
-  | { type: 'Ed25519'; publicKey: string }
-  | { type: 'Ed25519Session'; publicKey: string; maxDurationSlots: string }
-  | { type: 'Secp256k1'; publicKey: string }
-  | { type: 'Secp256k1Session'; publicKey: string; maxDurationSlots: string }
-  | { type: 'Secp256r1'; publicKey: string }
-  | { type: 'Secp256r1Session'; publicKey: string; maxDurationSlots: string };
-```
-
-### Action Configuration
-
-The `actions` array contains one or more action configurations:
-
-```typescript
-type ActionConfig =
-  // General permissions
-  | { type: 'All' }
-  | { type: 'AllButManageAuthority' }
-  | { type: 'ManageAuthority' }
-
-  // SOL transfer limits
-  | { type: 'SolLimit'; amount: string }
-  | { type: 'SolRecurringLimit'; recurringAmount: string; window: string }
-  | { type: 'SolDestinationLimit'; amount: string; destination: string }
-  | { type: 'SolRecurringDestinationLimit'; recurringAmount: string; window: string; destination: string }
-
-  // Token transfer limits
-  | { type: 'TokenLimit'; mint: string; amount: string }
-  | { type: 'TokenRecurringLimit'; mint: string; recurringAmount: string; window: string }
-  | { type: 'TokenDestinationLimit'; mint: string; amount: string; destination: string }
-  | { type: 'TokenRecurringDestinationLimit'; mint: string; recurringAmount: string; window: string; destination: string }
-
-  // Program access
-  | { type: 'Program'; programId: string }
-  | { type: 'ProgramAll' }
-  | { type: 'ProgramCurated' }
-
-  // Staking
-  | { type: 'StakeLimit'; amount: string }
-  | { type: 'StakeRecurringLimit'; recurringAmount: string; window: string }
-  | { type: 'StakeAll' }
-
-  // Sub-accounts
-  | { type: 'SubAccount' };
-```
-
-## Error Handling
-
-<Tabs>
-  <Tab title="API SDK">
-```typescript
-import { SwigApiClient, ApiError } from '@swig-wallet/api';
-
-const client = new SwigApiClient({
-  apiKey: 'sk_your_api_key',
-});
-
-const { data, error } = await client.policies.get('invalid-policy-id');
-
-if (error) {
-  // ApiError properties:
-  // - message: Human-readable error message
-  // - code: Error code string (e.g., 'NOT_FOUND', 'UNAUTHORIZED')
-  // - status: HTTP status code
-  // - details: Additional error context (if available)
-
-  switch (error.code) {
-    case 'NOT_FOUND':
-      console.log('Policy does not exist');
-      break;
-    case 'UNAUTHORIZED':
-      console.log('Invalid or expired API key');
-      break;
-    default:
-      console.log(`Unexpected error: ${error.message}`);
-  }
-}
-```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-import { SwigClient, SwigError } from '@swig-wallet/developer';
-
-const client = new SwigClient({
-  apiKey: 'sk_your_api_key',
-  baseUrl: 'https://dashboard.onswig.com',
-});
+import { SwigDeveloperSdkError } from '@swig-wallet/developer-sdk';
 
 try {
-  const policy = await client.getPolicy('invalid-policy-id');
+  const policy = await swig.wallets.getPolicy(policyId);
+  console.log(policy.name);
 } catch (error) {
-  if (error instanceof SwigError) {
-    // SwigError properties:
-    // - message: Human-readable error message
-    // - code: Error code string (e.g., 'POLICY_NOT_FOUND')
-    // - statusCode: HTTP status code
-    // - response: Raw response data (if available)
-
-    switch (error.code) {
-      case 'POLICY_NOT_FOUND':
-        console.log('Policy does not exist');
-        break;
-      case 'UNAUTHORIZED':
-        console.log('Invalid or expired API key');
-        break;
-      default:
-        console.log(`Unexpected error: ${error.message}`);
-    }
+  if (error instanceof SwigDeveloperSdkError) {
+    console.error('Status:', error.statusCode);
+    console.error('Code:', error.code);
   }
+  throw error;
 }
 ```
-  </Tab>
-</Tabs>
 
-### Common Errors
+Check the API key and its resource access for `401` or `403` responses. For a
+`404`, check that the policy ID exists and is visible to the caller. See
+[Developer API Errors](/developer-api/errors) for other response statuses.
 
-| Status | Code | Meaning |
-|--------|------|---------|
-| 401 | `UNAUTHORIZED` | Invalid or missing API key |
-| 403 | `FORBIDDEN` | API key doesn't have access to this policy |
-| 404 | `NOT_FOUND` / `POLICY_NOT_FOUND` | Policy ID doesn't exist |
-| 500 | `INTERNAL_ERROR` | Server error, try again later |
+## Continue with the template
 
-## Retry Configuration
-
-Both SDKs support automatic retries for transient failures:
-
-<Tabs>
-  <Tab title="API SDK">
-```typescript
-const client = new SwigApiClient({
-  apiKey: 'sk_your_api_key',
-  portalUrl: 'https://dashboard.onswig.com',
-  retry: {
-    maxRetries: 3,        // Number of retry attempts
-    retryDelay: 1000,     // Initial delay in milliseconds
-    backoffMultiplier: 2, // Exponential backoff multiplier
-  },
-});
-```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-const client = new SwigClient({
-  apiKey: 'sk_your_api_key',
-  baseUrl: 'https://dashboard.onswig.com',
-  retryOptions: {
-    maxRetries: 3,
-    retryDelay: 1000,
-    backoffMultiplier: 2,
-  },
-});
-```
-  </Tab>
-</Tabs>
-
-With these settings, retries occur at: 1s, 2s, 4s (exponential backoff).
-
-<Tip>
-  Both SDKs only retry on 5xx server errors and network failures. Client errors (4xx) are not retried.
-</Tip>
-
-## Complete Example
-
-<Tabs>
-  <Tab title="API SDK">
-```typescript
-import { SwigApiClient } from '@swig-wallet/api';
-
-async function main() {
-  const client = new SwigApiClient({
-    apiKey: process.env.SWIG_API_KEY!,
-    portalUrl: 'https://dashboard.onswig.com',
-    retry: { maxRetries: 3, retryDelay: 1000 },
-  });
-
-  const policyId = 'your-policy-id';
-  const { data: policy, error } = await client.policies.get(policyId);
-
-  if (error) {
-    console.error('Failed to fetch policy:', error.message);
-    process.exit(1);
-  }
-
-  console.log('=== Policy Details ===');
-  console.log(`ID: ${policy.id}`);
-  console.log(`Name: ${policy.name}`);
-  console.log(`Description: ${policy.description ?? 'None'}`);
-
-  console.log('\n=== Authority ===');
-  if (policy.authority) {
-    console.log(`Type: ${policy.authority.type}`);
-    console.log(`Public Key: ${policy.authority.publicKey}`);
-  } else {
-    console.log('No authority configured');
-  }
-
-  console.log('\n=== Actions ===');
-  for (const action of policy.actions) {
-    console.log(`- ${action.type}`);
-  }
-}
-
-main();
-```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-import { SwigClient, SwigError } from '@swig-wallet/developer';
-
-async function main() {
-  const client = new SwigClient({
-    apiKey: process.env.SWIG_API_KEY!,
-    baseUrl: 'https://dashboard.onswig.com',
-    retryOptions: { maxRetries: 3, retryDelay: 1000 },
-  });
-
-  try {
-    const policy = await client.getPolicy('your-policy-id');
-
-    console.log('=== Policy Details ===');
-    console.log(`ID: ${policy.id}`);
-    console.log(`Name: ${policy.name}`);
-
-    console.log('\n=== Authority ===');
-    if (policy.authority) {
-      console.log(`Type: ${policy.authority.type}`);
-      console.log(`Is Session: ${policy.authority.isSession()}`);
-      console.log(`Is Ed25519: ${policy.authority.isEd25519()}`);
-    } else {
-      console.log('No authority configured');
-    }
-
-    console.log('\n=== Permissions ===');
-    console.log(`Is Root: ${policy.actions.isRoot()}`);
-    console.log(`Can Manage Authority: ${policy.actions.canManageAuthority()}`);
-
-    const solLimit = policy.actions.solSpendLimit();
-    console.log(`SOL Limit: ${solLimit ? `${solLimit} lamports` : 'None'}`);
-  } catch (error) {
-    if (error instanceof SwigError) {
-      console.error('Failed to fetch policy:', error.message);
-      process.exit(1);
-    }
-    throw error;
-  }
-}
-
-main();
-```
-  </Tab>
-</Tabs>
-
-## Next Steps
-
-Now that you can fetch policies, learn how to [create Swig wallets](./create-swig) using those policies.
+Pass the policy ID when you [Create Wallets](/developer-sdk/create-wallets).
+The SDK reads the template as part of wallet preparation. Your application then
+signs and submits the returned transactions.
