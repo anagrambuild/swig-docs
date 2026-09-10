@@ -195,6 +195,7 @@
               "developer-sdk/add-roles-and-permissions",
               "developer-sdk/transfers-and-swaps",
               "developer-sdk/swaps-and-batches",
+              "developer-sdk/x402",
               "developer-sdk/participant-sets",
               "developer-sdk/custom-execution"
             ]
