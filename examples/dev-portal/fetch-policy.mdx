@@ -50,14 +50,15 @@ object and normalizes its top-level field names to snake case.
 
 ## Understand the result
 
-The response describes stored configuration. For example, the TypeScript
-client preserves the API's wallet-authority shape:
+The response describes stored configuration. For example, a template created
+in the portal gives its initial user full root access. The TypeScript client
+preserves the API's wallet-authority shape:
 
 ```json
 {
   "id": "clx1234567890abcdef",
   "name": "user-wallet-policy",
-  "description": "Standard user wallet with transfer limits",
+  "description": "Initial wallet user with root access",
   "initialKeySource": "WALLET_POLICY_KEY_SOURCE_STORED",
   "authority": {
     "ed25519": {
@@ -65,7 +66,7 @@ client preserves the API's wallet-authority shape:
     }
   },
   "actions": [
-    { "type": "SolLimit", "amount": "1000000000" }
+    { "type": "All" }
   ]
 }
 ```
@@ -75,11 +76,9 @@ user at wallet creation. The `actions` list contains saved action data. See
 [Permissions](/developer-sdk/permissions) for the meaning of each grant, its
 units, and the Developer SDK inputs used when adding a role.
 
-Policy response actions use stored names such as `SolLimit`; `roles.add()`
-uses the typed SDK inputs shown in the reference, such as TypeScript
-`{ type: 'solLimit', amount }` or Python `SolLimitAction(...)`. Map fields to
-those inputs when building a role rather than forwarding stored action data
-unchanged.
+Policy response actions use stored action names and fields. When adding a
+role, map them to the typed SDK inputs shown in the reference rather than
+forwarding stored action data unchanged.
 
 To inspect the authorities and permissions currently attached to a wallet,
 use [Read Wallet State](/developer-sdk/wallet-reads#roles).
