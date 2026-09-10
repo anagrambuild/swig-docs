@@ -3,7 +3,13 @@ title: "Policies"
 sidebarTitle: "Policies"
 ---
 
-Policies define how Swig wallets are created and what permissions they have. This guide explains the concepts behind policies and walks you through creating one in the Developer Portal.
+A policy stores reusable wallet-creation configuration: an authority and the
+permissions it should receive. Create policies in the Developer Portal, then
+use their IDs when you [Create Wallets](/developer-sdk/create-wallets).
+
+Use [Permissions](/developer-sdk/permissions) to choose the allowed actions.
+An [API key](/examples/dev-portal/create-api-key) authenticates access to the
+hosted API; the policy describes the wallet configuration to prepare.
 
 ## Understanding Policies
 
@@ -11,10 +17,6 @@ A **Policy** combines two key components:
 
 - **Signer**: The cryptographic identity (authority) that controls the wallet
 - **Permission**: The set of allowed actions for that signer
-
-```
-Policy = Signer + Permission
-```
 
 When you create a Swig wallet using a policy, the wallet is initialized with the signer and permissions defined in that policy.
 
@@ -51,37 +53,9 @@ Swig supports multiple authority types for different use cases:
 
 ### Action Types
 
-Actions define what operations are permitted:
-
-**General:**
-- `All` - Full access to all operations
-- `AllButManageAuthority` - Everything except adding/removing signers
-- `ManageAuthority` - Can add and remove signers
-
-**SOL Transfers:**
-- `SolLimit` - Transfer up to a specified amount of SOL
-- `SolRecurringLimit` - Transfer up to an amount within a time window
-- `SolDestinationLimit` - Transfer to a specific destination only
-- `SolRecurringDestinationLimit` - Recurring limit to specific destination
-
-**Token Transfers:**
-- `TokenLimit` - Transfer up to a specified amount of a token
-- `TokenRecurringLimit` - Token transfer with time-based limits
-- `TokenDestinationLimit` - Token transfer to specific destination
-- `TokenRecurringDestinationLimit` - Recurring token limit to destination
-
-**Program Access:**
-- `Program` - Can interact with a specific program ID
-- `ProgramAll` - Can interact with any program
-- `ProgramCurated` - Can interact with curated/approved programs
-
-**Staking:**
-- `StakeLimit` - Stake up to a specified amount
-- `StakeRecurringLimit` - Staking with time-based limits
-- `StakeAll` - Full staking permissions
-
-**Sub-accounts:**
-- `SubAccount` - Can manage sub-accounts
+Choose management, SOL, token, program, staking, or sub-account actions from
+the [Permissions](/developer-sdk/permissions) reference. It lists required
+fields, amount units, destination rules, and recurring slot windows.
 
 ## Creating a Policy
 
@@ -168,19 +142,18 @@ Policies have different statuses based on their configuration:
 
 ## Example: Creating a Limited Transfer Policy
 
-Here's an example of creating a policy that allows limited SOL transfers:
+For a policy that permits up to 1 SOL in total:
 
-1. **Policy Name**: `limited-sol-transfer`
-2. **Description**: `Allows up to 1 SOL transfers per day`
-3. **Signer**:
-   - Type: `ED25519`
-   - Public Key: Your user's Solana public key
-4. **Permission Actions**:
-   - `SolRecurringLimit`:
-     - Amount: `1000000000` (1 SOL in lamports)
-     - Window: `86400` (24 hours in seconds)
+1. Name the policy `limited-sol-transfer`.
+2. Set its description to `Allows up to 1 SOL in total`.
+3. Select an `ED25519` signer with the user's Solana public key.
+4. Add `Program` for the System Program (`11111111111111111111111111111111`).
+5. Add `SolLimit` with an amount of `1000000000` lamports.
 
-This policy creates wallets where the signer can transfer up to 1 SOL per day.
+The program action permits the invocation; the SOL action sets the spending
+allowance. Each successful transfer reduces the remaining allowance. For
+recurring allowances, use the slot-based windows described in
+[Permissions](/developer-sdk/permissions#amounts-addresses-and-windows).
 
 ## Managing Policies
 
@@ -210,4 +183,4 @@ Click on a policy to:
 
 Now that you've created a policy, you can:
 - [Fetch the policy](./fetch-policy) via the API to verify its configuration
-- [Create Swig wallets](./create-swig) using your policy
+- [Create wallets](/developer-sdk/create-wallets) using your policy

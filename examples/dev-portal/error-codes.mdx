@@ -338,40 +338,30 @@ if (error) {
 }
 ```
 
-### Legacy SDK (@swig-wallet/developer)
+### Developer SDK
+
+The TypeScript Developer SDK throws `SwigDeveloperSdkError`. Inspect its
+HTTP status and code when handling failed API calls. See
+[Developer API Errors](/developer-api/errors) for response formats and status
+handling.
 
 ```typescript
-import { SwigClient, SwigError } from '@swig-wallet/developer';
+import { SwigClient, SwigDeveloperSdkError } from '@swig-wallet/developer-sdk';
 
-const client = new SwigClient({
+const swig = new SwigClient({
   apiKey: process.env.SWIG_API_KEY!,
-  baseUrl: 'https://dashboard.onswig.com',
+  network: 'devnet',
 });
 
 try {
-  const policy = await client.getPolicy(policyId);
+  const policy = await swig.wallets.getPolicy(policyId);
+  console.log(policy.name);
 } catch (error) {
-  if (error instanceof SwigError) {
-    // error is a SwigError
-    console.error('Error code:', error.code);
+  if (error instanceof SwigDeveloperSdkError) {
     console.error('Status:', error.statusCode);
-    console.error('Message:', error.message);
-    console.error('Response:', error.response);
-
-    switch (error.code) {
-      case 'POLICY_NOT_FOUND':
-        // Handle missing policy
-        break;
-      case 'UNAUTHORIZED':
-        // Handle auth error
-        break;
-      default:
-        // Handle unexpected error
-    }
-  } else {
-    // Handle non-API errors
-    throw error;
+    console.error('Error code:', error.code);
   }
+  throw error;
 }
 ```
 
@@ -403,23 +393,13 @@ async function fetchWithRetry<T>(
 
 ### SDK Built-in Retry
 
-Both portal clients support retry configuration:
+The API SDK supports retry configuration:
 
 ```typescript
 // API SDK
 const client = new SwigApiClient({
   apiKey: 'sk_your_api_key',
   retry: {
-    maxRetries: 3,
-    retryDelay: 1000,
-    backoffMultiplier: 2,
-  },
-});
-
-// Legacy SDK
-const client = new SwigClient({
-  apiKey: 'sk_your_api_key',
-  retryOptions: {
     maxRetries: 3,
     retryDelay: 1000,
     backoffMultiplier: 2,

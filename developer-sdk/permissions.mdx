@@ -1,5 +1,5 @@
 ---
-title: "Permissions and Guardian Recovery"
+title: "Permissions"
 sidebarTitle: "Permissions"
 description: "Choose role permissions and understand recovery with one guardian or a threshold of guardians."
 ---
@@ -14,7 +14,7 @@ support guardian recovery, including a possible extension requiring multiple
 approvals. That recovery integration is not yet available through these SDK
 versions.
 
-## Assign permissions to a role
+## Read the action reference
 
 In TypeScript, each action is an object with a `type` and the fields listed
 below. Python uses an exported constructor named after the action, such as
@@ -22,38 +22,15 @@ below. Python uses an exported constructor named after the action, such as
 Python field names use snake case: `program_id` and `recurring_amount`
 correspond to TypeScript's `programId` and `recurringAmount`.
 
-<CodeGroup dropdown>
+For a complete transaction example, see
+[Add Roles](/developer-sdk/add-roles-and-permissions). To save permissions as
+reusable wallet-creation configuration, see
+[Policies](/examples/dev-portal/create-policy).
 
-```typescript TypeScript
-import type { AddRoleAction } from '@swig-wallet/developer-sdk';
-
-const actions: AddRoleAction[] = [
-  { type: 'program', programId: '11111111111111111111111111111111' },
-  { type: 'solLimit', amount: 100_000_000n },
-];
-```
-
-```python Python
-from swig_developer_sdk import ProgramAction, SolLimitAction
-
-actions = (
-    ProgramAction(program_id="11111111111111111111111111111111"),
-    SolLimitAction(amount=100_000_000),
-)
-```
-
-</CodeGroup>
-
-Pass `actions` with the new authority to `wallet.roles.add()`, then sign and
-submit its prepared transaction. See [Add Roles and
-Permissions](/developer-sdk/add-roles-and-permissions) for the complete setup
-flow. The existing requester must use Ed25519 or secp256r1 and have
-`manageAuthority` or `all` permission.
-
-The example combines access to the System Program with a total SOL allowance
-of 0.1 SOL. Program access and asset spending are checked separately. Granting
-`program`, `programAll`, or `programCurated` alone does not grant an unlimited
-SOL or token allowance.
+Program access and asset spending are checked separately. For example, a SOL
+transfer needs access to the System Program and an appropriate SOL allowance.
+Granting `program`, `programAll`, or `programCurated` alone does not grant an
+unlimited SOL or token allowance.
 
 ## Amounts addresses and windows
 
@@ -155,8 +132,8 @@ P-256 public key. See the
 
 **Integration status:** The following cases describe the recommended protocol
 design. The Developer SDK action list does not yet expose this scoped
-permission or a replacement preparation flow. Its legacy recovery API types
-remain for compatibility, but the legacy recovery flow is currently broken.
+permission or a replacement preparation flow. Recovery API types retained
+for compatibility do not provide a working recovery flow in these versions.
 Use a protocol integration with a compatible deployed program for the base
 case; the multiple-approval case requires the additional integration described
 below. These examples do not establish deployment or audit coverage.
@@ -167,10 +144,21 @@ Suppose the user's passkey controls role `7`. Before the passkey is lost, an
 existing administrator adds a separate guardian authority whose only action
 is the protocol permission `ReplaceAuthority { role_id: 7 }`.
 
-```text
-Guardian key -> recovery role -> replace the signer of role 7
-                                      |
-                              old passkey -> new passkey
+```mermaid
+---
+config:
+  theme: neutral
+---
+flowchart TD
+  accTitle: Recovery with one guardian
+  accDescr: Off-chain, the user creates a passkey and the guardian signs a replacement request. On-chain, the recovery role authorizes replacing the key for role 7 while preserving its permissions.
+  subgraph offchain["Off-chain"]
+    newKey["User creates a new passkey"] --> approve["Guardian verifies and signs<br/>the replacement request"]
+  end
+  subgraph onchain["On-chain: one transaction"]
+    authorize["Recovery role authorizes<br/>replacement for role 7"] --> replace["Role 7 uses the new key<br/>with its existing permissions"]
+  end
+  approve --> authorize
 ```
 
 1. The user creates a new passkey and obtains its public key.
@@ -196,10 +184,25 @@ To require two of three guardians, the same recovery role could instead use a
 ParticipantSet with threshold `2` and three members. Keep
 `ReplaceAuthority { role_id: 7 }` as the recovery role's only permission.
 
-```text
-Guardian A --\
-Guardian B ---+-> 2 of 3 approvals -> ProgramExec recovery role -> role 7 key
-Guardian C --/
+The diagram shows the proposed extension; it requires the integration work
+described below.
+
+```mermaid
+---
+config:
+  theme: neutral
+---
+flowchart TD
+  accTitle: Proposed recovery with two of three guardians
+  accDescr: The application collects signatures from any two of three guardians off-chain. In one on-chain transaction, the verifier checks the threshold and authorizes replacing role 7's key through the scoped recovery role. This composition requires additional integration.
+  subgraph offchain["Off-chain"]
+    request["Prepare one replacement request"] --> collect["Collect signatures from<br/>any 2 of 3 guardians"]
+  end
+  subgraph onchain["On-chain: one atomic transaction"]
+    threshold["Verify the 2-of-3 threshold<br/>and replacement proof"] --> recover["ProgramExec recovery role<br/>authorizes replacement for role 7"]
+    recover --> replace["Role 7 uses the new key<br/>with its existing permissions"]
+  end
+  collect --> threshold
 ```
 
 The ParticipantSet controls **who must approve**, while the scoped permission

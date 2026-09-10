@@ -3,7 +3,10 @@ title: "API Keys"
 sidebarTitle: "API Keys"
 ---
 
-API keys authenticate your applications when making requests to Swig services. This guide walks you through creating an API key in the Developer Portal.
+API keys authenticate your trusted server when it calls Swig's hosted API.
+Create a key in the Developer Portal and keep it in your server's secret
+storage. Wallet operations still require the appropriate authority's signature
+or approval proofs; the API key does not grant wallet signing authority.
 
 ## What API Keys Are Used For
 
@@ -18,7 +21,7 @@ API keys are required for:
 Before creating an API key, ensure you have:
 
 - A Swig account at [dashboard.onswig.com](https://dashboard.onswig.com)
-- Access to an project
+- Access to a project
 
 ## Creating an API Key
 
@@ -157,4 +160,4 @@ To revoke an API key:
 Now that you have an API key, you can:
 - [Create a policy](./create-policy) to define wallet permissions
 - [Fetch policies](./fetch-policy) programmatically
-- [Create Swig wallets](./create-swig) via the API
+- [Create wallets](/developer-sdk/create-wallets) with the Developer SDK

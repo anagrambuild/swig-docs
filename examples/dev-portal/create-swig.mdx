@@ -1,20 +1,14 @@
 ---
-title: "Legacy Wallet Create API"
+title: "Wallet Create API"
 sidebarTitle: "Wallet Create API"
 ---
 
 This guide shows how to create Swig wallets programmatically using the Developer Portal API. This approach is ideal for applications that need to create wallets on behalf of users with predefined policies.
 
 <Note>
-  This page covers the direct developer-portal API clients
-  <code>@swig-wallet/api</code> and <code>@swig-wallet/developer</code>. If you
-  want the current prepare-first SDK
-  (<code>@swig-wallet/developer-sdk</code> and
-  <code>swig-developer-sdk</code>, in
-  [anagrambuild/swig-developer-sdk](https://github.com/anagrambuild/swig-developer-sdk)),
-  start with the [Server-Side Developer SDK](/developer-sdk).
-  Treat <code>@swig-wallet/developer</code> as the legacy developer SDK for
-  existing integrations.
+  This page covers the Developer Portal REST endpoint and its
+  <code>@swig-wallet/api</code> client. For wallet creation with the TypeScript
+  or Python Developer SDK, use [Create Wallets](/developer-sdk/create-wallets).
 </Note>
 
 ## When to Use the API
@@ -50,75 +44,11 @@ Before creating wallets via the API, ensure you have:
 
 ## Installing a Portal Client
 
-<Tabs>
-  <Tab title="API SDK">
 ```bash
 npm install @swig-wallet/api
 # or
 bun add @swig-wallet/api
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```bash
-npm install @swig-wallet/developer
-# or
-bun add @swig-wallet/developer
-```
-  </Tab>
-</Tabs>
-
-## Current Swig Developer SDK
-
-If you are starting a new server-assisted integration, prefer
-<code>@swig-wallet/developer-sdk</code> over
-<code>@swig-wallet/developer</code>.
-
-The current package is prepare-first:
-
-1. your server uses an API key
-2. the server prepares wallet transactions
-3. application-owned signing code satisfies the transaction signer set and any
-   embedded signature requests
-4. your app submits them directly or through a sponsor flow
-
-Minimal server-side example:
-
-```typescript
-import { SwigClient } from '@swig-wallet/developer-sdk/server/typescript';
-
-const swig = new SwigClient({
-  apiKey: process.env.SWIG_API_KEY!,
-  network: 'devnet',
-});
-
-const created = await swig.wallets.create({
-  feePayer,
-  initialUser: {
-    ed25519: {
-      publicKey: userPublicKey,
-    },
-  },
-});
-
-return {
-  wallet: created.wallet,
-  transactions: created.transactions,
-};
-```
-
-Do not use an empty `created.clientAuthorityTransactions` array to infer that
-no application signature is needed. That collection tracks explicit embedded
-signature requests; inspect each serialized transaction's required signer set
-as well. A plain create normally requires only the fee payer, while policy-led
-follow-up instructions can add other required signers.
-
-Use this page when you specifically want the developer-portal create-wallet
-endpoint or its older portal clients. Use the [Server-Side Developer SDK](/developer-sdk)
-for the current product surface.
-
-For the current hosted operation flows after wallet creation, see
-[Transfers and Swaps](/developer-sdk/transfers-and-swaps) and
-[Read Wallet State](/developer-sdk/wallet-reads).
 
 ## Specifying the Wallet Authority
 
@@ -199,8 +129,6 @@ curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
 
 ### Using a Portal Client
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 import { SwigApiClient } from '@swig-wallet/api';
 
@@ -232,50 +160,11 @@ async function createWallet() {
 
 const wallet = await createWallet();
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-import { SwigClient, SwigError } from '@swig-wallet/developer';
-
-// Initialize the client
-const client = new SwigClient({
-  apiKey: 'sk_your_api_key',
-  baseUrl: 'https://dashboard.onswig.com',
-});
-
-// Create a wallet
-async function createWallet() {
-  try {
-    const wallet = await client.createWallet({
-      policyId: 'clx1234567890abcdef',
-      network: 'devnet',
-      paymasterPubkey: 'PaymasterPublicKeyHere...',
-    });
-
-    console.log('Swig ID:', wallet.swigId);
-    console.log('Wallet Address:', wallet.swigAddress);
-    console.log('Transaction Signature:', wallet.signature);
-
-    return wallet;
-  } catch (error) {
-    if (error instanceof SwigError) {
-      console.error(`Error: ${error.code} - ${error.message}`);
-    }
-    return null;
-  }
-}
-
-const wallet = await createWallet();
-```
-  </Tab>
-</Tabs>
 
 #### With Wallet Address and Type
 
 You can also provide a `walletAddress` and `walletType` directly instead of relying on a signer configured in the dashboard:
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 import { SwigApiClient } from '@swig-wallet/api';
 
@@ -307,52 +196,6 @@ async function createWallet() {
 
 const wallet = await createWallet();
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-import { SwigClient, SwigError } from '@swig-wallet/developer';
-
-const client = new SwigClient({
-  apiKey: 'sk_your_api_key',
-  baseUrl: 'https://dashboard.onswig.com',
-});
-
-async function createWallet() {
-  try {
-    const wallet = await client.createWallet({
-      policyId: 'clx1234567890abcdef',
-      network: 'devnet',
-      paymasterPubkey: 'PaymasterPublicKeyHere...',
-      walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-      walletType: 'ED25519',
-    });
-
-    console.log('Swig ID:', wallet.swigId);
-    console.log('Wallet Address:', wallet.swigAddress);
-    console.log('Transaction Signature:', wallet.signature);
-
-    return wallet;
-  } catch (error) {
-    if (error instanceof SwigError) {
-      console.error(`Error: ${error.code} - ${error.message}`);
-    }
-    return null;
-  }
-}
-
-const wallet = await createWallet();
-```
-  </Tab>
-</Tabs>
-
-## Portal Client Comparison
-
-| Feature | `@swig-wallet/api` | `@swig-wallet/developer` (legacy) |
-|---------|---------------------|-----------------------------------|
-| Error handling | Returns `{ data, error }` | Throws `SwigError` |
-| Method name | `client.wallet.create()` | `client.createWallet()` |
-| No-paymaster response | Raw base58 string in `transaction` | Reconstructed `VersionedTransaction` object |
-| Best for | Low-level control | Existing legacy portal integrations |
 
 ## Request Parameters
 
@@ -434,8 +277,6 @@ curl -X POST "https://dashboard.onswig.com/api/v1/wallet/create" \
 
 ### Using the SDK (No Paymaster)
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 import { SwigApiClient } from '@swig-wallet/api';
 
@@ -465,46 +306,6 @@ if (error) {
   // const sig = await connection.sendTransaction(tx);
 }
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-import { Connection } from '@solana/web3.js';
-import { SwigClient, SwigError } from '@swig-wallet/developer';
-
-const client = new SwigClient({
-  apiKey: 'sk_your_api_key',
-  baseUrl: 'https://dashboard.onswig.com',
-});
-
-try {
-  // Create without paymaster — returns a VersionedTransaction object
-  const result = await client.createWallet({
-    policyId: 'clx1234567890abcdef',
-    network: 'devnet',
-    // No paymasterPubkey
-  });
-
-  if ('transaction' in result) {
-    console.log('Swig ID:', result.swigId);
-    console.log('Swig Address:', result.swigAddress);
-
-    // The SDK automatically reconstructs the VersionedTransaction
-    const tx = result.transaction; // VersionedTransaction object
-
-    // Sign with your keypair and send
-    tx.sign([yourKeypair]);
-    const connection = new Connection('https://api.devnet.solana.com');
-    const signature = await connection.sendTransaction(tx);
-    console.log('Transaction sent:', signature);
-  }
-} catch (error) {
-  if (error instanceof SwigError) {
-    console.error(`Error: ${error.code} - ${error.message}`);
-  }
-}
-```
-  </Tab>
-</Tabs>
 
 <Warning>
   When using the no-paymaster flow, the returned transaction includes a recent blockhash. Blockhashes expire after approximately 60-90 seconds. You must sign and send the transaction promptly.
@@ -514,8 +315,6 @@ try {
 
 ### Basic Wallet Creation
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 import { SwigApiClient } from '@swig-wallet/api';
 
@@ -535,32 +334,9 @@ if (data) {
   console.log(`View on explorer: https://explorer.solana.com/address/${data.swigAddress}?cluster=devnet`);
 }
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-import { SwigClient } from '@swig-wallet/developer';
-
-const client = new SwigClient({
-  apiKey: process.env.SWIG_API_KEY!,
-  baseUrl: 'https://dashboard.onswig.com',
-});
-
-const wallet = await client.createWallet({
-  policyId: 'your-policy-id',
-  network: 'devnet',
-  paymasterPubkey: 'YourPaymasterPublicKey',
-});
-
-console.log(`Wallet created: ${wallet.swigAddress}`);
-console.log(`View on explorer: https://explorer.solana.com/address/${wallet.swigAddress}?cluster=devnet`);
-```
-  </Tab>
-</Tabs>
 
 ### With Custom Swig ID
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 // Generate a custom ID (must be unique)
 const customId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
@@ -572,28 +348,11 @@ const { data, error } = await client.wallet.create({
   swigId: customId,
 });
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-// Generate a custom ID (must be unique)
-const customId = crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-
-const wallet = await client.createWallet({
-  policyId: 'your-policy-id',
-  network: 'devnet',
-  paymasterPubkey: 'YourPaymasterPublicKey',
-  swigId: customId,
-});
-```
-  </Tab>
-</Tabs>
 
 ### With Signer Override
 
 If your policy doesn't have a signer attached, or you want to use a different signer from the dashboard:
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 const { data, error } = await client.wallet.create({
   policyId: 'policy-without-signer',
@@ -602,25 +361,11 @@ const { data, error } = await client.wallet.create({
   signerId: 'specific-signer-id', // Signer ID from the portal
 });
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-const wallet = await client.createWallet({
-  policyId: 'policy-without-signer',
-  network: 'devnet',
-  paymasterPubkey: 'YourPaymasterPublicKey',
-  signerId: 'specific-signer-id', // Signer ID from the portal
-});
-```
-  </Tab>
-</Tabs>
 
 ### With Wallet Address and Type
 
 Instead of creating a signer in the dashboard and referencing it by ID, you can supply the wallet's public key and authority type directly at creation time:
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 const { data, error } = await client.wallet.create({
   policyId: 'your-policy-id',
@@ -630,26 +375,11 @@ const { data, error } = await client.wallet.create({
   walletType: 'ED25519',
 });
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-const wallet = await client.createWallet({
-  policyId: 'your-policy-id',
-  network: 'devnet',
-  paymasterPubkey: 'YourPaymasterPublicKey',
-  walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-  walletType: 'ED25519',
-});
-```
-  </Tab>
-</Tabs>
 
 ### With Session Authority
 
 For session-based authority types, include `maxDurationSlots` to set the session lifetime:
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 const { data, error } = await client.wallet.create({
   policyId: 'your-policy-id',
@@ -660,25 +390,9 @@ const { data, error } = await client.wallet.create({
   maxDurationSlots: '1000000', // session duration in slots
 });
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-const wallet = await client.createWallet({
-  policyId: 'your-policy-id',
-  network: 'devnet',
-  paymasterPubkey: 'YourPaymasterPublicKey',
-  walletAddress: '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU',
-  walletType: 'ED25519_SESSION',
-  maxDurationSlots: '1000000', // session duration in slots
-});
-```
-  </Tab>
-</Tabs>
 
 ### Production Wallet
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 const { data, error } = await client.wallet.create({
   policyId: 'production-policy-id',
@@ -695,29 +409,9 @@ if (data) {
   });
 }
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-const wallet = await client.createWallet({
-  policyId: 'production-policy-id',
-  network: 'mainnet', // Use mainnet for production
-  paymasterPubkey: 'ProductionPaymasterKey',
-});
-
-// Store the wallet info in your database
-await db.wallets.create({
-  swigId: wallet.swigId,
-  address: wallet.swigAddress,
-  createdAt: new Date(),
-});
-```
-  </Tab>
-</Tabs>
 
 ## Error Handling
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 const { data, error } = await client.wallet.create({
   policyId: 'your-policy-id',
@@ -744,38 +438,6 @@ if (error) {
   }
 }
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-try {
-  const wallet = await client.createWallet({
-    policyId: 'your-policy-id',
-    network: 'devnet',
-    paymasterPubkey: 'YourPaymasterPublicKey',
-  });
-} catch (error) {
-  if (error instanceof SwigError) {
-    switch (error.code) {
-      case 'POLICY_NOT_FOUND':
-        console.error('Policy not found. Check the policy ID.');
-        break;
-      case 'UNAUTHORIZED':
-        console.error('Invalid API key.');
-        break;
-      case 'BAD_REQUEST':
-        console.error('Invalid request:', error.response);
-        break;
-      case 'SWIG_ID_EXISTS':
-        console.error('Swig ID already exists. Try a different ID.');
-        break;
-      default:
-        console.error(`Unexpected error: ${error.message}`);
-    }
-  }
-}
-```
-  </Tab>
-</Tabs>
 
 ### Common Errors
 
@@ -789,8 +451,6 @@ try {
 
 ## Complete Example
 
-<Tabs>
-  <Tab title="API SDK">
 ```typescript
 import { SwigApiClient } from '@swig-wallet/api';
 
@@ -830,52 +490,6 @@ async function main() {
 
 main();
 ```
-  </Tab>
-  <Tab title="Legacy SDK">
-```typescript
-import { SwigClient, SwigError } from '@swig-wallet/developer';
-
-async function main() {
-  const client = new SwigClient({
-    apiKey: process.env.SWIG_API_KEY!,
-    baseUrl: 'https://dashboard.onswig.com',
-    retryOptions: { maxRetries: 3, retryDelay: 1000 },
-  });
-
-  const config = {
-    policyId: process.env.SWIG_POLICY_ID!,
-    network: (process.env.SWIG_NETWORK || 'devnet') as 'mainnet' | 'devnet',
-    paymasterPubkey: process.env.SWIG_PAYMASTER_PUBKEY!,
-  };
-
-  console.log('Creating Swig wallet...');
-  console.log(`Network: ${config.network}`);
-  console.log(`Policy: ${config.policyId}`);
-
-  try {
-    const wallet = await client.createWallet(config);
-
-    console.log('\n=== Wallet Created ===');
-    console.log(`Swig ID: ${wallet.swigId}`);
-    console.log(`Address: ${wallet.swigAddress}`);
-    console.log(`Transaction: ${wallet.signature}`);
-
-    const cluster = config.network === 'mainnet' ? '' : '?cluster=devnet';
-    console.log(`\nExplorer: https://explorer.solana.com/address/${wallet.swigAddress}${cluster}`);
-  } catch (error) {
-    if (error instanceof SwigError) {
-      console.error('Failed to create wallet:', error.message);
-      console.error('Error code:', error.code);
-      process.exit(1);
-    }
-    throw error;
-  }
-}
-
-main();
-```
-  </Tab>
-</Tabs>
 
 ## TypeScript Types
 
@@ -934,33 +548,6 @@ interface CreateWalletTransactionResponse {
 type CreateWalletResponse =
   | CreateWalletPaymasterResponse
   | CreateWalletTransactionResponse;
-```
-
-### Legacy SDK Types
-
-The legacy `@swig-wallet/developer` SDK provides higher-level types that automatically reconstruct the transaction:
-
-```typescript
-import type { VersionedTransaction } from '@solana/web3.js';
-
-/** Result when a paymaster was used */
-interface WalletCreatePaymasterResult {
-  swigId: string;
-  swigAddress: string;
-  signature: string;
-}
-
-/** Result when no paymaster was provided */
-interface WalletCreateTransactionResult {
-  swigId: string;
-  swigAddress: string;
-  /** Reconstructed VersionedTransaction ready for signing */
-  transaction: VersionedTransaction;
-}
-
-type WalletCreateResult =
-  | WalletCreatePaymasterResult
-  | WalletCreateTransactionResult;
 ```
 
 ## Comparison: Portal API vs Direct SDK
