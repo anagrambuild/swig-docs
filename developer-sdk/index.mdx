@@ -17,9 +17,8 @@ reads wallet state, and submits application-signed transactions.
 bun add @swig-wallet/developer-sdk
 ```
 
-Published package `@swig-wallet/developer-sdk`, version `0.9.0`. The
-ParticipantSet interface documented here landed after that release and will be
-included in the next package release.
+Published package `@swig-wallet/developer-sdk`, version `0.10.0`, includes
+general role creation and ParticipantSet support.
 
 </Tab>
 
@@ -29,9 +28,8 @@ included in the next package release.
 pip install swig-developer-sdk
 ```
 
-Published package `swig-developer-sdk`, version `0.8.0`. Requires Python 3.10 or
-later. The ParticipantSet interface documented here landed after that release
-and will be included in the next package release.
+Published package `swig-developer-sdk`, version `0.9.0`, includes general role
+creation and ParticipantSet support. Requires Python 3.10 or later.
 
 </Tab>
 
@@ -92,13 +90,16 @@ API key or private key.
   <Card title="Participant Sets" icon="users" href="/developer-sdk/participant-sets">
     Add threshold authorization to a Swig role
   </Card>
+  <Card title="Permissions" icon="sliders" href="/developer-sdk/permissions">
+    Review every SDK action and the guardian recovery model
+  </Card>
   <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">
     Submit application-signed transactions
   </Card>
 </CardGroup>
 
 <Note>
-  Recovery API types remain for backend compatibility, but the recovery flow is
-  currently broken. Recovery setup and runtime guidance are intentionally
-  omitted.
+  Legacy recovery API types remain for backend compatibility, but that recovery
+  flow is currently broken. See [Guardian recovery](/developer-sdk/permissions#guardian-recovery)
+  for the scoped key replacement model and the remaining SDK integration work.
 </Note>
