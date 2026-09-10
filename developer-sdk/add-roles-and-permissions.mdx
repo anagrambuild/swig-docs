@@ -11,11 +11,7 @@ Use the wallet handle's `roles.add()` method to prepare the transaction that
 adds a role to an existing Swig wallet. The same call accepts the new authority
 and every action assigned to it in both SDKs.
 
-<Note>
-  This interface will ship in the next Developer SDK package release. The
-  currently published TypeScript `0.9.0` and Python `0.8.0` packages predate
-  general role creation.
-</Note>
+General role creation is available in TypeScript `0.10.0` and Python `0.9.0`.
 
 ## Before you begin
 
@@ -132,11 +128,11 @@ sub-account actions. Prefer the narrowest combination that supports the
 operation. Use `all` only when the new authority is intended to have full wallet
 control.
 
-See the Protocol SDK's
-[TypeScript Actions reference](/reference/typescript/actions) for on-chain
-permission semantics, limit variants, recurring windows, and
-destination-scoped actions. The Developer SDK expresses the same permissions
-with the typed action shapes and Python constructors used above.
+See [Permissions and Guardian Recovery](/developer-sdk/permissions) for the
+complete Developer SDK action list, required fields, and units. That reference
+also explains a recovery role limited to replacing one role's key and a
+possible extension requiring multiple guardian approvals, including the
+remaining SDK integration work.
 
 ## Confirm the role
 
@@ -180,8 +176,8 @@ application-owned signing layer.
   <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-and-swaps">
     Use a configured role for wallet transfers
   </Card>
-  <Card title="Protocol Actions" icon="sliders" href="/reference/typescript/actions">
-    Review permission and limit semantics
+  <Card title="Permissions" icon="sliders" href="/developer-sdk/permissions">
+    Choose actions and understand guardian recovery
   </Card>
   <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">
     Submit application-signed transactions

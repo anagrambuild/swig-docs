@@ -1,0 +1,236 @@
+---
+title: "Permissions and Guardian Recovery"
+sidebarTitle: "Permissions"
+description: "Choose role permissions and understand recovery with one guardian or a threshold of guardians."
+---
+
+Use permissions to define what an authority may do with a Swig wallet. A role
+combines one authority with an `actions` list, so the same permission model
+applies to a single signer or a ParticipantSet with several members.
+
+This page lists the 18 actions accepted by `wallet.roles.add()` in TypeScript
+`0.10.0` and Python `0.9.0`. It also explains how scoped key replacement can
+support guardian recovery, including a possible extension requiring multiple
+approvals. That recovery integration is not yet available through these SDK
+versions.
+
+## Assign permissions to a role
+
+In TypeScript, each action is an object with a `type` and the fields listed
+below. Python uses an exported constructor named after the action, such as
+`ManageAuthorityAction()` or `TokenRecurringDestinationLimitAction(...)`.
+Python field names use snake case: `program_id` and `recurring_amount`
+correspond to TypeScript's `programId` and `recurringAmount`.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+import type { AddRoleAction } from '@swig-wallet/developer-sdk';
+
+const actions: AddRoleAction[] = [
+  { type: 'program', programId: '11111111111111111111111111111111' },
+  { type: 'solLimit', amount: 100_000_000n },
+];
+```
+
+```python Python
+from swig_developer_sdk import ProgramAction, SolLimitAction
+
+actions = (
+    ProgramAction(program_id="11111111111111111111111111111111"),
+    SolLimitAction(amount=100_000_000),
+)
+```
+
+</CodeGroup>
+
+Pass `actions` with the new authority to `wallet.roles.add()`, then sign and
+submit its prepared transaction. See [Add Roles and
+Permissions](/developer-sdk/add-roles-and-permissions) for the complete setup
+flow. The existing requester must use Ed25519 or secp256r1 and have
+`manageAuthority` or `all` permission.
+
+The example combines access to the System Program with a total SOL allowance
+of 0.1 SOL. Program access and asset spending are checked separately. Granting
+`program`, `programAll`, or `programCurated` alone does not grant an unlimited
+SOL or token allowance.
+
+## Amounts addresses and windows
+
+- Express SOL and staking amounts in lamports, and token amounts in the mint's
+  smallest units. For a token with six decimals, `1_000_000` represents one token.
+- TypeScript accepts `bigint`, integer strings, or numbers. Use `bigint` or
+  integer strings when a value exceeds JavaScript's safe integer range. Python
+  accepts integers or integer strings.
+- Express `window` in Solana slots, not seconds. A recurring allowance resets
+  according to its on-chain window; it is not a per-transaction limit or an
+  exact wall-clock schedule.
+- Supply public addresses as base58 strings. A SOL `destination` is the
+  recipient account. A token `destination` is the recipient **token account**,
+  such as its associated token account, rather than the owner's wallet address.
+
+## Management permissions
+
+| TypeScript action | Required fields | Permission |
+| :--- | :--- | :--- |
+| `all` | None | Full wallet authority, including asset operations and authority management. |
+| `allButManageAuthority` | None | Broad wallet execution and asset access, excluding authority and sub-account management. It does not grant key replacement. |
+| `manageAuthority` | None | Add, remove, and update authorities. This is broad administrative access rather than delegation to recover one role. |
+
+An authority that can manage roles can grant powerful permissions to another
+key. Choose it when the signer should administer the wallet. For recovery
+limited to one role, see [Guardian recovery](#guardian-recovery).
+
+## SOL permissions
+
+| TypeScript action | Required fields | Permission |
+| :--- | :--- | :--- |
+| `solLimit` | `amount` | A total SOL allowance that decreases as it is spent. |
+| `solRecurringLimit` | `recurringAmount`, `window` | A SOL allowance renewed per slot window. |
+| `solDestinationLimit` | `amount`, `destination` | A total SOL allowance for one recipient account. |
+| `solRecurringDestinationLimit` | `recurringAmount`, `window`, `destination` | A recurring SOL allowance for one recipient account. |
+
+## Token permissions
+
+| TypeScript action | Required fields | Permission |
+| :--- | :--- | :--- |
+| `tokenLimit` | `mint`, `amount` | A total allowance for one token mint. |
+| `tokenRecurringLimit` | `mint`, `recurringAmount`, `window` | A recurring allowance for one token mint. |
+| `tokenDestinationLimit` | `mint`, `amount`, `destination` | A total allowance for one mint and recipient token account. |
+| `tokenRecurringDestinationLimit` | `mint`, `recurringAmount`, `window`, `destination` | A recurring allowance for one mint and recipient token account. |
+
+For example, a token transfer can combine the appropriate token program
+permission with `tokenDestinationLimit` to restrict both the asset and its
+recipient. The destination account in the permission must match the account
+used by the transfer.
+
+## Program permissions
+
+| TypeScript action | Required fields | Permission |
+| :--- | :--- | :--- |
+| `program` | `programId` | Invoke one specified program through the wallet. The Protocol SDK calls this permission `programLimit`. |
+| `programAll` | None | Invoke any program through the wallet, subject to the role's other permission checks. |
+| `programCurated` | None | Invoke programs in the protocol's built-in curated list, subject to the role's other permission checks. |
+
+The curated list is defined by the protocol version. It is not a list supplied
+by the application, and it does not imply approval of every operation that a
+listed program exposes.
+
+## Staking and sub account permissions
+
+| TypeScript action | Required fields | Permission |
+| :--- | :--- | :--- |
+| `stakeLimit` | `amount` | A total allowance for measured staking and unstaking changes, in lamports. |
+| `stakeRecurringLimit` | `recurringAmount`, `window` | A recurring allowance for measured staking and unstaking changes. |
+| `stakeAll` | None | Staking operations without a staking amount limit. |
+| `subAccount` | None | The protocol's original sub-account permission, initialized when its sub-account is created. It is distinct from the newer scoped V2 sub-account permissions. |
+
+Adding an action grants permission; it does not create a stake account or a
+sub-account, or prepare its operations automatically. Use the appropriate
+protocol instructions for those operations.
+
+The action list above is the Developer SDK's `AddRoleAction` surface, not every
+permission in every protocol version. In particular, it does not expose
+`ReplaceAuthority`, `ProgramScope`, `CloseSwigAuthority`, or the scoped V2
+sub-account actions. Consult the
+[TypeScript action definitions](https://github.com/anagrambuild/swig-developer-sdk/blob/typescript-v0.10.0/typescript/src/types/wallet-actions.ts)
+and [Python action definitions](https://github.com/anagrambuild/swig-developer-sdk/blob/python-v0.9.0/python/src/swig_developer_sdk/wallets.py)
+when choosing SDK inputs.
+
+## Guardian recovery
+
+Guardian recovery delegates the ability to replace a lost signer's key while
+preserving the wallet and the target role's permissions. Configure this
+delegation while an existing authorized signer is still available. A new
+passkey alone cannot recover a wallet that has no surviving authorization path.
+
+The current protocol permission for this purpose is
+`ReplaceAuthority { role_id }`, used with `ReplaceAuthorityV1`. Older recovery
+documentation calls the permission `RecoveryAuthority` and the instruction
+`RecoverAuthorityV1`. `ReplaceAuthority` explicitly scopes the delegation to
+one target role and preserves that role's ID, authority type, and actions.
+For a passkey role, this means replacing its P-256 public key with another
+P-256 public key. See the
+[protocol permission definition](https://github.com/anagrambuild/swig-wallet/blob/3e0411f0c2980b26296903eaa4aa0c2d07869316/state/src/action/replace_authority.rs).
+
+**Integration status:** The following cases describe the recommended protocol
+design. The Developer SDK action list does not yet expose this scoped
+permission or a replacement preparation flow. Its legacy recovery API types
+remain for compatibility, but the legacy recovery flow is currently broken.
+Use a protocol integration with a compatible deployed program for the base
+case; the multiple-approval case requires the additional integration described
+below. These examples do not establish deployment or audit coverage.
+
+### Base case with one guardian
+
+Suppose the user's passkey controls role `7`. Before the passkey is lost, an
+existing administrator adds a separate guardian authority whose only action
+is the protocol permission `ReplaceAuthority { role_id: 7 }`.
+
+```text
+Guardian key -> recovery role -> replace the signer of role 7
+                                      |
+                              old passkey -> new passkey
+```
+
+1. The user creates a new passkey and obtains its public key.
+2. The guardian verifies the recovery request and approves that specific new
+   key for role `7` in this wallet.
+3. The guardian authenticates a `ReplaceAuthorityV1` transaction through the
+   recovery role. The lost passkey does not need to sign.
+4. After confirmation, role `7` keeps its permissions and uses the new passkey.
+   If the target is a session authority, replacement clears its existing
+   session key and expiration.
+
+The recovery role cannot use that scoped permission to add arbitrary roles,
+change role `7`'s actions, or replace another role's signer. It does not need
+`manageAuthority`. However, the guardian can appoint the key that inherits
+role `7`'s existing power, so protecting the guardian is part of protecting
+that role. A waiting period or cancellation mechanism would be a separate
+recovery policy; the scoped replacement permission does not add either.
+
+### Extension requiring multiple guardian approvals
+
+To require two of three guardians, the same recovery role could instead use a
+`ProgramExec` authority controlled by the multi-authority program and a
+ParticipantSet with threshold `2` and three members. Keep
+`ReplaceAuthority { role_id: 7 }` as the recovery role's only permission.
+
+```text
+Guardian A --\
+Guardian B ---+-> 2 of 3 approvals -> ProgramExec recovery role -> role 7 key
+Guardian C --/
+```
+
+The ParticipantSet controls **who must approve**, while the scoped permission
+controls **which role they may recover**. Give the permission to the one
+threshold-controlled role. Giving each guardian its own recovery role would
+allow each guardian to replace the key independently.
+
+The intended flow is to prepare one replacement, collect enough guardian
+signatures off-chain, and submit one transaction that verifies the threshold
+and replaces the key atomically. Each guardian's approval must bind the same
+wallet, target role, and exact key replacement. The original passkey is not
+one of the required approvals unless the application deliberately includes it
+in the policy.
+
+This is **synchronous on-chain approval**: all required proofs are supplied
+when the replacement executes. Guardians can sign at different moments
+off-chain, but the approvals must remain valid for the same prepared operation,
+nonce, and expiration. The application distributes approval requests and
+collects signatures; separate on-chain approvals do not accumulate into a
+durable recovery proposal.
+
+The Developer SDK already provides the general collection and compilation
+workflow through `participantSetApprovalPlan`, `signParticipantSetApproval`,
+and `compileParticipantSetApprovals`, with corresponding Python helpers.
+See [Participant Sets](/developer-sdk/participant-sets) for working examples
+on supported operations.
+
+**Extension work:** ParticipantSet recovery preparation is not currently
+supported. A recovery integration must connect the multi-authority program's
+threshold approval to the replacement-specific proof expected by
+`ReplaceAuthorityV1`, and expose preparation and compilation for that
+operation. Ordinary ParticipantSet authorization alone is not that proof.
+Confirm the complete flow against the deployed protocol and its audit scope
+before offering this extension to users.
