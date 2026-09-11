@@ -185,6 +185,10 @@ deposit address a sell needs.
 
 A buy carries the quote and an optional `launchUrl`. A sell also carries
 `deposit` once the provider assigns one, and `transfer` once one is prepared.
+A `transfer.state` is `TRANSFER_STATE_UNSPECIFIED`, `PREPARED`, `SUBMITTED`,
+`LANDED`, `FAILED`, or `EXPIRED`. A transfer settles only at `confirmed` or
+better, so a `processed` signature still reads as in-flight, and a read of the
+order does not advance it — only submission resolves an attempt.
 
 <Warning>
   A `launchUrl` is a user-specific session URL. Hand it to the customer who owns
@@ -195,8 +199,13 @@ A buy carries the quote and an optional `launchUrl`. A sell also carries
 
 `POST /wallet/api/ramp/orders/{order_id}/transfer/prepare`
 
-Sell only. Call it once the order reaches `AWAITING_TRANSFER` and carries a
-`deposit`.
+Sell only, and refused with `FAILED_PRECONDITION` unless every condition holds:
+the order is unfinished, it is a sell (`only a sell needs a transfer`), its
+network is mainnet (`ramp transfers settle on mainnet only`), it carries a
+`deposit` (`the deposit address is not ready`), and no other attempt is live
+(`a transfer for this order is already in progress`). The provider assigns the
+deposit while the customer is in the order's checkout, so poll the order until
+it reaches `AWAITING_TRANSFER` and carries one.
 
 ```json
 {
@@ -222,14 +231,32 @@ lifetime.
 }
 ```
 
-Returns `{ "transfer": ... }` with a `state` of `TRANSFER_STATE_UNSPECIFIED`,
-`PREPARED`, `SUBMITTED`, `LANDED`, `FAILED`, or `EXPIRED`, and a
-`solanaSignature` once one exists. A transfer settles only at `confirmed` or
-better, so a `processed` signature still reads as in-flight.
+A successful response is `{ "transfer": ... }` with a `state` of
+`TRANSFER_STATE_LANDED` and the `solanaSignature` that landed. The route waits
+for `confirmed` or better, so it does not return a pending transfer: every
+other outcome is an error, and the error is what tells you which attempt you
+still own.
+
+| Error | Meaning | What to do |
+| :--- | :--- | :--- |
+| `UNAVAILABLE` — `the transfer is still confirming` | The attempt is alive and may still land | Retry the same `transferId`; the request may carry the same `signedTransaction` or an empty one |
+| `UNAVAILABLE` — `the claim was interrupted` | The attempt was not claimed | Retry the same `transferId` |
+| `FAILED_PRECONDITION` — `the transfer did not land; prepare another` | The attempt expired or reverted, and nothing moved | Prepare a replacement transfer for the order |
+| `FAILED_PRECONDITION` — `the prepared transfer expired; prepare another` | The blockhash lapsed before submission | Prepare a replacement transfer for the order |
+| `FAILED_PRECONDITION` — `this transfer has already been submitted` | Another caller claimed this attempt | Resolve it with an empty `signedTransaction` |
+| `FAILED_PRECONDITION` — `this transfer is no longer awaiting submission` | The attempt is already settled | Read the order for its final state |
 
 The prepared transaction is handed over exactly once. If you broadcast it and
 then lose it, submit again with an empty `signedTransaction` to resolve the
-attempt that is already live.
+attempt that is already live; resolution is answered from the stored attempt,
+so it does not need the bytes you lost.
+
+Retain the order and transfer ids until an attempt reaches a settled state.
+Reading the order reconciles it against the provider but does not resolve the
+transfer's chain state, so an attempt that was submitted and never resolved
+stays `SUBMITTED` and keeps the order's one live transfer slot. Prepare a
+replacement only after the previous attempt has been reported as failed —
+never in response to a confirmation timeout.
 
 ## Errors
 

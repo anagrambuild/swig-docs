@@ -199,10 +199,127 @@ Statuses are `unspecified`, `creating`, `creation-uncertain`,
 `declined`, `cancelled`, `failed`, and `refunded`. `refunded` can follow
 `settled`, so a settled order is not necessarily the last word.
 
-## Sell: prepare, sign, submit
+## Sell: create, check out, transfer
 
-A sell waits for `awaiting-transfer` and a deposit, then moves the crypto out of
-the Swig. Your application owns the signing step; the SDK never holds a key.
+A sell is its own order. The examples above create a buy, and a transfer
+prepared against one is refused with `only a sell needs a transfer`, so quote
+the sell direction and create a second order for it.
+
+Create that order on `mainnet`. A transfer prepared on any other network is
+refused with `ramp transfers settle on mainnet only`, and the order context's
+network wins over the client's default. The provider environment is separate: a
+`sandbox` order still settles on mainnet.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const sellQuotes = await swig.ramp.getQuotes({
+  configurationId,
+  environment: 'sandbox',
+  location: { countryCode: 'US' },
+  order: {
+    type: 'sell',
+    sell: { asset: { type: 'token', mint: usdcMint }, baseUnits: 10_000_000n },
+    receiveFiatCurrencyCode: 'USD',
+  },
+});
+
+const sellOrder = await swig.ramp.createOrder({
+  requestId: crypto.randomUUID(),
+  configurationId,
+  environment: 'sandbox',
+  context: {
+    customerId,
+    swigConfigAddress,
+    network: 'mainnet',
+    location: { countryCode: 'US' },
+  },
+  route: sellQuotes[0].route,
+  order: {
+    type: 'sell',
+    sell: { asset: { type: 'token', mint: usdcMint }, baseUnits: 10_000_000n },
+    receiveFiatCurrencyCode: 'USD',
+  },
+});
+```
+
+```python Python
+sell_quotes = await swig.ramp.get_quotes(
+    configuration_id=configuration_id,
+    environment="sandbox",
+    location=RampLocation(country_code="US"),
+    order=RampSellOrderRequest(
+        sell=CryptoAmountInput(
+            asset=SplTokenAsset(mint=usdc_mint), base_units=10_000_000
+        ),
+        receive_fiat_currency_code="USD",
+    ),
+)
+
+sell_order = await swig.ramp.create_order(
+    request_id=str(uuid.uuid4()),
+    configuration_id=configuration_id,
+    environment="sandbox",
+    context=RampOrderContext(
+        customer_id=customer_id,
+        swig_config_address=swig_config_address,
+        network="mainnet",
+        location=RampLocation(country_code="US"),
+    ),
+    route=sell_quotes[0].route,
+    order=RampSellOrderRequest(
+        sell=CryptoAmountInput(
+            asset=SplTokenAsset(mint=usdc_mint), base_units=10_000_000
+        ),
+        receive_fiat_currency_code="USD",
+    ),
+)
+```
+
+</CodeGroup>
+
+Send the customer to the sell order's launch URL. The provider assigns the
+deposit while they are in that checkout, so the transfer cannot be prepared
+until they have engaged with it.
+
+<Warning>
+  A launch URL is a user-specific session URL. Hand it to the customer who owns
+  the order and keep it out of logs and analytics.
+</Warning>
+
+Poll the order until it reaches `awaiting-transfer` and carries a deposit.
+Preparing earlier is refused with `the deposit address is not ready`.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const finished = ['settled', 'declined', 'cancelled', 'failed', 'refunded'];
+
+let current = await swig.ramp.getOrder({ orderId: sellOrder.id });
+while (current.type === 'sell' && !current.deposit) {
+  if (finished.includes(current.status)) {
+    throw new Error(`sell order ${current.status} before a deposit`);
+  }
+  await new Promise((resolve) => setTimeout(resolve, 5_000));
+  current = await swig.ramp.getOrder({ orderId: sellOrder.id });
+}
+```
+
+```python Python
+FINISHED = {"settled", "declined", "cancelled", "failed", "refunded"}
+
+current = await swig.ramp.get_order(order_id=sell_order.id)
+while isinstance(current, RampSellOrder) and current.deposit is None:
+    if current.status in FINISHED:
+        raise RuntimeError(f"sell order {current.status} before a deposit")
+    await asyncio.sleep(5)
+    current = await swig.ramp.get_order(order_id=sell_order.id)
+```
+
+</CodeGroup>
+
+Now prepare, sign, and submit the transfer that moves the crypto out of the
+Swig. Your application owns the signing step; the SDK never holds a key.
 
 <CodeGroup dropdown>
 
@@ -210,7 +327,7 @@ the Swig. Your application owns the signing step; the SDK never holds a key.
 import { signPreparedTransaction } from '@swig-wallet/developer-sdk/signers';
 
 const prepared = await swig.ramp.prepareTransfer({
-  orderId: order.id,
+  orderId: sellOrder.id,
   requesterAuthority: { ed25519: { publicKey: requester } },
   feePayer,
 });
@@ -220,7 +337,7 @@ const signed = await signPreparedTransaction(prepared.preparedTransaction, {
 });
 
 const transfer = await swig.ramp.submitTransfer({
-  orderId: order.id,
+  orderId: sellOrder.id,
   transferId: prepared.transfer.transferId,
   signedTransaction: signed.transaction,
 });
@@ -230,7 +347,7 @@ const transfer = await swig.ramp.submitTransfer({
 from swig_developer_sdk.signers import sign_prepared_transaction
 
 prepared = await swig.ramp.prepare_transfer(
-    order_id=order.id,
+    order_id=sell_order.id,
     requester_authority={"ed25519": {"publicKey": requester}},
     fee_payer=fee_payer,
 )
@@ -241,7 +358,7 @@ signed = await sign_prepared_transaction(
 )
 
 transfer = await swig.ramp.submit_transfer(
-    order_id=order.id,
+    order_id=sell_order.id,
     transfer_id=prepared.transfer.transfer_id,
     signed_transaction=signed.transaction,
 )
@@ -262,19 +379,26 @@ that is already live.
 
 ```typescript TypeScript
 await swig.ramp.submitTransfer({
-  orderId: order.id,
+  orderId: sellOrder.id,
   transferId: prepared.transfer.transferId,
 });
 ```
 
 ```python Python
 await swig.ramp.submit_transfer(
-    order_id=order.id,
+    order_id=sell_order.id,
     transfer_id=prepared.transfer.transfer_id,
 )
 ```
 
 </CodeGroup>
+
+Neither client retries submission. A submission that does not come back
+`landed` raises, and the error says which attempt you still own: keep the order
+and transfer ids, resolve the same attempt again while it is still confirming,
+and prepare a replacement only once one is reported as failed. See
+[Submit a transfer](/developer-api/ramp#submit-a-transfer) for the exact
+responses.
 
 ## Routes behind the clients
 
