@@ -1,0 +1,112 @@
+---
+title: "Permissions"
+sidebarTitle: "Permissions"
+description: "Understand role permissions, supported actions, required fields, and limits."
+---
+
+Use permissions to define what an authority may do with a Swig wallet. A role
+combines one authority with an `actions` list, so the same permission model
+applies to a single signer or a ParticipantSet with several members.
+
+This page lists the 18 actions accepted by `wallet.roles.add()` in TypeScript
+`0.10.0` and Python `0.9.0`, with their required fields, units, and permission
+boundaries.
+
+## Read the action reference
+
+In TypeScript, each action is an object with a `type` and the fields listed
+below. Python uses an exported constructor named after the action, such as
+`ManageAuthorityAction()` or `TokenRecurringDestinationLimitAction(...)`.
+Python field names use snake case: `program_id` and `recurring_amount`
+correspond to TypeScript's `programId` and `recurringAmount`.
+
+For a complete transaction example, see
+[Add Roles](/developer-sdk/add-roles-and-permissions). To save permissions as
+reusable wallet-creation configuration, see
+[Policy Templates](/examples/dev-portal/create-policy).
+
+Program access and asset spending are checked separately. For example, a SOL
+transfer needs access to the System Program and an appropriate SOL allowance.
+Granting `program`, `programAll`, or `programCurated` alone does not grant an
+unlimited SOL or token allowance.
+
+## Amounts addresses and windows
+
+- Express SOL and staking amounts in lamports, and token amounts in the mint's
+  smallest units. For a token with six decimals, `1_000_000` represents one token.
+- TypeScript accepts `bigint`, integer strings, or numbers. Use `bigint` or
+  integer strings when a value exceeds JavaScript's safe integer range. Python
+  accepts integers or integer strings.
+- Express `window` in Solana slots, not seconds. A recurring allowance resets
+  according to its on-chain window; it is not a per-transaction limit or an
+  exact wall-clock schedule.
+- Supply public addresses as base58 strings. A SOL `destination` is the
+  recipient account. A token `destination` is the recipient **token account**,
+  such as its associated token account, rather than the owner's wallet address.
+
+## Management permissions
+
+| TypeScript action | Required fields | Permission |
+| :--- | :--- | :--- |
+| `all` | None | Full wallet authority, including asset operations and authority management. |
+| `allButManageAuthority` | None | Broad wallet execution and asset access, excluding authority and sub-account management. It does not grant key replacement. |
+| `manageAuthority` | None | Add, remove, and update authorities. This is broad administrative access rather than delegation to recover one role. |
+
+An authority that can manage roles can grant powerful permissions to another
+key. Choose it when the signer should administer the wallet.
+
+## SOL permissions
+
+| TypeScript action | Required fields | Permission |
+| :--- | :--- | :--- |
+| `solLimit` | `amount` | A total SOL allowance that decreases as it is spent. |
+| `solRecurringLimit` | `recurringAmount`, `window` | A SOL allowance renewed per slot window. |
+| `solDestinationLimit` | `amount`, `destination` | A total SOL allowance for one recipient account. |
+| `solRecurringDestinationLimit` | `recurringAmount`, `window`, `destination` | A recurring SOL allowance for one recipient account. |
+
+## Token permissions
+
+| TypeScript action | Required fields | Permission |
+| :--- | :--- | :--- |
+| `tokenLimit` | `mint`, `amount` | A total allowance for one token mint. |
+| `tokenRecurringLimit` | `mint`, `recurringAmount`, `window` | A recurring allowance for one token mint. |
+| `tokenDestinationLimit` | `mint`, `amount`, `destination` | A total allowance for one mint and recipient token account. |
+| `tokenRecurringDestinationLimit` | `mint`, `recurringAmount`, `window`, `destination` | A recurring allowance for one mint and recipient token account. |
+
+For example, a token transfer can combine the appropriate token program
+permission with `tokenDestinationLimit` to restrict both the asset and its
+recipient. The destination account in the permission must match the account
+used by the transfer.
+
+## Program permissions
+
+| TypeScript action | Required fields | Permission |
+| :--- | :--- | :--- |
+| `program` | `programId` | Invoke one specified program through the wallet. The Protocol SDK calls this permission `programLimit`. |
+| `programAll` | None | Invoke any program through the wallet, subject to the role's other permission checks. |
+| `programCurated` | None | Invoke programs in the protocol's built-in curated list, subject to the role's other permission checks. |
+
+The curated list is defined by the protocol version. It is not a list supplied
+by the application, and it does not imply approval of every operation that a
+listed program exposes.
+
+## Staking and sub account permissions
+
+| TypeScript action | Required fields | Permission |
+| :--- | :--- | :--- |
+| `stakeLimit` | `amount` | A total allowance for measured staking and unstaking changes, in lamports. |
+| `stakeRecurringLimit` | `recurringAmount`, `window` | A recurring allowance for measured staking and unstaking changes. |
+| `stakeAll` | None | Staking operations without a staking amount limit. |
+| `subAccount` | None | The protocol's original sub-account permission, initialized when its sub-account is created. It is distinct from the newer scoped V2 sub-account permissions. |
+
+Adding an action grants permission; it does not create a stake account or a
+sub-account, or prepare its operations automatically. Use the appropriate
+protocol instructions for those operations.
+
+The action list above is the Developer SDK's `AddRoleAction` surface, not every
+permission in every protocol version. In particular, it does not expose
+`ReplaceAuthority`, `ProgramScope`, `CloseSwigAuthority`, or the scoped V2
+sub-account actions. Consult the
+[TypeScript action definitions](https://github.com/anagrambuild/swig-developer-sdk/blob/typescript-v0.10.0/typescript/src/types/wallet-actions.ts)
+and [Python action definitions](https://github.com/anagrambuild/swig-developer-sdk/blob/python-v0.9.0/python/src/swig_developer_sdk/wallets.py)
+when choosing SDK inputs.

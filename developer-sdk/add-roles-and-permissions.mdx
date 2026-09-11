@@ -1,15 +1,17 @@
 ---
-title: "Add Roles and Permissions"
-sidebarTitle: "Add Roles and Permissions"
+title: "Add Roles"
+sidebarTitle: "Add Roles"
+description: "Prepare, sign, and submit the transaction that adds an authority to an existing wallet."
 ---
 
-A role combines one authority with one or more actions. The authority identifies
-who can request wallet operations, while the actions define what that authority
-may do.
+Use `wallet.roles.add()` to prepare a transaction that attaches a new authority
+and its permitted actions to an existing Swig wallet. Your application signs
+and submits the transaction.
 
-Use the wallet handle's `roles.add()` method to prepare the transaction that
-adds a role to an existing Swig wallet. The same call accepts the new authority
-and every action assigned to it in both SDKs.
+Choose the actions from the [Permissions](/developer-sdk/permissions)
+reference, then follow this guide to add the role.
+
+General role creation is available in TypeScript `0.10.0` and Python `0.9.0`.
 
 ## Before you begin
 
@@ -91,8 +93,8 @@ invocation, while `solLimit` provides the role's remaining one-time SOL budget.
 Each successful transfer decrements that budget. SignV2 checks program access
 and SOL spending independently, so the transfer needs both permissions.
 
-The Developer SDK calls the program permission `program`. The Protocol SDK
-builder calls the same permission `programLimit`.
+For other operations, choose the required actions and fields from
+[Permissions](/developer-sdk/permissions).
 
 ## Choose the new authority
 
@@ -114,23 +116,6 @@ approval collection and compilation.
   The authority being added may use any supported shape above. The existing
   authority requesting the add-role operation must use Ed25519 or secp256r1.
 </Note>
-
-## Compose the permissions
-
-Every entry in `actions` applies to the same role. Combine narrow actions when
-an operation crosses more than one permission boundary, as the SOL example
-combines program access with a spending limit.
-
-The Developer SDK accepts management, SOL, token, program, staking, and
-sub-account actions. Prefer the narrowest combination that supports the
-operation. Use `all` only when the new authority is intended to have full wallet
-control.
-
-See the Protocol SDK's
-[TypeScript Actions reference](/reference/typescript/actions) for on-chain
-permission semantics, limit variants, recurring windows, and
-destination-scoped actions. The Developer SDK expresses the same permissions
-with the typed action shapes and Python constructors used above.
 
 ## Confirm the role
 
@@ -174,8 +159,8 @@ application-owned signing layer.
   <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-and-swaps">
     Use a configured role for wallet transfers
   </Card>
-  <Card title="Protocol Actions" icon="sliders" href="/reference/typescript/actions">
-    Review permission and limit semantics
+  <Card title="Permissions" icon="sliders" href="/developer-sdk/permissions">
+    Look up available actions, fields, and units
   </Card>
   <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">
     Submit application-signed transactions

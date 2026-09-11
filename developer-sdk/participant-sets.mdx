@@ -11,12 +11,14 @@ Members can use Ed25519, secp256r1/passkeys, or secp256k1. Each member signs a
 challenge bound to the prepared operation, while every challenge in the plan
 commits to the same shared ParticipantSet nonce.
 
+ParticipantSet support is available in TypeScript `0.10.0` and Python `0.9.0`.
+
 ## Create the set and add its role
 
 This 2-of-2 example prepares a SOL-transfer role using two Ed25519 members. First
 prepare and submit the ParticipantSet creation transaction. After that
 transaction lands, use the general
-[Add Roles and Permissions](/developer-sdk/add-roles-and-permissions) flow to
+[Add Roles](/developer-sdk/add-roles-and-permissions) flow to
 attach the set to a role and choose its permissions.
 
 The address variables below are base58 strings. `adminPublicKey` /
@@ -173,9 +175,11 @@ if plan is None:
 </CodeGroup>
 
 ParticipantSet preparation currently supports SOL transfers, token transfers,
-transfer batches, and custom instructions without address lookup tables. Swaps,
-recovery operations, and custom transactions with address lookup tables require
-a direct non-ParticipantSet requester.
+transfer batches, and custom instructions without address lookup tables. Swaps
+and custom transactions with address lookup tables require a direct
+non-ParticipantSet requester. Recovery preparation is not currently supported;
+see [Guardian recovery](/developer-sdk/use-cases/guardian-recovery) for the
+scoped permission model and a possible extension requiring multiple approvals.
 
 Serialize ParticipantSet operations per set. Concurrent plans use the same next
 nonce; after one transaction lands, prepare and approve the others again.
