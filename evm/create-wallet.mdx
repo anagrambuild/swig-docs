@@ -1,0 +1,61 @@
+---
+title: "Create a Wallet"
+description: "Deploy a Swig EVM wallet and fund its vault."
+---
+
+Create a wallet with your signing key as its root authority. The root is role
+`0` with `All` permission. Use the [EVM setup](/evm) first, then select your root
+key through `SIGNER_PRIVATE_KEY`.
+
+## Choose the initial balance
+
+Set these inputs alongside `RPC_URL` and the root signing key:
+
+| Variable | Value |
+| --- | --- |
+| `FACTORY_ADDRESS` | Factory matching the SDK's pinned contracts |
+| `WALLET_NAME` | A fresh, public name for this wallet |
+| `INITIAL_BALANCE_WEI` | Native currency to place in the vault; zero is allowed |
+
+Amounts are integer base units: on an ETH-denominated chain,
+`1000000000000000000` wei is 1 ETH. The root EOA needs the initial balance plus
+transaction gas.
+
+The example hashes `WALLET_NAME` into both the wallet ID and deployment salt.
+Reusing the same name and root settings targets the same address; a second
+deployment reverts. Keep secrets out of the name.
+
+## Create the wallet
+
+Run from the language directory selected during setup:
+
+<CodeGroup>
+```bash TypeScript
+bun run examples/create-wallet.ts
+```
+
+```bash Rust
+cargo run --locked -p swig-evm --example create_wallet
+```
+
+```bash Python
+uv run --locked python examples/create_wallet.py
+```
+</CodeGroup>
+
+The example predicts the address, submits the deployment, waits for a successful
+receipt, and checks the emitted address against the prediction. It prints:
+
+- `accountAddress`: the config contract; use this as `ACCOUNT_ADDRESS`.
+- `vaultAddress`: the wallet's asset address, funded by `INITIAL_BALANCE_WEI`.
+- `capsuleAddress`: the wallet's capsule contract.
+- `transactionHash`: the creation transaction.
+
+## Continue with a delegate
+
+Keep the root key selected and [add a spending role](/evm/add-role). The delegate
+will use its own key to spend from this wallet within the allowance you assign.
+
+Full examples: [TypeScript](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript/examples/create-wallet.ts),
+[Rust](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/rust/examples/create_wallet.rs),
+[Python](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/python/examples/create_wallet.py).

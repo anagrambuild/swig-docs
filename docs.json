@@ -73,7 +73,7 @@
       {
         "product": "Protocol SDK",
         "icon": "terminal",
-        "description": "Direct TypeScript and Rust integrations with the protocol",
+        "description": "Direct Solana and EVM wallet integrations from TypeScript, Rust, and Python",
         "groups": [
           {
             "group": "Overview",
@@ -82,7 +82,18 @@
             ]
           },
           {
-            "group": "Quickstarts",
+            "group": "EVM Wallets",
+            "pages": [
+              "evm/index",
+              "evm/create-wallet",
+              "evm/add-role",
+              "evm/read-role",
+              "evm/send-transfer",
+              "evm/send-sponsored-transfer"
+            ]
+          },
+          {
+            "group": "Solana Quickstarts",
             "pages": [
               "tutorials/typescript/index",
               "tutorials/typescript/env",
@@ -93,7 +104,7 @@
             ]
           },
           {
-            "group": "TypeScript Packages",
+            "group": "Solana TypeScript Packages",
             "pages": [
               "reference/typescript/index",
               "reference/typescript/kit",
@@ -101,7 +112,7 @@
             ]
           },
           {
-            "group": "Rust Packages",
+            "group": "Solana Rust Packages",
             "pages": [
               "reference/rust/index",
               "reference/rust/instruction_builder",
@@ -117,7 +128,7 @@
             ]
           },
           {
-            "group": "Examples & Recipes",
+            "group": "Solana Examples & Recipes",
             "pages": [
               "examples/index",
               {

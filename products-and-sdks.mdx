@@ -9,7 +9,7 @@ Swig has five product surfaces. Choose the one that matches how your app will in
 | If you are trying to... | Start here |
 | :--- | :--- |
 | Understand the on-chain protocol and repo layout | [Swig Protocol](/protocol) |
-| Integrate directly with Swig wallets from TypeScript or Rust | [Swig Protocol SDK](/reference) |
+| Integrate directly with Solana or EVM wallets | [Swig Protocol SDK](/reference) |
 | Prepare wallet operations and submit signed transactions from a trusted server | [Swig Developer SDK](/developer-sdk) |
 | Call hosted backend endpoints directly over REST | [Swig Developer API](/developer-api) |
 | Add OAuth, email OTP, or SMS OTP login flows | [Swig IDP SDK](/idp-sdk) |
@@ -25,10 +25,12 @@ The on-chain wallet system in `swig-wallet`.
 
 ### Swig Protocol SDK
 
-Direct TypeScript and Rust integrations with the protocol.
+Direct wallet integrations: TypeScript and Rust for Solana; TypeScript, Rust,
+and Python for EVM.
 
 - Use it when your app talks to Swig wallets directly and controls its own authority or signing flows.
 - Start at [Protocol SDK](/reference).
+- For EVM wallet scenarios, start at [EVM Wallets](/evm).
 
 ### Swig Developer SDK
 
