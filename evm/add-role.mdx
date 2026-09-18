@@ -18,7 +18,7 @@ another authorized manager role, select both its key and `MANAGER_ROLE_ID`.
 | --- | --- |
 | `DELEGATE_ADDRESS` | The new authority's EOA address |
 | `LIMIT_WEI` | Total native-currency allowance, as a uint64 base-unit amount |
-| `MANAGER_ROLE_ID` | Role authorizing the change; defaults to root role `0` |
+| `MANAGER_ROLE_ID` | Role authorizing the change; defaults to `0`. `SIGNER_PRIVATE_KEY` must belong to this role. |
 
 For example, `LIMIT_WEI=100` permits a total spend of 100 wei. The maximum value
 is `18446744073709551615` (uint64). This is a spending cap, not a deposit: fund

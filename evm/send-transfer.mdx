@@ -15,7 +15,7 @@ config `ACCOUNT_ADDRESS`, and the delegate's `ROLE_ID` selected.
 
 Before sending:
 
-- Set `RECIPIENT` to an EOA with no deployed code; include no calldata.
+- Set `RECIPIENT` to an EOA with no deployed code. The example sends no calldata.
 - Set `VALUE_WEI` to a positive amount within the remaining role allowance.
 - Ensure `vaultAddress` holds at least `VALUE_WEI`.
 - Fund the delegate EOA separately so it can pay gas.
