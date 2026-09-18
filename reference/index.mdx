@@ -1,48 +1,43 @@
 ---
-title: "Protocol SDK Overview"
+title: "Choose Your Chain"
+mode: "wide"
+description: "Build directly with Swig wallets. Choose the chain your application uses."
 ---
 
-This is the direct integration layer for teams building against Swig wallets
-without the hosted Developer SDK.
+Create wallets, assign permissions, and authorize transactions from your own
+application. Start with a chain to see its setup, wallet tasks, and SDK choices.
 
-Use this section when your app or backend controls wallet authorities, signing,
-and protocol access directly.
+<CardGroup cols={2}>
+  <Card title="Solana" icon="layer-group" href="/solana">
+    **TypeScript · Rust**
 
-## Choose your chain
+    Build with Solana Kit, Web3.js 1.x, or Rust. Create wallets, manage
+    authorities, and compose transactions.
+  </Card>
+  <Card title="EVM" icon="cube" href="/evm">
+    **TypeScript · Rust · Python — from source**
 
-- **EVM:** [Create and operate wallets](/evm) from TypeScript, Rust, or Python,
-  with Viem and permissionless.js examples for sponsored transfers.
-- **Solana:** Start with the [TypeScript quickstart](/tutorials/typescript) or
-  [Rust packages](/reference/rust).
+    Build with Viem, Alloy, or Web3.py. Create wallets, add roles, and send
+    direct or sponsored transfers.
+  </Card>
+</CardGroup>
 
-## What lives here
+## Start with a task
 
-| Surface | Use it for |
-| :--- | :--- |
-| EVM packages in `swig-protocol-sdk` | TypeScript, Rust, and Python bindings, codecs, and smart-account adapters |
-| Solana TypeScript packages in `swig-ts` | browser apps, backend services, and scripted integrations |
-| Solana Rust packages in `swig-wallet` | backend services, CLI tooling, and lower-level protocol integrations |
-| MCP tooling | agent access to wallet operations |
-| examples and quickstarts | working reference flows for direct protocol usage |
+| Wallet task | Solana | EVM |
+| --- | --- | --- |
+| Prepare your environment | [TypeScript setup](/tutorials/typescript/env) | [Choose a language](/evm/setup) |
+| Create a wallet | [Create a Swig account](/tutorials/typescript/create) | [Deploy a wallet](/evm/create-wallet) |
+| Give a key permissions | [Manage authorities](/tutorials/typescript/managing_authorities) | [Add a spending role](/evm/add-role) |
+| Send funds | [Transfer SOL](/examples/transfer) | [Transfer native currency](/evm/send-transfer) |
+| Sponsor gas or fees | [Hosted Paymaster (API key)](/examples/paymaster) | [ERC-4337 with a compatible bundler](/evm/send-sponsored-transfer) |
 
-## Solana packages
-
-### TypeScript
-
-- `@swig-wallet/classic` for Web3.js 1.x
-- `@swig-wallet/kit` for Solana Kit / Web3.js 2.0
-- `@swig-wallet/lib` for shared protocol logic
-- `@swig-wallet/coder` for lower-level encoding and decoding
-- `@swig-wallet/mcp-server` for MCP-based agent access
-
-### Rust
-
-- `swig-sdk` for Rust integrations
-- `swig-cli` for command-line flows
-- support crates such as `swig-interface`, `swig-state`, and
-  `swig-compact-instructions`
+Each chain view describes its own prerequisites and supported flows. EVM
+sponsorship requires a compatible bundler and paymaster; its Rust and Python
+examples use the local test fixture.
 
 ## Hosted integrations
 
-Use the API-key-based [Developer SDK](/developer-sdk) for hosted wallet
-preparation and sponsorship flows.
+Use the API-key-based [Developer SDK](/developer-sdk) when a trusted server
+should prepare wallet operations and sponsor submission through Swig's hosted
+services.

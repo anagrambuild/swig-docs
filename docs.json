@@ -74,112 +74,139 @@
         "product": "Protocol SDK",
         "icon": "terminal",
         "description": "Direct Solana and EVM wallet integrations from TypeScript, Rust, and Python",
-        "groups": [
+        "tabs": [
           {
-            "group": "Overview",
-            "pages": [
-              "reference/index"
-            ]
-          },
-          {
-            "group": "EVM Wallets",
-            "pages": [
-              "evm/index",
-              "evm/create-wallet",
-              "evm/add-role",
-              "evm/read-role",
-              "evm/send-transfer",
-              "evm/send-sponsored-transfer"
-            ]
-          },
-          {
-            "group": "EVM Operations",
-            "pages": [
-              "evm/bundler-compatibility"
-            ]
-          },
-          {
-            "group": "Solana Quickstarts",
-            "pages": [
-              "tutorials/typescript/index",
-              "tutorials/typescript/env",
-              "tutorials/typescript/create",
-              "tutorials/typescript/managing_authorities",
-              "tutorials/typescript/sign",
-              "tutorials/embeded_wallet_para/index"
-            ]
-          },
-          {
-            "group": "Solana TypeScript Packages",
-            "pages": [
-              "reference/typescript/index",
-              "reference/typescript/kit",
-              "reference/typescript/actions"
-            ]
-          },
-          {
-            "group": "Solana Rust Packages",
-            "pages": [
-              "reference/rust/index",
-              "reference/rust/instruction_builder",
-              "reference/rust/rust_wallet"
-            ]
-          },
-          {
-            "group": "AI & MCP",
-            "pages": [
-              "tutorials/mcp/index",
-              "reference/mcp-server",
-              "mcp-support"
-            ]
-          },
-          {
-            "group": "Solana Examples & Recipes",
-            "pages": [
-              "examples/index",
+            "tab": "Overview",
+            "groups": [
               {
-                "group": "Wallet Basics",
+                "group": "Choose your chain",
                 "pages": [
-                  "examples/transfer",
-                  "examples/swap",
-                  "examples/credit_card",
-                  "examples/subscription"
-                ]
-              },
-              {
-                "group": "Wallet Integrations",
-                "pages": [
-                  "examples/ethereum_keys",
-                  "examples/passkeys",
-                  "examples/paymaster/index",
-                  "examples/paymaster/sponsor-transactions",
-                  "examples/paymaster/advanced-usage"
-                ]
-              },
-              {
-                "group": "Advanced Wallet Patterns",
-                "pages": [
-                  "examples/secp256r1_authority",
-                  "examples/sessions",
-                  "examples/sub_accounts",
-                  "examples/v2_features",
-                  "examples/multi_authority",
-                  "examples/migrating-from-squads"
+                  "reference/index"
                 ]
               }
             ]
           },
           {
-            "group": "Error Types",
-            "pages": [
-              "reference/error-types/index"
+            "tab": "Solana",
+            "groups": [
+              {
+                "group": "Start here",
+                "pages": [
+                  "solana/index"
+                ]
+              },
+              {
+                "group": "Quickstarts",
+                "pages": [
+                  "tutorials/typescript/index",
+                  "tutorials/typescript/env",
+                  "tutorials/typescript/create",
+                  "tutorials/typescript/managing_authorities",
+                  "tutorials/typescript/sign",
+                  "tutorials/embeded_wallet_para/index"
+                ]
+              },
+              {
+                "group": "TypeScript Packages",
+                "pages": [
+                  "reference/typescript/index",
+                  "reference/typescript/kit",
+                  "reference/typescript/actions"
+                ]
+              },
+              {
+                "group": "Rust Packages",
+                "pages": [
+                  "reference/rust/index",
+                  "reference/rust/instruction_builder",
+                  "reference/rust/rust_wallet"
+                ]
+              },
+              {
+                "group": "AI & MCP",
+                "pages": [
+                  "tutorials/mcp/index",
+                  "reference/mcp-server",
+                  "mcp-support"
+                ]
+              },
+              {
+                "group": "Examples & Recipes",
+                "pages": [
+                  "examples/index",
+                  {
+                    "group": "Wallet Basics",
+                    "pages": [
+                      "examples/transfer",
+                      "examples/swap",
+                      "examples/credit_card",
+                      "examples/subscription"
+                    ]
+                  },
+                  {
+                    "group": "Wallet Integrations",
+                    "pages": [
+                      "examples/ethereum_keys",
+                      "examples/passkeys",
+                      "examples/paymaster/index",
+                      "examples/paymaster/sponsor-transactions",
+                      "examples/paymaster/advanced-usage"
+                    ]
+                  },
+                  {
+                    "group": "Advanced Wallet Patterns",
+                    "pages": [
+                      "examples/secp256r1_authority",
+                      "examples/sessions",
+                      "examples/sub_accounts",
+                      "examples/v2_features",
+                      "examples/multi_authority",
+                      "examples/migrating-from-squads"
+                    ]
+                  }
+                ]
+              },
+              {
+                "group": "Error Types",
+                "pages": [
+                  "reference/error-types/index"
+                ]
+              },
+              {
+                "group": "Migration & Releases",
+                "pages": [
+                  "tutorials/typescript/migration-v1",
+                  "v1-release-notes"
+                ]
+              }
             ]
           },
           {
-            "group": "Migration & Releases",
-            "pages": [
-              "tutorials/typescript/migration-v1",
-              "v1-release-notes"
+            "tab": "EVM",
+            "groups": [
+              {
+                "group": "Start here",
+                "pages": [
+                  "evm/index",
+                  "evm/setup"
+                ]
+              },
+              {
+                "group": "Build wallet flows",
+                "pages": [
+                  "evm/create-wallet",
+                  "evm/add-role",
+                  "evm/read-role",
+                  "evm/send-transfer",
+                  "evm/send-sponsored-transfer"
+                ]
+              },
+              {
+                "group": "Operate your fleet",
+                "pages": [
+                  "evm/bundler-compatibility"
+                ]
+              }
             ]
           }
         ]

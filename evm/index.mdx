@@ -1,98 +1,60 @@
 ---
-title: "EVM Wallets"
-sidebarTitle: "Overview and Setup"
-description: "Create and operate Swig EVM wallets from TypeScript, Rust, or Python."
+title: "Swig on EVM"
+sidebarTitle: "EVM Overview"
+mode: "wide"
+description: "Create a wallet, give each key a role, and send direct or sponsored transfers."
 ---
 
-Use the EVM Protocol SDK to create a wallet, give another key a spending role,
-and send native currency. Follow the same scenarios in TypeScript, Rust, or
-Python. Your application owns its keys and RPC connections.
+Use the **source-available TypeScript, Rust, and Python SDKs** with your own keys
+and RPC connection. You need a compatible Swig deployment from your operator;
+[Environment Setup](/evm/setup) explains how to obtain its details.
 
-Swig supplies contract bindings, permission codecs, and a small smart-account
-adapter. Viem, Alloy, and Web3.py handle the Ethereum client work. The TypeScript
-adapter works with Viem and permissionless.js for sponsored ERC-4337 operations.
+## Build a wallet flow
 
-## Set up the examples
+<CardGroup cols={2}>
+  <Card title="Set up your environment" icon="terminal" href="/evm/setup">
+    Choose a language and connect to a compatible Swig deployment.
+  </Card>
+  <Card title="Create a wallet" icon="wallet" href="/evm/create-wallet">
+    Deploy a wallet with a root authority and fund its vault.
+  </Card>
+  <Card title="Add a spending role" icon="key" href="/evm/add-role">
+    Give another key a native-currency allowance.
+  </Card>
+  <Card title="Read a role" icon="magnifying-glass" href="/evm/read-role">
+    Inspect the authority and action count before using the role.
+  </Card>
+  <Card title="Send a transfer" icon="arrow-right-arrow-left" href="/evm/send-transfer">
+    Spend from the vault; the role's key pays transaction gas.
+  </Card>
+  <Card title="Send a sponsored transfer" icon="gas-pump" href="/evm/send-sponsored-transfer">
+    Use a compatible bundler and paymaster to sponsor gas.
+  </Card>
+</CardGroup>
 
-For the individual examples, you need an RPC endpoint and a compatible Swig
-deployment. Obtain the factory address and deployment details from your operator
-or [contact Swig](/links-and-contact). The public SDK source does not deploy the
-contracts for you.
+## Choose your client
 
-The EVM packages are available from source. These guides use the tested examples
-in [swig-protocol-sdk](https://github.com/anagrambuild/swig-protocol-sdk/tree/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm),
-rather than a published package release.
+The scenario pages put each language side by side. Swig supplies contract
+bindings, permission codecs, and a small smart-account adapter.
 
-```bash
-git clone https://github.com/anagrambuild/swig-protocol-sdk.git
-cd swig-protocol-sdk
-git checkout 5eec58c3eca4b79c483d245df2f2885313fd03dc
-```
+| Language and SDK source | Ethereum client | Sponsored-transfer examples |
+| --- | --- | --- |
+| [TypeScript](https://github.com/anagrambuild/swig-protocol-sdk/tree/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript) | Viem | Viem and permissionless.js |
+| [Rust](https://github.com/anagrambuild/swig-protocol-sdk/tree/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/rust) | Alloy | Local test fixture only |
+| [Python](https://github.com/anagrambuild/swig-protocol-sdk/tree/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/python) | Web3.py and eth-account | Local test fixture only |
 
-Choose a language and keep its working directory for the commands in these guides.
+## Sponsored transfers
 
-<CodeGroup>
-```bash TypeScript
-cd evm/typescript
-bun install --frozen-lockfile
-```
+Sponsored operations currently use **already deployed accounts and EntryPoint
+v0.9**, with one call per operation. The shared beacon requires a compatible
+bundler policy. See [Send a Sponsored Transfer](/evm/send-sponsored-transfer)
+for provider requirements and the tested SDK versions.
 
-```bash Rust
-cd evm
-cargo build --locked -p swig-evm --examples
-```
+## Operate a fleet
 
-```bash Python
-cd evm/python
-uv sync --locked
-```
-</CodeGroup>
+The shared beacon selects the implementation used by every wallet in the fleet.
+It lets an operator upgrade that fleet without individual
+user upgrade transactions. [Bundler Compatibility](/evm/bundler-compatibility)
+covers account registration and handling operations queued during an upgrade.
 
-Set `RPC_URL` to the chain you are using. For writes, load `SIGNER_PRIVATE_KEY`
-into your environment from your application's key storage. Keep private keys
-outside source files and logs. The examples use secp256k1 authorities.
-
-For your own deployment, obtain a factory matching the SDK's
-[pinned contract revision](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/abi/source.json).
-The guides do not assume a public-chain deployment address. A direct transaction
-requires gas in the signing key's EOA.
-
-## Understand the two addresses
-
-- **Account address:** the Swig config contract. It stores roles and permissions
-  and receives the wallet's execution requests. Use this as `ACCOUNT_ADDRESS`.
-- **Vault address:** the contract that holds the wallet's assets. Transfers spend
-  from this balance. Funding the vault does not fund the signer's gas balance.
-
-## Follow a wallet lifecycle
-
-1. [Create a wallet](/evm/create-wallet) and fund its vault.
-2. [Add a spending role](/evm/add-role) for another key.
-3. [Read the role](/evm/read-role) to inspect its authority.
-4. [Send a transfer](/evm/send-transfer) using that role.
-5. [Send a sponsored transfer](/evm/send-sponsored-transfer) through a compatible bundler.
-
-## Try every scenario locally
-
-This optional contributor workflow requires access to Swig's private contracts
-repository, `swig-dev-portal`, and all three language toolchains. It is separate
-from running one language's examples against an existing deployment.
-
-The disposable test runner builds and deploys the pinned contracts, creates test
-wallets, and runs all 16 examples. It owns Anvil and Rundler through Docker
-Compose and removes them when the run finishes. It uses public development keys.
-
-Install Bun, Node.js/npm, Foundry, Docker with Compose, Rust through rustup, and uv.
-Check out `swig-dev-portal` using your authorized repository access so the runner
-can read the pinned contract commit. From the `swig-protocol-sdk` root:
-
-```bash
-cd evm/typescript
-bun install --frozen-lockfile
-cd ../..
-evm/scripts/test-4337.sh /path/to/swig-dev-portal
-```
-
-The run checks deployed addresses, authority identities, transfers, remaining
-allowances, and sponsored-operation receipts. This verifies the local SDK and
-bundler configuration; a hosted provider needs its own compatibility check.
+Building on Solana? See [Swig on Solana](/solana).

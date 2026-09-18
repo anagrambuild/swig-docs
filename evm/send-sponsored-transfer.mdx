@@ -7,7 +7,7 @@ The role's key authorizes the transfer, the vault supplies the native currency,
 and a paymaster contract pays the gas. A bundler submits the signed UserOperation
 to EntryPoint v0.9, which validates it before Swig executes through SignV2.
 
-Start with [EVM Wallets](/evm) for source setup. Use an existing compatible wallet,
+Start with [Environment Setup](/evm/setup) for source setup. Use an existing compatible wallet,
 or [create a wallet](/evm/create-wallet) and optionally
 [add a spending role](/evm/add-role).
 
@@ -54,7 +54,7 @@ arbitrary EOA address cannot serve as a paymaster.
 
 For the TypeScript examples on the disposable local chain (`1337`), set only
 `TEST_PAYMASTER_ADDRESS` and unset `PAYMASTER_URL`. Supplying both is rejected. The optional
-[contributor runner](/evm#try-every-scenario-locally) provisions this fixture.
+[contributor runner](/evm/setup#try-every-scenario-locally) provisions this fixture.
 
 From `evm/typescript`, run either client:
 
@@ -79,7 +79,7 @@ UserOperation result, not only its containing transaction receipt.
 The Rust and Python examples use Alloy and Web3.py/eth-account with Swig's thin
 adapter. Their runnable sponsorship setup is the disposable local chain
 (`1337`), using `TEST_PAYMASTER_ADDRESS`. The Rust example also uses Rundler's fee
-quote. The [local runner](/evm#try-every-scenario-locally) provisions these inputs
+quote. The [local runner](/evm/setup#try-every-scenario-locally) provisions these inputs
 and executes both examples.
 
 <CodeGroup>
