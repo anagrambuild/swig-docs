@@ -1,5 +1,6 @@
 ---
 title: "EVM Wallets"
+sidebarTitle: "Overview and Setup"
 description: "Create and operate Swig EVM wallets from TypeScript, Rust, or Python."
 ---
 
@@ -12,6 +13,11 @@ adapter. Viem, Alloy, and Web3.py handle the Ethereum client work. The TypeScrip
 adapter works with Viem and permissionless.js for sponsored ERC-4337 operations.
 
 ## Set up the examples
+
+For the individual examples, you need an RPC endpoint and a compatible Swig
+deployment. Obtain the factory address and deployment details from your operator
+or [contact Swig](/links-and-contact). The public SDK source does not deploy the
+contracts for you.
 
 The EVM packages are available from source. These guides use the tested examples
 in [swig-protocol-sdk](https://github.com/anagrambuild/swig-protocol-sdk/tree/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm),
@@ -58,9 +64,6 @@ requires gas in the signing key's EOA.
 - **Vault address:** the contract that holds the wallet's assets. Transfers spend
   from this balance. Funding the vault does not fund the signer's gas balance.
 
-Creation also returns a capsule address for isolated contract execution. These
-guides use ordinary SignV2 transfers.
-
 ## Follow a wallet lifecycle
 
 1. [Create a wallet](/evm/create-wallet) and fund its vault.
@@ -71,12 +74,16 @@ guides use ordinary SignV2 transfers.
 
 ## Try every scenario locally
 
+This optional contributor workflow requires access to Swig's private contracts
+repository, `swig-dev-portal`, and all three language toolchains. It is separate
+from running one language's examples against an existing deployment.
+
 The disposable test runner builds and deploys the pinned contracts, creates test
 wallets, and runs all 16 examples. It owns Anvil and Rundler through Docker
 Compose and removes them when the run finishes. It uses public development keys.
 
 Install Bun, Node.js/npm, Foundry, Docker with Compose, Rust through rustup, and uv.
-Clone [swig-dev-portal](https://github.com/anagrambuild/swig-dev-portal) so the runner
+Check out `swig-dev-portal` using your authorized repository access so the runner
 can read the pinned contract commit. From the `swig-protocol-sdk` root:
 
 ```bash

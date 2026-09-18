@@ -9,7 +9,8 @@ permission without role-management permission.
 
 Use the wallet from [Create a Wallet](/evm/create-wallet). Keep its root key in
 `SIGNER_PRIVATE_KEY`, and set `ACCOUNT_ADDRESS` to the returned config address.
-The root EOA pays gas for adding the role.
+The manager role's key signs and pays gas. Root role `0` is the default; to use
+another authorized manager role, select both its key and `MANAGER_ROLE_ID`.
 
 ## Define the allowance
 
@@ -19,9 +20,9 @@ The root EOA pays gas for adding the role.
 | `LIMIT_WEI` | Total native-currency allowance, as a uint64 base-unit amount |
 | `MANAGER_ROLE_ID` | Role authorizing the change; defaults to root role `0` |
 
-For example, `LIMIT_WEI=100` permits a total spend of 100 wei. After a successful
-7-wei transfer, 93 wei remain. This is a spending cap, not a deposit: fund the
-wallet's vault separately.
+For example, `LIMIT_WEI=100` permits a total spend of 100 wei. The maximum value
+is `18446744073709551615` (uint64). This is a spending cap, not a deposit: fund
+the wallet's vault separately.
 
 ## Add the role
 
@@ -40,9 +41,9 @@ uv run --locked python examples/add_role.py
 </CodeGroup>
 
 The example waits for a successful transaction and reads `roleId` from its
-`RoleAdded` event. Use this returned ID as `ROLE_ID`; another role may have been
-created while your transaction was pending, so predict neither the counter nor
-the assigned ID.
+`RoleAdded` event. Use this returned ID as `ROLE_ID`. Read the mined event rather
+than predicting the ID: another role may have been created while your transaction
+was pending.
 
 The output also includes `transactionHash`. Next, [read the role](/evm/read-role)
 to inspect the authority before using the delegate key.

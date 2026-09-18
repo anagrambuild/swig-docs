@@ -3,8 +3,9 @@ title: "Read a Role"
 description: "Inspect the authority attached to an EVM wallet role."
 ---
 
-Read the role you added before selecting its key for a transfer. This operation
-requires an RPC connection and no signing key or transaction gas.
+Optionally inspect the role before selecting its key for a transfer. The example
+prints its decoded authority and action count. This read requires an RPC
+connection and no signing key or transaction gas.
 
 ## Select the wallet and role
 
@@ -32,8 +33,10 @@ The example decodes the role's authority and action count. For the spending role
 confirm that the authority is the delegate address you intended to authorize.
 
 Individual permission values require a separate contract read. Use the native
-config binding's `getAction(roleId, actionIndex)` method and the SDK's permission
-decoder. The role read alone does not report the remaining spending allowance.
+config binding's `getAction(roleId, actionIndex)` method, then decode the result
+with `decodePermission` (TypeScript), `Permission::decode` (Rust), or
+`decode_permission` (Python). The read-role example itself reports authority and
+action count; it does not query the remaining allowance.
 
 Next, [send a transfer](/evm/send-transfer) with the delegate key.
 

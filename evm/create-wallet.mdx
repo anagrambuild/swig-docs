@@ -3,9 +3,9 @@ title: "Create a Wallet"
 description: "Deploy a Swig EVM wallet and fund its vault."
 ---
 
-Create a wallet with your signing key as its root authority. The root is role
-`0` with `All` permission. Use the [EVM setup](/evm) first, then select your root
-key through `SIGNER_PRIVATE_KEY`.
+Create a wallet with a secp256k1 EOA key as its root authority. The root is role
+`0` with `All` permission. Follow [EVM Wallets](/evm) for source setup, then select
+your root key through `SIGNER_PRIVATE_KEY`.
 
 ## Choose the initial balance
 
@@ -19,7 +19,7 @@ Set these inputs alongside `RPC_URL` and the root signing key:
 
 Amounts are integer base units: on an ETH-denominated chain,
 `1000000000000000000` wei is 1 ETH. The root EOA needs the initial balance plus
-transaction gas.
+transaction gas; it pays both when creating the wallet.
 
 The example hashes `WALLET_NAME` into both the wallet ID and deployment salt.
 Reusing the same name and root settings targets the same address; a second
@@ -50,6 +50,9 @@ receipt, and checks the emitted address against the prediction. It prints:
 - `vaultAddress`: the wallet's asset address, funded by `INITIAL_BALANCE_WEI`.
 - `capsuleAddress`: the wallet's capsule contract.
 - `transactionHash`: the creation transaction.
+
+Keep `accountAddress` for the next guides. Fund and read asset balances at
+`vaultAddress`; additional wallet funding belongs in the vault, not the config.
 
 ## Continue with a delegate
 

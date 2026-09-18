@@ -93,6 +93,12 @@
             ]
           },
           {
+            "group": "EVM Operations",
+            "pages": [
+              "evm/bundler-compatibility"
+            ]
+          },
+          {
             "group": "Solana Quickstarts",
             "pages": [
               "tutorials/typescript/index",

@@ -6,19 +6,22 @@ description: "Spend from the wallet vault using a delegate's allowance."
 Use the role from [Add a Spending Role](/evm/add-role) to send native currency.
 The vault supplies the transfer amount, and the delegate's EOA pays transaction
 gas. This direct SignV2 path needs no bundler or paymaster.
+The amount comes from the vault, not the transaction's value field.
 
 ## Select the delegate
 
 Replace `SIGNER_PRIVATE_KEY` with the delegate's key. Keep `RPC_URL`, the wallet's
 config `ACCOUNT_ADDRESS`, and the delegate's `ROLE_ID` selected.
 
-Set `RECIPIENT` to an EOA with no deployed code. Set `VALUE_WEI` to a positive
-amount within both the role's remaining allowance and the vault's balance.
-This limited native-spend role rejects zero-value transfers, contract recipients,
-and attached calldata.
+Before sending:
+
+- Set `RECIPIENT` to an EOA with no deployed code; include no calldata.
+- Set `VALUE_WEI` to a positive amount within the remaining role allowance.
+- Ensure `vaultAddress` holds at least `VALUE_WEI`.
+- Fund the delegate EOA separately so it can pay gas.
 
 For the 100-wei allowance from the previous guide, `VALUE_WEI=7` leaves 93 wei
-after a successful transfer. Fund the delegate EOA separately so it can pay gas.
+after a successful transfer.
 
 ## Send the transfer
 
@@ -38,12 +41,11 @@ uv run --locked python examples/send_transfer.py
 
 The example calls SignV2 with the selected role and empty authorization bytes.
 That selects the direct EOA-authority path: the transaction sender must be the
-role's authorized key. The transfer value comes from the vault, not the
-transaction's value field.
+role's authorized key.
 
 Each example waits for a successful receipt and prints `transactionHash`.
-If the transfer reverts, its asset movement and allowance changes revert too;
-the sending EOA can still pay transaction gas.
+If an included transaction reverts, its asset movement and allowance changes
+revert too, but the delegate still pays gas.
 
 For a paymaster-funded gas flow, continue to
 [Send a Sponsored Transfer](/evm/send-sponsored-transfer).
