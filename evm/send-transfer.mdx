@@ -1,0 +1,53 @@
+---
+title: "Send a Transfer"
+description: "Spend from the wallet vault using a delegate's allowance."
+---
+
+Use the role from [Add a Spending Role](/evm/add-role) to send native currency.
+The vault supplies the transfer amount, and the delegate's EOA pays transaction
+gas. This direct SignV2 path needs no bundler or paymaster.
+
+## Select the delegate
+
+Replace `SIGNER_PRIVATE_KEY` with the delegate's key. Keep `RPC_URL`, the wallet's
+config `ACCOUNT_ADDRESS`, and the delegate's `ROLE_ID` selected.
+
+Set `RECIPIENT` to an EOA with no deployed code. Set `VALUE_WEI` to a positive
+amount within both the role's remaining allowance and the vault's balance.
+This limited native-spend role rejects zero-value transfers, contract recipients,
+and attached calldata.
+
+For the 100-wei allowance from the previous guide, `VALUE_WEI=7` leaves 93 wei
+after a successful transfer. Fund the delegate EOA separately so it can pay gas.
+
+## Send the transfer
+
+<CodeGroup>
+```bash TypeScript
+bun run examples/send-transfer.ts
+```
+
+```bash Rust
+cargo run --locked -p swig-evm --example send_transfer
+```
+
+```bash Python
+uv run --locked python examples/send_transfer.py
+```
+</CodeGroup>
+
+The example calls SignV2 with the selected role and empty authorization bytes.
+That selects the direct EOA-authority path: the transaction sender must be the
+role's authorized key. The transfer value comes from the vault, not the
+transaction's value field.
+
+Each example waits for a successful receipt and prints `transactionHash`.
+If the transfer reverts, its asset movement and allowance changes revert too;
+the sending EOA can still pay transaction gas.
+
+For a paymaster-funded gas flow, continue to
+[Send a Sponsored Transfer](/evm/send-sponsored-transfer).
+
+Full examples: [TypeScript](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript/examples/send-transfer.ts),
+[Rust](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/rust/examples/send_transfer.rs),
+[Python](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/python/examples/send_transfer.py).

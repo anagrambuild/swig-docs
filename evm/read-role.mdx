@@ -1,0 +1,42 @@
+---
+title: "Read a Role"
+description: "Inspect the authority attached to an EVM wallet role."
+---
+
+Read the role you added before selecting its key for a transfer. This operation
+requires an RPC connection and no signing key or transaction gas.
+
+## Select the wallet and role
+
+Set `RPC_URL`, `ACCOUNT_ADDRESS`, and `ROLE_ID`. Use the config address returned
+by [wallet creation](/evm/create-wallet) and the role ID returned by
+[adding a role](/evm/add-role). Omitting `ROLE_ID` reads root role `0`.
+
+<CodeGroup>
+```bash TypeScript
+bun run examples/read-role.ts
+```
+
+```bash Rust
+cargo run --locked -p swig-evm --example read_role
+```
+
+```bash Python
+uv run --locked python examples/read_role.py
+```
+</CodeGroup>
+
+## Check the result
+
+The example decodes the role's authority and action count. For the spending role,
+confirm that the authority is the delegate address you intended to authorize.
+
+Individual permission values require a separate contract read. Use the native
+config binding's `getAction(roleId, actionIndex)` method and the SDK's permission
+decoder. The role read alone does not report the remaining spending allowance.
+
+Next, [send a transfer](/evm/send-transfer) with the delegate key.
+
+Full examples: [TypeScript](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript/examples/read-role.ts),
+[Rust](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/rust/examples/read_role.rs),
+[Python](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/python/examples/read_role.py).

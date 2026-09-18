@@ -1,0 +1,52 @@
+---
+title: "Add a Spending Role"
+description: "Give another key a fixed native-currency allowance."
+---
+
+A role connects an authority to permissions on your wallet. This example gives
+a delegate a fixed native-currency allowance. The delegate gains spending
+permission without role-management permission.
+
+Use the wallet from [Create a Wallet](/evm/create-wallet). Keep its root key in
+`SIGNER_PRIVATE_KEY`, and set `ACCOUNT_ADDRESS` to the returned config address.
+The root EOA pays gas for adding the role.
+
+## Define the allowance
+
+| Variable | Value |
+| --- | --- |
+| `DELEGATE_ADDRESS` | The new authority's EOA address |
+| `LIMIT_WEI` | Total native-currency allowance, as a uint64 base-unit amount |
+| `MANAGER_ROLE_ID` | Role authorizing the change; defaults to root role `0` |
+
+For example, `LIMIT_WEI=100` permits a total spend of 100 wei. After a successful
+7-wei transfer, 93 wei remain. This is a spending cap, not a deposit: fund the
+wallet's vault separately.
+
+## Add the role
+
+<CodeGroup>
+```bash TypeScript
+bun run examples/add-role.ts
+```
+
+```bash Rust
+cargo run --locked -p swig-evm --example add_role
+```
+
+```bash Python
+uv run --locked python examples/add_role.py
+```
+</CodeGroup>
+
+The example waits for a successful transaction and reads `roleId` from its
+`RoleAdded` event. Use this returned ID as `ROLE_ID`; another role may have been
+created while your transaction was pending, so predict neither the counter nor
+the assigned ID.
+
+The output also includes `transactionHash`. Next, [read the role](/evm/read-role)
+to inspect the authority before using the delegate key.
+
+Full examples: [TypeScript](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript/examples/add-role.ts),
+[Rust](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/rust/examples/add_role.rs),
+[Python](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/python/examples/add_role.py).

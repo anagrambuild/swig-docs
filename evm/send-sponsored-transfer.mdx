@@ -1,0 +1,112 @@
+---
+title: "Send a Sponsored Transfer"
+description: "Use a smart-account client to send from the wallet while a paymaster pays gas."
+---
+
+The role's key authorizes the transfer, the vault supplies the native currency,
+and a paymaster contract pays the gas. A bundler submits the signed UserOperation
+to EntryPoint v0.9, which validates it before Swig executes through SignV2.
+
+## Prepare the account and sponsor
+
+Use an already deployed Swig account configured for the canonical v0.9
+EntryPoint, `0x433709009B8330FDa32311DF1C2AFA402eD8D009`. The selected authority must
+be a secp256k1 role or an active secp256k1 session. The wallet's permissions still
+apply; sponsorship does not increase the role's allowance.
+
+The shared beacon enables automatic fleet upgrades. It also requires a bundler
+with a compatible mempool policy. Coordinate account registration with the
+bundler operator before submitting. Creating a wallet alone does not register it.
+
+Set these values alongside `RPC_URL` and `SIGNER_PRIVATE_KEY`:
+
+| Variable | Value |
+| --- | --- |
+| `BUNDLER_URL` | RPC endpoint for the compatible bundler |
+| `ACCOUNT_ADDRESS` | The deployed, registered Swig config address |
+| `ROLE_ID` | Role authorizing this transfer; defaults to `0` |
+| `RECIPIENT` | Transfer destination allowed by the role |
+| `VALUE_WEI` | Native-currency amount; defaults to `1` |
+
+For the limited role from these guides, use an EOA recipient with no code and a
+positive amount within the remaining allowance. The vault must hold the amount.
+
+## Choose a TypeScript smart-account SDK
+
+Both integrations use `toSwigSmartAccount` from the Swig SDK. The existing client
+owns operation preparation, estimation, sponsorship, submission, and receipt
+polling. The adapter supplies Swig's call encoding, role nonce, and signing hook.
+
+| Client | Tested version | Example |
+| --- | --- | --- |
+| Viem Bundler Client | 2.56.3 | [Viem source](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript/examples/send-sponsored-transfer.ts) |
+| permissionless.js Smart Account Client | 0.4.1 with Viem 2.56.3 | [permissionless source](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript/examples/send-sponsored-transfer-permissionless.ts) |
+
+Set `PAYMASTER_URL` to an ERC-7677-compatible sponsor endpoint supporting your
+chain, account, and EntryPoint version. Both examples use Viem's standard
+paymaster client. A paymaster is a contract with its own validation rules; an
+arbitrary EOA address cannot serve as a paymaster.
+
+From `evm/typescript`, run either client:
+
+<CodeGroup>
+```bash Viem
+bun run examples/send-sponsored-transfer.ts
+```
+
+```bash permissionless.js
+bun run examples/send-sponsored-transfer-permissionless.ts
+```
+</CodeGroup>
+
+Each example submits a single call, checks the UserOperation's `success` field,
+and prints `userOperationHash` and `transactionHash`. An included operation can
+fail during wallet execution: asset movement and permission consumption revert,
+but the EntryPoint nonce can be consumed and the sponsor charged. Check the
+UserOperation result, not only its containing transaction receipt.
+
+## Run the Rust and Python examples locally
+
+The Rust and Python examples use Alloy and Web3.py/eth-account with Swig's thin
+adapter. Their runnable sponsorship setup is the disposable local chain
+(`1337`), using `TEST_PAYMASTER_ADDRESS`. The Rust example also uses Rundler's fee
+quote. The [local runner](/evm#try-every-scenario-locally) provisions these inputs
+and executes both examples.
+
+<CodeGroup>
+```bash Rust
+# From evm, against the configured local fixture:
+cargo run --locked -p swig-evm --example send_sponsored_transfer
+```
+
+```bash Python
+# From evm/python, against the configured local fixture:
+uv run --locked python examples/send_sponsored_transfer.py
+```
+</CodeGroup>
+
+TypeScript can use that same fixture by setting only `TEST_PAYMASTER_ADDRESS`
+on chain `1337`; unset `PAYMASTER_URL` for this mode. Supplying both is rejected.
+To adapt the Rust or Python flow to a hosted environment, obtain fees and current
+sponsorship fields through that provider's client before signing.
+
+Full examples: [Rust](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/rust/examples/send_sponsored_transfer.rs),
+[Python](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/python/examples/send_sponsored_transfer.py).
+
+## Match the tested scope
+
+Viem and permissionless.js pass the local v0.9 flow against unmodified Rundler
+0.11.0 with an explicit account-scoped mempool exception and tracing enabled.
+That SDK result does not establish acceptance by hosted Pimlico or another public
+bundler. Verify the provider's account, EntryPoint, and paymaster support before
+using its endpoint.
+
+The current adapter supports sponsored operations for deployed accounts and one
+call per operation. Use [direct SignV2](/evm/send-transfer) when the role's EOA
+should pay gas. Self-funded ERC-4337 operations and account deployment inside a
+UserOperation are outside this adapter's current scope.
+
+Before a fleet upgrade, coordinate with the bundler operator to pause admissions
+and bundling, drain or discard affected queued operations, and handle any account
+reputation penalty. Revalidate and prepare operations against the new code before
+resubmitting. The SDK does not reset reputation or retry authorization automatically.
