@@ -3,16 +3,17 @@ title: "Protocol SDK"
 sidebarTitle: "Protocol SDK"
 ---
 
-Use the Protocol SDK section when your app integrates with Swig wallets
-directly from TypeScript or Rust.
+Use the Protocol SDK when your application controls wallet authorities, signing,
+and protocol access directly. Your code builds transactions and submits them
+through your chosen chain client.
 
-Start there for:
+Solana packages cover TypeScript and Rust. EVM SDKs are available from source
+for TypeScript, Rust, and Python. The chain guides explain their own setup and
+supported flows.
 
-- TypeScript packages such as `classic` and `kit`
-- Rust packages and instruction builders
-- direct signing and execution patterns
-- MCP tooling and protocol examples
-
-<Card title="Open Protocol SDK Docs" icon="terminal" href="/reference">
-  Go to the full Protocol SDK documentation
+<Card title="Choose your chain" icon="terminal" href="/reference">
+  Open the Solana or EVM guides to create wallets, assign permissions, and send funds.
 </Card>
+
+For API-key-based transaction preparation through Swig's hosted services, use
+the [Developer SDK](/developer-sdk).

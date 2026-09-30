@@ -1,0 +1,53 @@
+---
+title: "Bundler Compatibility"
+description: "Register shared-beacon accounts and coordinate fleet upgrades with your bundler operator."
+---
+
+Swig's shared beacon lets an authorized upgrade reach the wallet fleet without
+each user submitting an upgrade transaction. Sponsored operations require a
+bundler whose validation policy accepts this architecture.
+
+For the application flow, use [Send a Sponsored Transfer](/evm/send-sponsored-transfer).
+This page describes the operator coordination that makes that flow available.
+
+## Register the account
+
+The tested local configuration uses unmodified Rundler 0.11.0 with tracing
+enabled. Canonical validation rejects the shared-beacon storage read. The
+compatible configuration adds a `notStaked` exception for one explicitly
+registered Swig account address; an unregistered account on the same beacon is
+still rejected.
+
+This exception is broader than allowing one beacon storage slot: Rundler treats
+the listed account as staked for validation and reputation rules. Other validation
+checks remain enabled. It is an alternative mempool policy, not canonical public
+mempool support.
+
+The operator should verify the account, its beacon governance, and implementation
+before registering it. Keep tracing enabled and scope registration to verified
+account addresses. A wildcard exception or unsafe validation mode is not a
+substitute for this policy.
+
+The [fixture configuration](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript/integration/deploy-4337.ts)
+and [Compose setup](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/integration/4337/compose.yaml)
+record the verified local policy. A hosted provider must separately confirm
+support for the actual chain, account implementation, EntryPoint v0.9, and sponsor.
+
+## Coordinate a fleet upgrade
+
+A queued operation can become invalid when the beacon changes. In the local
+test, Rundler's code-hash revalidation drops that operation without spending its
+nonce or vault funds, and penalizes the account's reputation.
+
+Coordinate maintenance with the bundler operator:
+
+1. Pause admissions and bundling, then drain or discard affected pending operations.
+2. Verify the authorized beacon upgrade and the new implementation.
+3. If revalidation penalized a verified account during maintenance, restore only
+   that account's captured reputation through the operator's controlled process.
+4. Prepare and sign fresh operations against the current implementation, then
+   revalidate and submit them before resuming normal traffic.
+
+The SDK does not reset reputation or retry authorization automatically. Users do
+not need to upgrade their individual accounts. Deployment-specific governance,
+provider access, and paymaster policy remain the operator's responsibility.
