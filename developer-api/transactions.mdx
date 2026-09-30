@@ -15,6 +15,7 @@ Ed25519 signers are represented in the serialized Solana transaction instead.
 | :--- | :--- |
 | `POST` | `/transaction/prepare/batch` |
 | `POST` | `/transaction/wallet/create` |
+| `POST` | `/transaction/wallet/rent-claimer/set` |
 | `POST` | `/transaction/wallet/participant-set/create` |
 | `POST` | `/transaction/wallet/role/add` |
 | `POST` | `/transaction/wallet/participant-set/compile` |
@@ -79,6 +80,69 @@ is the hex-encoded message to sign. An empty array does not prove that the
 transaction needs no application signature; inspect the Solana transaction's
 required signer set for native Ed25519 authorities and other transaction-level
 signers.
+
+## Rent claimers
+
+These API-key routes read and configure the rent recipient on a V2 Swig. Use
+the Swig config PDA as `swig_address` or `swigAddress`.
+
+### Read the recipient
+
+`GET /transaction/wallet/{swig_address}/rent-claimer?network=NETWORK_MAINNET`
+
+`network` is required and accepts `NETWORK_MAINNET` or `NETWORK_DEVNET`.
+The backend reads finalized chain state and returns:
+
+```json
+{ "rentClaimer": "RecipientPublicKey" }
+```
+
+When a valid config has no recipient, the optional `rentClaimer` field is
+absent. Missing accounts, malformed or unsupported state, and RPC failures
+return errors. A requester authority is not needed for this read.
+
+### Prepare the setter
+
+`POST /transaction/wallet/rent-claimer/set`
+
+```json
+{
+  "network": "NETWORK_MAINNET",
+  "feePayer": "FeePayerPublicKey",
+  "swigAddress": "SwigConfigAddress",
+  "requesterAuthority": {
+    "ed25519": { "publicKey": "RequesterPublicKey" }
+  },
+  "rentClaimer": "RecipientPublicKey"
+}
+```
+
+Every field shown is required. The requester must match a direct Ed25519 role
+with `All` or `CloseSwigAuthority`; `ManageAuthority` alone is insufficient.
+The recipient must differ from the zero public key, config PDA, and wallet PDA.
+An existing recipient is rejected even when it matches the requested value.
+
+The response wraps an unsigned prepared transaction:
+
+```json
+{
+  "transaction": {
+    "transaction": "Base64EncodedUnsignedTransaction",
+    "transactionEncoding": "TRANSACTION_ENCODING_BASE64",
+    "network": "NETWORK_MAINNET",
+    "kind": "PREPARED_TRANSACTION_KIND_SET_RENT_CLAIMER",
+    "signatureRequests": []
+  }
+}
+```
+
+Both the requester and fee payer must provide native transaction signatures,
+or one signature when the keys coincide. The backend fetches finalized state
+and a fresh blockhash, then prepares the transaction. The application signs,
+submits, and confirms it. Preparation does not set the recipient; the program
+enforces the set-once rule when the transaction executes.
+
+See [Rent Claimers](/developer-sdk/rent-claimers) for TypeScript examples.
 
 ## Prepare a batch
 

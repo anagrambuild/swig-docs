@@ -159,6 +159,19 @@ Common uses:
 - check whether a passkey or EVM authority is still attached before preparing
   a transaction it would need to sign
 
+## Rent claimer
+
+TypeScript `0.11.0` adds a finalized read of the V2 Swig's rent recipient:
+
+```typescript
+const rentClaimer = await wallet.getRentClaimer({ network: 'mainnet' });
+// A public key string, or null when a valid config has no recipient.
+```
+
+The network may also come from the wallet handle or client. Errors are not
+treated as an unset recipient. See [Rent Claimers](/developer-sdk/rent-claimers)
+for setup and the separate setter. Python support is pending.
+
 ## Policy metadata
 
 Policy reads are a separate, portal-scoped lookup rather than a wallet read:
@@ -186,6 +199,7 @@ fields and how to use the saved configuration.
 | Token balances | `GET /wallet/swig/{swig_config_address}/token-balances` |
 | Token transactions | `GET /wallet/swig/{swig_config_address}/token-transactions` |
 | Roles | `GET /wallet/swig/{swig_config_address}/roles` |
+| Rent claimer | `GET /transaction/wallet/{swig_address}/rent-claimer?network=NETWORK_MAINNET` |
 | Policy | `GET /wallet/policies/{policy_id}` |
 
 These are API-key routes and must be called from a trusted server. If your
