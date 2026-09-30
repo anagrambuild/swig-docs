@@ -1,0 +1,81 @@
+---
+title: "Rent Claimers"
+sidebarTitle: "Rent Claimers"
+---
+
+Read the configured rent recipient on a V2 Swig, or prepare a transaction to
+set it once. These methods are available in the TypeScript Developer SDK
+starting with `0.11.0` and require a backend with the rent-claimer API routes.
+Python support is pending.
+
+The backend fetches finalized chain state, validates the config, and builds the
+setter transaction. Your application keeps the API key on the server and owns
+signing, submission, and sponsorship decisions.
+
+## Check the rent claimer
+
+Set `SWIG_API_KEY` and `SWIG_CONFIG_ADDRESS` in your server environment. Use the
+Swig config address for the selected network.
+
+```typescript
+import { SwigClient } from '@swig-wallet/developer-sdk';
+
+const swig = new SwigClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  network: 'mainnet',
+});
+const wallet = swig.wallets.use(process.env.SWIG_CONFIG_ADDRESS!);
+
+const rentClaimer = await wallet.getRentClaimer();
+console.log(rentClaimer); // Recipient public key, or null when unset.
+```
+
+The read needs no requester authority. `null` means that a valid config has no
+rent-claimer record. Missing, malformed, unsupported, or unavailable account
+state produces an error. Reads follow the client's GET retry policy.
+
+## Prepare the setter
+
+Provide `REQUESTER_PUBLIC_KEY`, `FEE_PAYER_PUBLIC_KEY`, and
+`RENT_CLAIMER_PUBLIC_KEY` as public addresses in the server environment. The
+requester must match a direct Ed25519 role with `All` or
+`CloseSwigAuthority`. `ManageAuthority` alone is insufficient.
+
+```typescript
+import { SwigClient } from '@swig-wallet/developer-sdk';
+
+const swig = new SwigClient({
+  apiKey: process.env.SWIG_API_KEY!,
+  network: 'mainnet',
+});
+const wallet = swig.wallets.use(process.env.SWIG_CONFIG_ADDRESS!, {
+  requesterAuthority: {
+    ed25519: { publicKey: process.env.REQUESTER_PUBLIC_KEY! },
+  },
+});
+
+const prepared = await wallet.setRentClaimer({
+  feePayer: process.env.FEE_PAYER_PUBLIC_KEY!,
+  rentClaimer: process.env.RENT_CLAIMER_PUBLIC_KEY!,
+});
+console.log(prepared.transaction); // Base64 unsigned Solana transaction.
+```
+
+The result has kind `set-rent-claimer`. The requester and fee payer must sign
+the serialized transaction; one signature suffices when they are the same
+key. `signatureRequests` is empty because these are native Ed25519 transaction
+signatures. Follow the [signing guide](/developer-sdk/signers) and
+[submission guide](/developer-sdk/sponsor-and-submit) to complete the operation.
+
+Once a recipient is set on the config, another setter is rejected, including
+one naming the same recipient. The recipient cannot be the zero public key,
+the Swig config, or its wallet-address PDA. Session, passkey, EVM, and
+ParticipantSet requesters are not supported by this setter.
+
+Preparation does not change chain state, and the POST is not retried
+automatically. After submission, wait for finality and read the recipient
+again before using it in a sponsorship decision. Concurrent preparations can
+both succeed; the on-chain program accepts only the first valid set.
+
+See the [REST contract](/developer-api/transactions#rent-claimers) for direct
+API integration.
