@@ -1,0 +1,256 @@
+---
+title: "Read DEX Activity"
+sidebarTitle: "Read DEX Activity"
+---
+
+`swig.dex` reads what Swig's index recorded about a Swig your API key's
+organization owns: its DEX transaction history and the latest state of its
+liquidity positions. The lists are API-key `POST` searches and `get` is an
+API-key `GET`. All of them only read and follow the client's retry policy, so
+they are safe to repeat. The network may also come from the client.
+
+TypeScript `0.12.0` and Python `0.10.0` add these reads. They require a backend
+with the DEX API routes.
+
+## List DEX transactions
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const page = await swig.dex.transactions.list({
+  swigConfigAddress,
+  network: 'mainnet',
+  pageSize: 25,
+  filters: [
+    { kind: 'startSlot', value: 357_000_000n },
+    { kind: 'endSlot', value: 358_000_000n },
+    { kind: 'protocol', value: 'raydium-clmm' },
+    { kind: 'actionType', value: 'swap' },
+    { kind: 'swigVaultAddress', value: swigVaultAddress },
+  ],
+});
+
+for (const transaction of page.transactions) {
+  for (const { action, protocol } of transaction.actions) {
+    if (action.type === 'swap') {
+      console.log(protocol, action.input.amountRaw, action.output.amountRaw);
+    }
+  }
+}
+```
+
+```python Python
+from swig_developer_sdk import (
+    DexActionTypeFilter,
+    DexEndSlotFilter,
+    DexProtocolFilter,
+    DexStartSlotFilter,
+    DexSwigVaultAddressFilter,
+)
+
+page = await swig.dex.transactions.list(
+    swig_config_address=swig_config_address,
+    network="mainnet",
+    page_size=25,
+    filters=[
+        DexStartSlotFilter(357_000_000),
+        DexEndSlotFilter(358_000_000),
+        DexProtocolFilter("raydium-clmm"),
+        DexActionTypeFilter("swap"),
+        DexSwigVaultAddressFilter(swig_vault_address),
+    ],
+)
+
+for transaction in page.transactions:
+    for executed in transaction.actions:
+        if executed.action.type == "swap":
+            print(
+                executed.protocol,
+                executed.action.input.amount_raw,
+                executed.action.output.amount_raw,
+            )
+```
+
+</CodeGroup>
+
+Transactions come newest first. `filters` is optional:
+
+| TypeScript `kind` | Python | Selects |
+| :--- | :--- | :--- |
+| `startSlot`, `endSlot` | `DexStartSlotFilter`, `DexEndSlotFilter` | transactions in an inclusive slot range |
+| `protocol` | `DexProtocolFilter` | transactions with an action on that protocol |
+| `actionType` | `DexActionTypeFilter` | transactions with an action of that type |
+| `swigVaultAddress` | `DexSwigVaultAddressFilter` | transactions with an action from that vault or sub-account |
+
+Filters combine with AND, their order does not matter, and each kind may
+appear once; the API refuses a repeated kind. The action filters must all match
+the same action. A matching transaction still carries every DEX action the Swig
+executed in it.
+
+Protocols are `pump-swap`, `meteora-dlmm`, `raydium-amm-v4`, `raydium-cpmm`,
+`raydium-clmm`, and `orca-whirlpool`. Action types are `swap`,
+`position-open`, `liquidity-add`, `liquidity-remove`, `position-rebalance`,
+`fee-claim`, `reward-claim`, and `position-close`. An unknown value is refused
+before any request is sent.
+
+## Page through results
+
+Pass `nextPageToken` / `next_page_token` back as `pageToken` / `page_token`
+with the same network and filters. A token used with other filters is refused.
+The last page has no token.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+let pageToken: string | undefined;
+do {
+  const page = await swig.dex.transactions.list({
+    swigConfigAddress,
+    network: 'mainnet',
+    filters: [{ kind: 'actionType', value: 'swap' }],
+    pageToken,
+  });
+  // handle page.transactions
+  pageToken = page.nextPageToken;
+} while (pageToken);
+```
+
+```python Python
+page_token = None
+while True:
+    page = await swig.dex.transactions.list(
+        swig_config_address=swig_config_address,
+        network="mainnet",
+        filters=[DexActionTypeFilter("swap")],
+        page_token=page_token,
+    )
+    # handle page.transactions
+    page_token = page.next_page_token
+    if page_token is None:
+        break
+```
+
+</CodeGroup>
+
+## Read one transaction
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const transaction = await swig.dex.transactions.get({
+  swigConfigAddress,
+  network: 'mainnet',
+  transactionSignature,
+});
+```
+
+```python Python
+transaction = await swig.dex.transactions.get(
+    swig_config_address=swig_config_address,
+    network="mainnet",
+    transaction_signature=transaction_signature,
+)
+```
+
+</CodeGroup>
+
+The result has the same shape as a list item.
+
+## What a transaction carries
+
+| Field | Meaning |
+| :--- | :--- |
+| `transactionSignature` / `transaction_signature` | the Solana transaction |
+| `slot` | its slot |
+| `blockTime` / `block_time` | RFC 3339 block time, when known |
+| `actions` | every DEX action the Swig executed, in execution order |
+| `actionIndex` / `action_index` | the action's place in that order |
+| `swigVaultAddress` / `swig_vault_address` | the vault or sub-account that signed for it |
+| `actingRoleId` / `acting_role_id` | the Swig role that authorized it |
+| `protocol`, `dexProgramAddress` / `dex_program_address` | where it executed |
+| `action` | the typed action, discriminated by `type` |
+
+Each action carries `protocolInstruction` / `protocol_instruction` and
+`protocolActorAddress` / `protocol_actor_address`. Swaps add the pool and an
+`input` and `output` amount. Position actions add the pool and position, plus
+`deposits`, `withdrawals`, or `claimed` amounts. A position close carries the
+pool only when the instruction names one.
+
+### Read the amounts as the venue saw them
+
+- `amountRaw` / `amount_raw` is a signed decimal string for the action's
+  `protocolActorAddress`: a negative amount left its accounts. Keep it a string,
+  or parse it into an arbitrary-precision integer.
+- That actor is the Swig vault on a direct call. When an aggregator such as
+  Jupiter routed the trade, it is the router's account, and the swap appears as
+  one action per venue hop. For the wallet's own inflows and outflows, use
+  [token activity](/developer-sdk/wallet-reads#token-activity).
+- Only transactions the index interpreted are listed. One it could not
+  interpret, or has not processed yet, is omitted, and `get` answers `404`
+  for it.
+
+## List latest positions
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const { positions } = await swig.dex.positions.list({
+  swigConfigAddress,
+  network: 'mainnet',
+  filters: [{ kind: 'positionStatus', value: 'open' }],
+});
+
+for (const position of positions) {
+  if (position.status === 'open') {
+    console.log(
+      position.dexPositionAddress,
+      position.dexPoolAddress,
+      position.state.liquidityRaw,
+    );
+  }
+}
+```
+
+```python Python
+from swig_developer_sdk import DexOpenPosition, DexPositionStatusFilter
+
+result = await swig.dex.positions.list(
+    swig_config_address=swig_config_address,
+    network="mainnet",
+    filters=[DexPositionStatusFilter("open")],
+)
+
+for position in result.positions:
+    if isinstance(position, DexOpenPosition):
+        print(
+            position.dex_position_address,
+            position.dex_pool_address,
+            position.state.liquidity_raw,
+        )
+```
+
+</CodeGroup>
+
+A position is the latest known on-chain state of a position held by the Swig's
+vault or one of its enabled sub-accounts. An open position carries its pool and
+decoded account state; a closed position means the account no longer exists.
+`updatedSlot` / `updated_slot` is the slot of the read the state came from.
+Latest state is currently recorded for Raydium CLMM positions only.
+
+Positions take `positionStatus` (`DexPositionStatusFilter`, `open` or
+`closed`), `protocol` (`DexProtocolFilter`), and `swigVaultAddress`
+(`DexSwigVaultAddressFilter`) filters, each applied to the position, and page
+the same way as transactions.
+
+## Underlying routes
+
+| Read | Route |
+| :--- | :--- |
+| Transaction history | `POST /wallet/swig/{swig_config_address}/dex/transactions:search` |
+| One transaction | `GET /wallet/swig/{swig_config_address}/dex/transactions/{transaction_signature}` |
+| Latest positions | `POST /wallet/swig/{swig_config_address}/dex/positions:search` |
+
+See the [DEX API](/developer-api/dex) for the exact parameters and response
+shapes. These are API-key routes and must be called from a trusted server. If
+your product shows the data elsewhere, return an authorized view through your
+own application API.

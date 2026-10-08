@@ -172,6 +172,11 @@ The network may also come from the wallet handle or client. Errors are not
 treated as an unset recipient. See [Rent Claimers](/developer-sdk/rent-claimers)
 for setup and the separate setter. Python support is pending.
 
+## DEX activity
+
+DEX transaction history and the latest state of liquidity positions are a
+separate read, `swig.dex`. See [Read DEX Activity](/developer-sdk/dex-activity).
+
 ## Policy metadata
 
 Policy reads are a separate, portal-scoped lookup rather than a wallet read:

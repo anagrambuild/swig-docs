@@ -1,0 +1,320 @@
+---
+title: "DEX API"
+sidebarTitle: "DEX"
+---
+
+The DEX API reads the decentralized-exchange activity Swig's indexer recorded
+for a Swig your API key's organization owns: its transaction history, with each
+DEX action typed, and the latest known state of its liquidity positions. The
+routes read the index only. They never call Solana, parse transactions, or
+write.
+
+## Routes
+
+| Method | Route | Authentication |
+| :--- | :--- | :--- |
+| `POST` | `/wallet/swig/{swig_config_address}/dex/transactions:search` | API key |
+| `GET` | `/wallet/swig/{swig_config_address}/dex/transactions/{transaction_signature}` | API key |
+| `POST` | `/wallet/swig/{swig_config_address}/dex/positions:search` | API key |
+
+Send your API key:
+
+```text
+Authorization: Bearer sk_your_api_key
+```
+
+The two searches are `POST` requests with a JSON body, and the
+single-transaction read is a `GET`. All three only read, so they are safe to
+retry.
+
+## Ownership
+
+The Swig must be an active Swig owned by your API key's organization on the
+requested network. An unknown Swig, an inactive one, and another
+organization's Swig all answer `404`, so a response never reveals whether a Swig
+exists outside your organization. Positions cover the Swig's vault and its
+enabled sub-accounts.
+
+## Coverage
+
+The index records actions on these protocols:
+
+| `protocol` | Protocol |
+| :--- | :--- |
+| `DEX_PROTOCOL_PUMP_SWAP` | PumpSwap |
+| `DEX_PROTOCOL_METEORA_DLMM` | Meteora DLMM |
+| `DEX_PROTOCOL_RAYDIUM_AMM_V4` | Raydium AMM v4 |
+| `DEX_PROTOCOL_RAYDIUM_CPMM` | Raydium CPMM |
+| `DEX_PROTOCOL_RAYDIUM_CLMM` | Raydium CLMM |
+| `DEX_PROTOCOL_ORCA_WHIRLPOOL` | Orca Whirlpool |
+
+Only transactions the index interpreted are listed. A transaction it could not
+interpret, or has not processed yet, is omitted from the list, and the
+single-transaction read answers `404` for it. Indexer status is never returned.
+
+Latest position state is recorded for Raydium CLMM positions only. Swap-only
+protocols have no positions.
+
+## List DEX transactions
+
+`POST /wallet/swig/{swig_config_address}/dex/transactions:search`
+
+Request body:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `network` | enum | Required. `NETWORK_DEVNET` or `NETWORK_MAINNET` |
+| `pageSize` | number | Optional. Defaults to 25; values above 100 are capped at 100 |
+| `pageToken` | string | Optional. The `nextPageToken` of the previous page |
+| `filters` | array | Optional. Each filter is an object with exactly one of the keys below |
+
+Filters:
+
+| Key | Type | Selects |
+| :--- | :--- | :--- |
+| `startSlot` | uint64 | Transactions at or after this slot |
+| `endSlot` | uint64 | Transactions at or before this slot |
+| `protocol` | enum | Transactions with an action on this protocol, one of the `protocol` values above |
+| `actionType` | enum | Transactions with an action of this type, one of the action types below |
+| `swigVaultAddress` | string | Transactions with an action from this Swig vault or sub-account |
+
+Filters combine with AND, and their order does not matter. Each kind may appear
+once. `protocol`, `actionType`, and `swigVaultAddress` must all match the same
+action. A matching transaction still carries every DEX action the Swig executed
+in it, so a list item and a single-transaction read have the same shape. Slot
+filters do not change the order: transactions come newest first by slot, then
+by signature.
+
+```bash
+curl -X POST "https://api.onswig.com/wallet/swig/<swig-config-address>/dex/transactions:search" \
+  -H "Authorization: Bearer sk_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "network": "NETWORK_MAINNET",
+    "pageSize": 25,
+    "filters": [
+      { "startSlot": "357000000" },
+      { "endSlot": "358000000" },
+      { "protocol": "DEX_PROTOCOL_RAYDIUM_CLMM" },
+      { "actionType": "DEX_ACTION_TYPE_LIQUIDITY_ADD" },
+      { "swigVaultAddress": "<swig-vault-address>" }
+    ]
+  }'
+```
+
+```json
+{
+  "transactions": [
+    {
+      "swigConfigAddress": "<swig-config-address>",
+      "transactionSignature": "<transaction-signature>",
+      "slot": "357894221",
+      "blockTime": "2026-09-23T17:52:56Z",
+      "actions": [
+        {
+          "actionIndex": 0,
+          "swigVaultAddress": "<swig-vault-address>",
+          "actingRoleId": "1",
+          "protocol": "DEX_PROTOCOL_RAYDIUM_CLMM",
+          "dexProgramAddress": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+          "action": {
+            "liquidityAdd": {
+              "protocolInstruction": "IncreaseLiquidityV2",
+              "protocolActorAddress": "<swig-vault-address>",
+              "dexPoolAddress": "<pool-address>",
+              "dexPositionAddress": "<position-address>",
+              "deposits": [
+                {
+                  "mintAddress": "<token-mint-address>",
+                  "amountRaw": "-500000000000",
+                  "decimals": 6
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "nextPageToken": "<opaque-token>"
+}
+```
+
+Transaction fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `swigConfigAddress` | string | Swig config address |
+| `transactionSignature` | string | Solana transaction signature |
+| `slot` | uint64 | Slot of the transaction, as a decimal string |
+| `blockTime` | timestamp | RFC 3339 block time; absent when unknown |
+| `actions` | array | Every DEX action the Swig executed in the transaction, in execution order |
+
+Action fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `actionIndex` | number | Position of the action in the transaction's execution order |
+| `swigVaultAddress` | string | The Swig vault or sub-account that signed for the action |
+| `actingRoleId` | uint64 | The Swig role that authorized it, as a decimal string |
+| `protocol` | enum | The DEX protocol |
+| `dexProgramAddress` | string | The DEX program that executed the action |
+| `action` | object | Exactly one key naming the action, described below |
+
+## Action payloads
+
+`action` has exactly one key. Its value carries `protocolInstruction` (the
+venue instruction name) and `protocolActorAddress`, plus:
+
+| Key | `actionType` | Fields |
+| :--- | :--- | :--- |
+| `swap` | `DEX_ACTION_TYPE_SWAP` | `dexPoolAddress`, `input`, `output` |
+| `positionOpen` | `DEX_ACTION_TYPE_POSITION_OPEN` | `dexPoolAddress`, `dexPositionAddress`, `deposits` |
+| `liquidityAdd` | `DEX_ACTION_TYPE_LIQUIDITY_ADD` | `dexPoolAddress`, `dexPositionAddress`, `deposits` |
+| `liquidityRemove` | `DEX_ACTION_TYPE_LIQUIDITY_REMOVE` | `dexPoolAddress`, `dexPositionAddress`, `withdrawals` |
+| `positionRebalance` | `DEX_ACTION_TYPE_POSITION_REBALANCE` | `dexPoolAddress`, `dexPositionAddress`, `deposits`, `withdrawals` |
+| `feeClaim` | `DEX_ACTION_TYPE_FEE_CLAIM` | `dexPoolAddress`, `dexPositionAddress`, `claimed` |
+| `rewardClaim` | `DEX_ACTION_TYPE_REWARD_CLAIM` | `dexPoolAddress`, `dexPositionAddress`, `claimed` |
+| `positionClose` | `DEX_ACTION_TYPE_POSITION_CLOSE` | `dexPositionAddress`, and `dexPoolAddress` when the instruction names one |
+
+`withdrawals` include any fees the venue pays out in the same transfer, as
+Raydium CLMM does.
+
+Each amount is an object:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `mintAddress` | string | Token mint |
+| `amountRaw` | string | Signed decimal integer in the mint's base units |
+| `decimals` | number | The mint's decimals; absent when the transaction never states them |
+
+### Reading amounts
+
+- `amountRaw` is signed for the action's `protocolActorAddress`: a negative
+  amount left its accounts, a positive one arrived. It is a decimal string so
+  that large values survive JSON exactly.
+- `protocolActorAddress` is the Swig vault on a direct call. When an aggregator
+  such as Jupiter routed the trade, it is the router's account, and a routed
+  swap appears as one action per venue hop. These are venue-level actions, not
+  the wallet's net token change. For wallet-relative inflows and outflows, use
+  [token transactions](/developer-api/wallets#list-token-transactions).
+
+## Get one DEX transaction
+
+`GET /wallet/swig/{swig_config_address}/dex/transactions/{transaction_signature}`
+
+Query parameters:
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `network` | enum | Required. `NETWORK_DEVNET` or `NETWORK_MAINNET` |
+
+The response is `{ "transaction": { ... } }`, where the transaction has exactly
+the shape of a list item. It answers `404` when the Swig is not yours, or when
+the Swig executed no indexed DEX action in that transaction.
+
+## List latest DEX positions
+
+`POST /wallet/swig/{swig_config_address}/dex/positions:search`
+
+The request body takes the same `network`, `pageSize`, `pageToken`, and
+`filters` fields as the transaction search. Filters:
+
+| Key | Type | Selects |
+| :--- | :--- | :--- |
+| `positionStatus` | enum | `POSITION_STATUS_OPEN` or `POSITION_STATUS_CLOSED` |
+| `protocol` | enum | One of the `protocol` values above |
+| `swigVaultAddress` | string | The vault or enabled sub-account holding the position |
+
+Filters combine with AND in any order, each kind may appear once, and each
+applies to the position. Positions are ordered by protocol, then position
+address. The order never depends on state, so a position that closes does not
+move.
+
+```bash
+curl -X POST "https://api.onswig.com/wallet/swig/<swig-config-address>/dex/positions:search" \
+  -H "Authorization: Bearer sk_your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "network": "NETWORK_MAINNET",
+    "filters": [{ "positionStatus": "POSITION_STATUS_OPEN" }]
+  }'
+```
+
+```json
+{
+  "positions": [
+    {
+      "swigConfigAddress": "<swig-config-address>",
+      "swigVaultAddress": "<swig-vault-address>",
+      "protocol": "DEX_PROTOCOL_RAYDIUM_CLMM",
+      "dexPositionAddress": "<open-position-address>",
+      "open": {
+        "dexPoolAddress": "<pool-address>",
+        "state": {
+          "raydiumClmm": {
+            "liquidityRaw": "11001375020588076",
+            "tickLowerIndex": 1,
+            "tickUpperIndex": 2,
+            "tokenFeesOwed0": "7970766",
+            "tokenFeesOwed1": "7971948",
+            "rewardAmountsOwed": ["0", "0", "0"]
+          }
+        }
+      },
+      "updatedSlot": "454258553",
+      "sourceTransactionSignature": "<transaction-signature>"
+    },
+    {
+      "swigConfigAddress": "<swig-config-address>",
+      "swigVaultAddress": "<swig-vault-address>",
+      "protocol": "DEX_PROTOCOL_RAYDIUM_CLMM",
+      "dexPositionAddress": "<closed-position-address>",
+      "closed": {},
+      "updatedSlot": "454258553",
+      "sourceTransactionSignature": "<close-transaction-signature>"
+    }
+  ],
+  "nextPageToken": ""
+}
+```
+
+Position fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `swigConfigAddress` | string | Swig config address |
+| `swigVaultAddress` | string | Vault or sub-account holding the position |
+| `protocol` | enum | The DEX protocol |
+| `dexPositionAddress` | string | The position account |
+| `open` | object | Present while the position account exists: `dexPoolAddress` and the decoded `state` |
+| `closed` | object | Present, and empty, once the position account no longer exists |
+| `updatedSlot` | uint64 | Slot of the on-chain read the state came from |
+| `sourceTransactionSignature` | string | The indexed transaction that triggered that read |
+
+Exactly one of `open` and `closed` is present. Test for the key, not its
+contents: `closed` is an empty object. `open.state.raydiumClmm` carries the
+Raydium CLMM position account: `liquidityRaw`, `tickLowerIndex`,
+`tickUpperIndex`, `tokenFeesOwed0`, `tokenFeesOwed1`, and one
+`rewardAmountsOwed` entry per reward slot. A closed position is state, not a
+separate action; the close itself appears in the transaction history.
+
+## Pagination
+
+- `pageToken` is opaque. Pass the previous `nextPageToken` back with the same
+  `network`, Swig, and filters; their order does not matter. Any other change
+  refuses the token with `400`. An empty `nextPageToken` means the last page.
+- Pages stay stable while new transactions are indexed: a newer transaction
+  appears at the start of a fresh walk, not inside one already in progress.
+- A token is not a credential. Every page checks the API key and ownership
+  again.
+
+## Errors
+
+| Status | Cause |
+| :--- | :--- |
+| `400` | Missing or unspecified `network`; a malformed Swig address, vault, or signature; a filter with no kind (`{}`), or a repeated filter kind; an explicit `*_UNSPECIFIED` filter; `startSlot` after `endSlot`; a slot out of range; a page token that is malformed or was issued for a different request |
+| `401` | Missing or invalid API key |
+| `404` | The Swig is unknown, inactive, or another organization's; or, for a single transaction, the Swig has no indexed DEX action in it |
+
+See [Errors](/developer-api/errors) for the general error format.
