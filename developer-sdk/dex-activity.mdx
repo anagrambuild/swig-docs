@@ -9,7 +9,7 @@ liquidity positions. The lists are API-key `POST` searches and `get` is an
 API-key `GET`. All of them only read and follow the client's retry policy, so
 they are safe to repeat. The network may also come from the client.
 
-TypeScript `0.12.0` and Python `0.10.0` add these reads. They require a backend
+TypeScript `0.12.0` and Python `0.11.0` add these reads. They require a backend
 with the DEX API routes.
 
 ## List DEX transactions
@@ -97,7 +97,8 @@ before any request is sent.
 
 Pass `nextPageToken` / `next_page_token` back as `pageToken` / `page_token`
 with the same network and filters. A token used with other filters is refused.
-The last page has no token.
+The last page has no token. Each page is one API request, so a larger
+`pageSize` / `page_size`, up to 100, reads a long history in fewer requests.
 
 <CodeGroup dropdown>
 
@@ -232,8 +233,9 @@ for position in result.positions:
 </CodeGroup>
 
 A position is the latest known on-chain state of a position held by the Swig's
-vault or one of its enabled sub-accounts. An open position carries its pool and
-decoded account state; a closed position means the account no longer exists.
+vault or any of its sub-accounts, enabled or not. An open position carries its
+pool and decoded account state; a closed position means the account no longer
+exists.
 `updatedSlot` / `updated_slot` is the slot of the read the state came from.
 Latest state is currently recorded for Raydium CLMM positions only.
 
@@ -246,9 +248,9 @@ the same way as transactions.
 
 | Read | Route |
 | :--- | :--- |
-| Transaction history | `POST /wallet/swig/{swig_config_address}/dex/transactions:search` |
-| One transaction | `GET /wallet/swig/{swig_config_address}/dex/transactions/{transaction_signature}` |
-| Latest positions | `POST /wallet/swig/{swig_config_address}/dex/positions:search` |
+| Transaction history | `POST /wallet/api/swig/{swig_config_address}/dex/transactions:search` |
+| One transaction | `GET /wallet/api/swig/{swig_config_address}/dex/transactions/{transaction_signature}` |
+| Latest positions | `POST /wallet/api/swig/{swig_config_address}/dex/positions:search` |
 
 See the [DEX API](/developer-api/dex) for the exact parameters and response
 shapes. These are API-key routes and must be called from a trusted server. If

@@ -13,9 +13,9 @@ write.
 
 | Method | Route | Authentication |
 | :--- | :--- | :--- |
-| `POST` | `/wallet/swig/{swig_config_address}/dex/transactions:search` | API key |
-| `GET` | `/wallet/swig/{swig_config_address}/dex/transactions/{transaction_signature}` | API key |
-| `POST` | `/wallet/swig/{swig_config_address}/dex/positions:search` | API key |
+| `POST` | `/wallet/api/swig/{swig_config_address}/dex/transactions:search` | API key |
+| `GET` | `/wallet/api/swig/{swig_config_address}/dex/transactions/{transaction_signature}` | API key |
+| `POST` | `/wallet/api/swig/{swig_config_address}/dex/positions:search` | API key |
 
 Send your API key:
 
@@ -32,8 +32,8 @@ retry.
 The Swig must be an active Swig owned by your API key's organization on the
 requested network. An unknown Swig, an inactive one, and another
 organization's Swig all answer `404`, so a response never reveals whether a Swig
-exists outside your organization. Positions cover the Swig's vault and its
-enabled sub-accounts.
+exists outside your organization. Positions cover the Swig's vault and all of
+its sub-accounts, enabled or not.
 
 ## Coverage
 
@@ -57,7 +57,7 @@ protocols have no positions.
 
 ## List DEX transactions
 
-`POST /wallet/swig/{swig_config_address}/dex/transactions:search`
+`POST /wallet/api/swig/{swig_config_address}/dex/transactions:search`
 
 Request body:
 
@@ -86,7 +86,7 @@ filters do not change the order: transactions come newest first by slot, then
 by signature.
 
 ```bash
-curl -X POST "https://api.onswig.com/wallet/swig/<swig-config-address>/dex/transactions:search" \
+curl -X POST "https://api.onswig.com/wallet/api/swig/<swig-config-address>/dex/transactions:search" \
   -H "Authorization: Bearer sk_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -114,7 +114,7 @@ curl -X POST "https://api.onswig.com/wallet/swig/<swig-config-address>/dex/trans
         {
           "actionIndex": 0,
           "swigVaultAddress": "<swig-vault-address>",
-          "actingRoleId": "1",
+          "actingRoleId": 1,
           "protocol": "DEX_PROTOCOL_RAYDIUM_CLMM",
           "dexProgramAddress": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
           "action": {
@@ -156,7 +156,7 @@ Action fields:
 | :--- | :--- | :--- |
 | `actionIndex` | number | Position of the action in the transaction's execution order |
 | `swigVaultAddress` | string | The Swig vault or sub-account that signed for the action |
-| `actingRoleId` | uint64 | The Swig role that authorized it, as a decimal string |
+| `actingRoleId` | number | The Swig role that authorized it |
 | `protocol` | enum | The DEX protocol |
 | `dexProgramAddress` | string | The DEX program that executed the action |
 | `action` | object | Exactly one key naming the action, described below |
@@ -201,7 +201,7 @@ Each amount is an object:
 
 ## Get one DEX transaction
 
-`GET /wallet/swig/{swig_config_address}/dex/transactions/{transaction_signature}`
+`GET /wallet/api/swig/{swig_config_address}/dex/transactions/{transaction_signature}`
 
 Query parameters:
 
@@ -215,7 +215,7 @@ the Swig executed no indexed DEX action in that transaction.
 
 ## List latest DEX positions
 
-`POST /wallet/swig/{swig_config_address}/dex/positions:search`
+`POST /wallet/api/swig/{swig_config_address}/dex/positions:search`
 
 The request body takes the same `network`, `pageSize`, `pageToken`, and
 `filters` fields as the transaction search. Filters:
@@ -224,7 +224,7 @@ The request body takes the same `network`, `pageSize`, `pageToken`, and
 | :--- | :--- | :--- |
 | `positionStatus` | enum | `POSITION_STATUS_OPEN` or `POSITION_STATUS_CLOSED` |
 | `protocol` | enum | One of the `protocol` values above |
-| `swigVaultAddress` | string | The vault or enabled sub-account holding the position |
+| `swigVaultAddress` | string | The vault or sub-account holding the position |
 
 Filters combine with AND in any order, each kind may appear once, and each
 applies to the position. Positions are ordered by protocol, then position
@@ -232,7 +232,7 @@ address. The order never depends on state, so a position that closes does not
 move.
 
 ```bash
-curl -X POST "https://api.onswig.com/wallet/swig/<swig-config-address>/dex/positions:search" \
+curl -X POST "https://api.onswig.com/wallet/api/swig/<swig-config-address>/dex/positions:search" \
   -H "Authorization: Bearer sk_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
@@ -308,6 +308,8 @@ separate action; the close itself appears in the transaction history.
   appears at the start of a fresh walk, not inside one already in progress.
 - A token is not a credential. Every page checks the API key and ownership
   again.
+- Each page is one API request. A larger `pageSize`, up to 100, reads a long
+  history in fewer requests.
 
 ## Errors
 
@@ -316,5 +318,6 @@ separate action; the close itself appears in the transaction history.
 | `400` | Missing or unspecified `network`; a malformed Swig address, vault, or signature; a filter with no kind (`{}`), or a repeated filter kind; an explicit `*_UNSPECIFIED` filter; `startSlot` after `endSlot`; a slot out of range; a page token that is malformed or was issued for a different request |
 | `401` | Missing or invalid API key |
 | `404` | The Swig is unknown, inactive, or another organization's; or, for a single transaction, the Swig has no indexed DEX action in it |
+| `429` | Your organization reached its plan's monthly API request limit |
 
 See [Errors](/developer-api/errors) for the general error format.
