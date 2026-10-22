@@ -256,7 +256,8 @@
             "group": "Balances and Funding",
             "pages": [
               "developer-sdk/wallet-reads",
-              "developer-sdk/ramp"
+              "developer-sdk/ramp",
+              "developer-sdk/yield"
             ]
           },
           {
@@ -310,7 +311,8 @@
               "developer-api/transactions",
               "developer-api/wallets",
               "developer-api/paymaster",
-              "developer-api/ramp"
+              "developer-api/ramp",
+              "developer-api/yield"
             ]
           },
           {

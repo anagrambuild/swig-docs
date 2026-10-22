@@ -1,0 +1,165 @@
+---
+title: "Yield API"
+sidebarTitle: "Yield"
+---
+
+The Yield API earns on an existing Swig wallet. Native Solana staking to an
+allowlisted validator is the first yield method. Every route is scoped to one
+Swig wallet config, and prepare routes return unsigned transactions that the
+caller authorizes, signs, and submits.
+
+## Auth
+
+Use an API key:
+
+```text
+Authorization: Bearer sk_your_api_key
+```
+
+Every route requires `network` (`NETWORK_MAINNET` or `NETWORK_DEVNET`) and
+checks that the wallet config belongs to the API key's organization. Other
+organizations' wallets return `NOT_FOUND`.
+
+## Routes
+
+| Method | Route | Purpose |
+| :--- | :--- | :--- |
+| `POST` | `/api/yield/{swig_config_address}/role/prepare` | Reuse or prepare a role that can stake |
+| `POST` | `/api/yield/{swig_config_address}/deposit/prepare` | Fund and delegate a new position |
+| `POST` | `/api/yield/{swig_config_address}/exit/prepare` | Deactivate all or part of a position |
+| `POST` | `/api/yield/{swig_config_address}/withdraw/prepare` | Withdraw an inactive position to the wallet |
+| `GET` | `/api/yield/{swig_config_address}/options` | Allowlisted validators with live rates |
+| `GET` | `/api/yield/{swig_config_address}/estimate` | Project rewards at a validator's rate |
+| `GET` | `/api/yield/{swig_config_address}/positions` | Indexed positions |
+| `GET` | `/api/yield/{swig_config_address}/summary` | Position and reward totals |
+| `GET` | `/api/yield/{swig_config_address}/rewards` | Recorded reward credits |
+
+Amounts are unsigned lamports encoded as decimal strings. Timestamps are RFC
+3339 strings.
+
+## Wallet envelope
+
+Deposit, exit, and withdrawal take a `wallet` object. Its
+`swigConfigAddress` must match the route.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `network` | enum | `NETWORK_MAINNET` or `NETWORK_DEVNET` |
+| `swigConfigAddress` | string | The Swig wallet config |
+| `feePayer` | string | Signing key that pays fees and any new position's rent |
+| `roleId` | number, optional | Role to act with; omitted selects the lowest capable role |
+| `requesterAuthority` | object | `ed25519`, `secp256r1`, or `participantSet` authority |
+
+## Prepare a role
+
+`POST /api/yield/{swig_config_address}/role/prepare`
+
+```json
+{
+  "network": "NETWORK_MAINNET",
+  "swigConfigAddress": "...",
+  "feePayer": "...",
+  "yieldAuthority": { "ed25519": { "publicKey": "..." } },
+  "validatorVoteAddress": "...",
+  "maxDepositLamports": "10000000000",
+  "roleManagerAuthority": { "ed25519": { "publicKey": "..." } }
+}
+```
+
+The response is one of:
+
+- `existing`: `{ "roleId": 2, "actions": [...] }`. A role held by
+  `yieldAuthority` can already deposit up to `maxDepositLamports`, exit, and
+  withdraw.
+- `create`: `{ "transaction": PreparedTransaction, "yieldAuthority": ..., "actions": [...] }`.
+  An unsigned AddRole transaction for a new role with `Program(System)`,
+  `Program(Stake)`, `SolLimit(maxDepositLamports)`, and `StakeAll`. It requires
+  `roleManagerAuthority`, whose role must hold `All` or `ManageAuthority`. After
+  it confirms, call the route again without `roleId` to resolve the new role.
+
+## Deposit
+
+`POST /api/yield/{swig_config_address}/deposit/prepare`
+
+```json
+{
+  "wallet": { "network": "NETWORK_MAINNET", "swigConfigAddress": "...", "feePayer": "...", "requesterAuthority": { "ed25519": { "publicKey": "..." } } },
+  "lamports": "5000000000",
+  "validatorVoteAddress": "...",
+  "positionSeed": "deposit-1"
+}
+```
+
+Returns `transaction`, `positionAddress`, `validatorVoteAddress`,
+`delegatedLamports`, and `rentLamports`. The position is
+`createWithSeed(feePayer, positionSeed, Stake program)` with the Swig wallet as
+staker and withdrawer and no lockup. `positionSeed` is ASCII, 1–32 bytes. Reuse
+it on retry: an occupied address returns `ALREADY_EXISTS`. The validator must
+currently accept deposits.
+
+## Exit
+
+`POST /api/yield/{swig_config_address}/exit/prepare`
+
+```json
+{ "wallet": { ... }, "positionAddress": "...", "all": {} }
+```
+
+```json
+{ "wallet": { ... }, "positionAddress": "...", "partial": { "lamports": "2000000000", "positionSeed": "exit-1" } }
+```
+
+Returns `transaction`, `exitingPositionAddress`, `deactivatingLamports`, and
+`additionalRentLamports`. A partial exit needs a fully active position, and
+both the exiting and the remaining stake must meet the network minimum
+delegation. Positions delegated to validators later disabled for deposits can
+still exit.
+
+## Withdraw
+
+`POST /api/yield/{swig_config_address}/withdraw/prepare`
+
+```json
+{ "wallet": { ... }, "positionAddress": "..." }
+```
+
+Returns `transaction`, `withdrawalLamports`, and `destinationWalletAddress`
+(the Swig wallet). The position must be fully inactive with no lockup in force.
+The position's rent reserve currently stays in the position.
+
+## Options and estimates
+
+`GET /api/yield/{swig_config_address}/options?network=NETWORK_MAINNET` returns
+`options[]` with `voteAddress`, `name`, `acceptsDeposits`, and `rate`
+(`estimatedNetAprBps`, `commissionBps`, `lastUpdatedAt`). Rates are cached for
+15 seconds.
+
+`GET /api/yield/{swig_config_address}/estimate?network=…&validatorVoteAddress=…&principalLamports=…&horizonDays=…`
+returns `projection` with `estimatedRewardsLamports` =
+`principal × net APR × days / 365`, rounded down. `horizonDays` is 1–365.
+
+## Positions, summary, and rewards
+
+- `GET …/positions?network=…&pageSize=…&pageToken=…` returns `positions[]`,
+  `nextPageToken`, and `lastUpdatedAt`. Positions sort by address. Each has
+  `state` (`YIELD_POSITION_STATE_ACTIVATING`, `_ACTIVE`, `_DEACTIVATING`, or
+  `_INACTIVE`), `balanceLamports`, `rentLamports`, `positionLamports`,
+  `withdrawableLamports`, and `earningLamports`.
+- `GET …/summary?network=…` returns `totalPositionLamports` (excluding rent),
+  `withdrawableLamports` (including rent), and `recordedRewardsLamports`.
+- `GET …/rewards?network=…&pageSize=…&pageToken=…` returns `rewards[]` with
+  `positionAddress`, `amountLamports`, and `earnedAt`, ordered by credit time.
+
+Page size defaults to 50 (maximum 200). Page tokens are bound to the
+organization, network, and wallet that issued them.
+
+## Errors
+
+| gRPC code | HTTP | Meaning |
+| :--- | :--- | :--- |
+| `INVALID_ARGUMENT` | 400 | Bad input or unsupported validator/network |
+| `NOT_FOUND` | 404 | Wallet not in your organization |
+| `PERMISSION_DENIED` | 403 | Role cannot perform the operation |
+| `FAILED_PRECONDITION` | 400 | Funds, position state, or lockup |
+| `ALREADY_EXISTS` | 409 | Position seed already used |
+| `UNAVAILABLE` | 503 | RPC, rate source, or index outage |
