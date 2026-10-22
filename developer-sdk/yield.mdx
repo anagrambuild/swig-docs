@@ -1,0 +1,282 @@
+---
+title: "Earn Yield"
+sidebarTitle: "Yield (Staking)"
+---
+
+The yield client earns on an existing Swig wallet. Native Solana staking to a
+validator on the Swig allowlist is the first yield method; the client is named
+for yield so later methods use the same calls.
+
+Every call runs on your server and is scoped to one wallet config. Prepare
+calls return an unsigned `PreparedTransaction`: authorize it with the wallet
+authority, sign it with your fee payer, then submit or
+[sponsor](/developer-sdk/sponsor-and-submit) it exactly like a transfer.
+
+TypeScript exposes `swig.yield`. Python exposes `swig.yields`, because `yield`
+is a Python keyword.
+
+## How native staking works
+
+```text
+Swig wallet --SOL--> position account --delegate--> validator vote account
+                          |
+                          +-- staker and withdrawer authority = the Swig wallet
+                          +-- exit (deactivate) --> cooldown --> withdraw to the wallet
+```
+
+- **Deposit.** The wallet funds the position's principal. Your fee payer funds
+  the position's rent and transaction fees.
+- **Rewards.** Native rewards compound in the position. They become spendable
+  wallet SOL when you exit and withdraw.
+- **Exit.** Deactivates all of a position, or splits part of a fully active
+  position into a new account and deactivates that. Cooldown takes about one
+  epoch (2–3 days).
+- **Withdraw.** Returns an inactive position's balance to the Swig wallet.
+  Until the Swig program supports closing stake accounts through SignV2, the
+  position's rent reserve stays in the position.
+
+Rates are variable and are not set by Swig. Normal validator commission and
+network fees apply.
+
+## Choose a validator
+
+`listOptions` returns the validators Swig allows on the network, with each
+validator's live rate. Only options with `acceptsDeposits` take new deposits;
+disabled validators stay listed so existing positions can still exit and
+withdraw.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const yieldClient = swig.yield.forWallet({
+  swigConfigAddress: wallet.swigConfigAddress,
+  network: 'mainnet',
+});
+
+const options = await yieldClient.listOptions();
+const validator = options.find((option) => option.acceptsDeposits)!;
+// validator.rate?.estimatedNetAprBps: 600 = 6% APR after commission
+```
+
+```python Python
+options = await swig.yields.list_options(swig_config_address=config)
+validator = next(option for option in options if option.accepts_deposits)
+# validator.rate.estimated_net_apr_bps: 600 = 6% APR after commission
+```
+
+</CodeGroup>
+
+Rates are cached for 15 seconds. `rate.lastUpdatedAt` is when the rate source
+observed the value.
+
+## Prepare a role that can stake
+
+The authority that signs yield transactions needs a
+[role](/developer-sdk/permissions) that allows:
+
+| Need | Permission |
+| :--- | :--- |
+| Sign Stake program instructions | `Program(Stake)`, `ProgramAll`, or `All` |
+| Fund deposits from the wallet | `Program(System)` and a SOL limit (`SolLimit` or `SolRecurringLimit`) |
+| Exit part of a position and withdraw | `StakeAll`, or a stake limit that covers the amount |
+
+`StakeAll` on its own cannot sign Stake program instructions. A role also needs
+`Program(Stake)`. On the current Swig program, `ProgramCurated` does not cover
+the Stake program.
+
+`prepareRole` checks this for you. It reuses the lowest role held by
+`yieldAuthority` that can deposit up to `maxDeposit`, exit, and withdraw. If
+none qualifies, it prepares an AddRole transaction for a new role with exactly
+`Program(System)`, `Program(Stake)`, `SolLimit(maxDeposit)`, and `StakeAll`. The
+new role never gets `All` or `ManageAuthority`, and existing roles are left
+unchanged.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const role = await yieldClient.prepareRole({
+  feePayer: paymaster.address,
+  yieldAuthority: { ed25519: { publicKey: agentKey } },
+  validatorVoteAddress: validator.voteAddress,
+  maxDeposit: 10_000_000_000n,
+  // Only needed to create a role: an existing role holding All or ManageAuthority.
+  roleManagerAuthority: { ed25519: { publicKey: adminKey } },
+});
+
+if (role.type === 'create') {
+  // Sign role.transaction with the role manager and fee payer, submit it, and
+  // wait for confirmation. Then call prepareRole again without roleId.
+}
+```
+
+```python Python
+from swig_developer_sdk import PreparedYieldRoleCreation
+
+role = await swig.yields.prepare_role(
+    swig_config_address=config,
+    fee_payer=fee_payer,
+    yield_authority={"ed25519": {"public_key": agent_key}},
+    validator_vote_address=validator.vote_address,
+    max_deposit=10_000_000_000,
+    role_manager_authority={"ed25519": {"public_key": admin_key}},
+)
+if isinstance(role, PreparedYieldRoleCreation):
+    ...  # sign, submit and confirm role.transaction, then call prepare_role again
+```
+
+</CodeGroup>
+
+Each deposit, exit, and withdrawal re-checks the role's live permissions, so a
+role that has spent its SOL limit is rejected with `PERMISSION_DENIED` before a
+transaction is built.
+
+## Deposit
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const deposit = await yieldClient.deposit({
+  feePayer: paymaster.address,
+  requesterAuthority: { ed25519: { publicKey: agentKey } },
+  amount: 5_000_000_000n, // principal, excluding rent and fees
+  validatorVoteAddress: validator.voteAddress,
+  positionSeed: 'deposit-2026-10-22',
+});
+// deposit.positionAddress, deposit.rentLamports (funded by the fee payer)
+```
+
+```python Python
+deposit = await swig.yields.deposit(
+    swig_config_address=config,
+    fee_payer=fee_payer,
+    requester_authority={"ed25519": {"public_key": agent_key}},
+    amount=5_000_000_000,
+    validator_vote_address=validator.vote_address,
+    position_seed="deposit-2026-10-22",
+)
+```
+
+</CodeGroup>
+
+The position address is derived from your fee payer and `positionSeed` (ASCII,
+1–32 bytes). Keep the seed when you retry: if a previous attempt already landed,
+the call returns `ALREADY_EXISTS` instead of building a second deposit. The
+amount must meet the network's minimum delegation, and the wallet must keep its
+rent reserve after funding it.
+
+## Exit
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const exit = await yieldClient.exit({
+  feePayer: paymaster.address,
+  requesterAuthority: { ed25519: { publicKey: agentKey } },
+  positionAddress: deposit.positionAddress,
+  amount: 'all',
+  // Or part of a fully active position:
+  // amount: { lamports: 2_000_000_000n, positionSeed: 'exit-1' },
+});
+// exit.exitingPositionAddress is the position entering cooldown
+```
+
+```python Python
+from swig_developer_sdk import PartialYieldExit
+
+exit = await swig.yields.exit(
+    swig_config_address=config,
+    fee_payer=fee_payer,
+    requester_authority={"ed25519": {"public_key": agent_key}},
+    position_address=deposit.position_address,
+    amount="all",  # or PartialYieldExit(lamports=2_000_000_000, position_seed="exit-1")
+)
+```
+
+</CodeGroup>
+
+A partial exit needs a fully active position, and both the exiting amount and
+the amount left behind must meet the minimum delegation. Your fee payer funds
+the new position's rent (`additionalRentLamports`).
+
+## Withdraw
+
+After cooldown the position is inactive. Withdraw returns its balance to the
+Swig wallet.
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const withdrawal = await yieldClient.withdraw({
+  feePayer: paymaster.address,
+  requesterAuthority: { ed25519: { publicKey: agentKey } },
+  positionAddress: exit.exitingPositionAddress,
+});
+// withdrawal.withdrawalLamports, withdrawal.destinationWalletAddress
+```
+
+```python Python
+withdrawal = await swig.yields.withdraw(
+    swig_config_address=config,
+    fee_payer=fee_payer,
+    requester_authority={"ed25519": {"public_key": agent_key}},
+    position_address=exit.exiting_position_address,
+)
+```
+
+</CodeGroup>
+
+## Read positions, rewards, and estimates
+
+<CodeGroup dropdown>
+
+```typescript TypeScript
+const { positions, nextPageToken, lastUpdatedAt } =
+  await yieldClient.listPositions({ pageSize: 50 });
+const summary = await yieldClient.getSummary();
+const rewards = await yieldClient.listRewards();
+const projection = await yieldClient.estimate({
+  validatorVoteAddress: validator.voteAddress,
+  principal: 5_000_000_000n,
+  horizonDays: 365,
+});
+```
+
+```python Python
+page = await swig.yields.list_positions(swig_config_address=config, page_size=50)
+summary = await swig.yields.get_summary(swig_config_address=config)
+rewards = await swig.yields.list_rewards(swig_config_address=config)
+projection = await swig.yields.estimate(
+    swig_config_address=config,
+    validator_vote_address=validator.vote_address,
+    principal=5_000_000_000,
+    horizon_days=365,
+)
+```
+
+</CodeGroup>
+
+- **Positions** carry a state (`activating`, `active`, `deactivating`, or
+  `inactive`), the total balance, rent, `positionLamports` (balance excluding
+  rent), the stake currently earning, and what is withdrawable now.
+- **Summary** totals positions excluding rent, withdrawable SOL including rent,
+  and recorded rewards. Rewards are already included in position balances.
+- **Rewards** are credited native rewards, ordered by on-chain credit time.
+- **Estimates** are `principal × net APR × days / 365`, rounded down, with no
+  compounding, rent, or fees. Days count once the position is fully active.
+
+Positions and rewards come from the Swig index. Pages default to 50 entries
+(maximum 200), and a page token only works for the wallet and network that
+issued it. `lastUpdatedAt` is absent until the wallet's first indexed position.
+
+## Errors
+
+| Code | Meaning |
+| :--- | :--- |
+| `INVALID_ARGUMENT` | Bad input, or a validator that is not allowlisted for deposits on the network |
+| `NOT_FOUND` | The wallet does not belong to your organization |
+| `PERMISSION_DENIED` | The role cannot perform this operation, or a role manager lacks `ManageAuthority` |
+| `FAILED_PRECONDITION` | Insufficient funds, position state (for example not yet inactive), or lockup |
+| `ALREADY_EXISTS` | The position seed already identifies an account; check the earlier submission |
+| `UNAVAILABLE` | RPC, rate source, or index outage; retry |
+
+See the [Yield API reference](/developer-api/yield) for the underlying routes.
