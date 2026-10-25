@@ -6,6 +6,10 @@ sidebarTitle: "Create Wallets"
 Prepare a new Swig wallet from a saved policy template or an inline authority. Your
 application signs and submits the returned transactions to create it on-chain.
 
+Rust uses `WalletClient::prepare_create_wallet`. The examples use `wallet` from
+[Rust integration](/developer-sdk/integration-paths#rust), with `fee_payer` and
+`user_public_key` supplied as `Pubkey` values.
+
 ## Two create modes
 
 You can create a wallet either:
@@ -16,6 +20,22 @@ You can create a wallet either:
 If the policy ID is omitted, the backend creates the wallet from the inline
 authority you provide. Supported authority shapes are `ed25519`, `secp256k1`,
 and `secp256r1`.
+
+In Rust, a saved policy uses `policy_id: Some(policy_id)` with a `String` ID.
+`initial_user` is an `Option<WalletAuthority>`. It contains an authority when
+the policy requests a key at creation, or `None` when the policy supplies one.
+
+```rust
+use swig_developer_sdk::PrepareCreateWalletArgs;
+
+let created = wallet
+    .prepare_create_wallet(PrepareCreateWalletArgs {
+        fee_payer,
+        policy_id: Some(policy_id),
+        initial_user,
+    })
+    .await?;
+```
 
 ## Basic create flow
 
@@ -41,6 +61,20 @@ created = await swig.wallets.create(
         },
     },
 )
+```
+
+```rust Rust
+use swig_developer_sdk::{PrepareCreateWalletArgs, WalletAuthority};
+
+let created = wallet
+    .prepare_create_wallet(PrepareCreateWalletArgs {
+        fee_payer,
+        policy_id: None,
+        initial_user: Some(WalletAuthority::Ed25519 {
+            public_key: user_public_key,
+        }),
+    })
+    .await?;
 ```
 
 </CodeGroup>
@@ -72,6 +106,20 @@ created = await swig.wallets.create(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{PrepareCreateWalletArgs, WalletAuthority};
+
+let created = wallet
+    .prepare_create_wallet(PrepareCreateWalletArgs {
+        fee_payer,
+        policy_id: None,
+        initial_user: Some(WalletAuthority::Secp256r1 {
+            public_key: passkey_public_key,
+        }),
+    })
+    .await?;
+```
+
 </CodeGroup>
 
 EVM-backed creation works the same way with `secp256k1`:
@@ -100,11 +148,29 @@ created = await swig.wallets.create(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{PrepareCreateWalletArgs, WalletAuthority};
+
+let created = wallet
+    .prepare_create_wallet(PrepareCreateWalletArgs {
+        fee_payer,
+        policy_id: None,
+        initial_user: Some(WalletAuthority::Secp256k1 {
+            public_key: evm_public_key,
+        }),
+    })
+    .await?;
+```
+
 </CodeGroup>
+
+In Rust, `passkey_public_key` and `evm_public_key` are compressed SEC1 public
+keys as `[u8; 33]`. Preparation validates that the supplied key lies on the
+selected curve.
 
 ## What you get back
 
-The result is not just one transaction. It is a categorized create plan:
+TypeScript and Python return a categorized create plan:
 
 | TypeScript / Python | Meaning |
 |-------|---------|
@@ -118,14 +184,29 @@ For a plain create, this usually collapses to one creation transaction whose
 only required transaction signer is the fee payer. Policy-driven follow-up
 instructions can add other signer requirements.
 
+Rust returns `WalletCreation { wallet, transaction }`. The wallet contains
+native config and wallet `Pubkey` addresses. `transaction` is one
+`PreparedTransaction`, whose `transaction` field is a native
+`VersionedTransaction` and whose `signature_requests` contains any requested
+embedded signatures.
+
+Rust currently requires exactly one transaction in the creation response.
+A policy that produces multiple transactions returns
+`PrepareCreateWalletError::InvalidResponse("expected exactly one prepared transaction")`.
+Use TypeScript or Python for those policy plans. A missing inline authority
+without a policy, an empty policy ID, or a ParticipantSet initial authority
+returns `PrepareCreateWalletError::InvalidInput`.
+
 ## Networks
 
-Both SDKs resolve the network from the call and then the client default. Wallet
-creation requires one of those values to be set.
+TypeScript and Python resolve the network from the call and then the client
+default. Wallet creation requires one of those values to be set. Rust uses the
+`Network` configured on `WalletClient` for every request.
 
 ## What to submit
 
-Always submit the prepared `transactions` exactly in the returned order.
+For TypeScript and Python, submit the prepared `transactions` exactly in the
+returned order. In Rust, sign and submit the returned `transaction`.
 
 If the client-authority collection is not empty, your application must obtain
 and patch each requested embedded signature outside the server SDK before

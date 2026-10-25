@@ -36,9 +36,17 @@ wallet = swig.wallets.use(
 
 </CodeGroup>
 
-The authority shape may also be `secp256k1` or `secp256r1`. The SDK uses the
-public authority value to prepare the correct request; it never accesses the
-corresponding private key or authenticator.
+TypeScript and Python authority shapes may also be `secp256k1` or
+`secp256r1`. The SDK uses the public authority value to prepare the correct
+request; it never accesses the corresponding private key or authenticator.
+
+Rust passes the config address and requester authority directly to a reusable
+`WalletClient`; see [Rust integration](/developer-sdk/integration-paths#rust)
+for setup. The examples use that client as `wallet`, with
+`requester_authority` as a `WalletAuthority` and all addresses as `Pubkey`
+values supplied by your application. Rust transfer preparation accepts
+Ed25519, secp256r1, and ParticipantSet requesters. A secp256k1 requester returns
+`InvalidInput`.
 
 ## SOL transfer
 
@@ -60,7 +68,24 @@ prepared = await wallet.transfer.sol(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::PrepareTransferSolArgs;
+
+let prepared = wallet
+    .prepare_transfer_sol(PrepareTransferSolArgs {
+        swig_config_address,
+        fee_payer,
+        requester_authority: requester_authority.clone(),
+        destination,
+        amount: 1_000_000,
+    })
+    .await?;
+```
+
 </CodeGroup>
+
+Rust's `amount` is a `u64` count of lamports. A zero amount returns
+`PrepareTransferSolError::InvalidAmount`.
 
 ## Token transfer
 
@@ -88,7 +113,27 @@ prepared = await wallet.transfer.token(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::PrepareTransferTokenArgs;
+
+let prepared = wallet
+    .prepare_transfer_token(PrepareTransferTokenArgs {
+        swig_config_address,
+        fee_payer,
+        requester_authority: requester_authority.clone(),
+        mint,
+        destination_owner,
+        amount: 10_000,
+    })
+    .await?;
+```
+
 </CodeGroup>
+
+Rust's token `amount` is a `u64` count of the mint's smallest units. A zero
+amount returns `PrepareTransferTokenError::InvalidInput`. Both transfer
+methods return their own typed errors for authentication, permission, timeout,
+service, and malformed-response failures.
 
 ## Continue the flow
 
@@ -101,9 +146,15 @@ Use the requester authority and the serialized transaction's required signer
 set to coordinate signing in your application. For `secp256r1` and
 `secp256k1`, also process every `signatureRequests` / `signature_requests`
 record. The optional [signing helpers](/developer-sdk/signers)
-can adapt application-provided signatures. Return the signed base64 transaction
-to the server, then use
+can adapt application-provided signatures. With TypeScript and Python, return
+the signed base64 transaction to the server, then use
 [Sponsor & Submit](/developer-sdk/sponsor-and-submit) or your own RPC path.
+
+Rust keeps the Solana transaction decoded as
+`PreparedTransaction::transaction`, a native `VersionedTransaction`. Retain
+the preparation metadata while signing. A ParticipantSet requester returns a
+`participant_set_approval_plan` for approval collection and compilation before
+the transaction can be submitted.
 
 For Jupiter swaps and multi-operation preparation, continue to
 [Swaps and Batches](/developer-sdk/swaps-and-batches).

@@ -7,6 +7,12 @@ The built-in helpers cover common flows. Use `wallet.buildTransaction(...)` or
 `wallet.build_transaction(...)` when you still want hosted preparation but need
 your own instruction set.
 
+Rust uses `WalletClient::prepare_transaction` with native `Instruction` and
+`AccountMeta` values. The example uses `wallet` from
+[Rust integration](/developer-sdk/integration-paths#rust). Supply all addresses
+as `Pubkey` values, `requester_authority` as a `WalletAuthority`, and
+`instruction_data` as a `Vec<u8>` encoded for your target program.
+
 ## What it does
 
 The custom transaction builder prepares a transaction for an existing Swig
@@ -66,11 +72,49 @@ prepared = await wallet.build_transaction(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{AccountMeta, Instruction, PrepareTransactionArgs};
+
+let prepared = wallet
+    .prepare_transaction(PrepareTransactionArgs {
+        swig_config_address,
+        fee_payer,
+        requester_authority: requester_authority.clone(),
+        instructions: vec![Instruction {
+            program_id: target_program_id,
+            accounts: vec![
+                AccountMeta::new(writable_account, false),
+                AccountMeta::new_readonly(readonly_account, false),
+            ],
+            data: instruction_data,
+        }],
+        address_lookup_table_accounts: vec![lookup_table_address],
+    })
+    .await?;
+```
+
 </CodeGroup>
 
 The SDK normalizes the instruction input and sends it to
 `POST /transaction/prepare/custom`. The API returns the prepared transaction
 for your application-owned signing and submission flow.
+
+Rust keeps instruction data as bytes and handles wire encoding internally.
+The result's `transaction` is a native `VersionedTransaction`.
+
+Rust supports Ed25519 or secp256r1 requesters with lookup tables.
+ParticipantSet requesters are supported when
+`address_lookup_table_accounts` is empty.
+
+`PrepareTransactionError::InvalidInput` reports an empty instruction list,
+duplicate lookup-table addresses, a secp256k1 requester, or lookup tables with
+a ParticipantSet requester. Instruction accounts marked as signers must be
+the derived Swig wallet address, the fee payer, or the Ed25519 requester.
+Other required instruction signers return `InvalidInput`.
+
+The method also returns typed authentication, permission, timeout, service,
+and invalid-response errors. Propagate preparation errors before collecting
+signatures.
 
 ## What still applies
 
