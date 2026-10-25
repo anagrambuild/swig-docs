@@ -8,8 +8,8 @@ Use permissions to define what an authority may do with a Swig wallet. A role
 combines one authority with an `actions` list, so the same permission model
 applies to a single signer or a ParticipantSet with several members.
 
-This page lists the 18 actions accepted by `wallet.roles.add()` in TypeScript
-`0.10.0` and Python `0.9.0`, with their required fields, units, and permission
+This page lists the 18 actions supported by TypeScript `0.10.0`, Python
+`0.9.0`, and Rust `0.1.0`, with their required fields, units, and permission
 boundaries.
 
 ## Read the action reference
@@ -19,6 +19,9 @@ below. Python uses an exported constructor named after the action, such as
 `ManageAuthorityAction()` or `TokenRecurringDestinationLimitAction(...)`.
 Python field names use snake case: `program_id` and `recurring_amount`
 correspond to TypeScript's `programId` and `recurringAmount`.
+
+Rust uses `WalletPermission` variants such as `TokenRecurringDestinationLimit`,
+with snake case fields. Amounts and slot windows are `u64` values.
 
 For a complete transaction example, see
 [Add Roles](/developer-sdk/add-roles-and-permissions). To save permissions as
@@ -40,7 +43,7 @@ unlimited SOL or token allowance.
 - Express `window` in Solana slots, not seconds. A recurring allowance resets
   according to its on-chain window; it is not a per-transaction limit or an
   exact wall-clock schedule.
-- Supply public addresses as base58 strings. A SOL `destination` is the
+- In TypeScript and Python, supply public addresses as base58 strings. A SOL `destination` is the
   recipient account. A token `destination` is the recipient **token account**,
   such as its associated token account, rather than the owner's wallet address.
 
@@ -110,3 +113,6 @@ sub-account actions. Consult the
 [TypeScript action definitions](https://github.com/anagrambuild/swig-developer-sdk/blob/typescript-v0.10.0/typescript/src/types/wallet-actions.ts)
 and [Python action definitions](https://github.com/anagrambuild/swig-developer-sdk/blob/python-v0.9.0/python/src/swig_developer_sdk/wallets.py)
 when choosing SDK inputs.
+
+Rust role reads use `SwigRolePermission`, which includes current allowances
+and permissions outside the role-creation API.
