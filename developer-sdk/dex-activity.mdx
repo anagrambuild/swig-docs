@@ -21,13 +21,11 @@ const page = await swig.dex.transactions.list({
   swigConfigAddress,
   network: 'mainnet',
   pageSize: 25,
-  filters: [
-    { kind: 'startSlot', value: 357_000_000n },
-    { kind: 'endSlot', value: 358_000_000n },
-    { kind: 'protocol', value: 'raydium-clmm' },
-    { kind: 'actionType', value: 'swap' },
-    { kind: 'swigVaultAddress', value: swigVaultAddress },
-  ],
+  startSlot: 357_000_000,
+  endSlot: 358_000_000,
+  protocol: 'raydium-clmm',
+  actionType: 'swap',
+  swigVaultAddress,
 });
 
 for (const transaction of page.transactions) {
@@ -40,25 +38,15 @@ for (const transaction of page.transactions) {
 ```
 
 ```python Python
-from swig_developer_sdk import (
-    DexActionTypeFilter,
-    DexEndSlotFilter,
-    DexProtocolFilter,
-    DexStartSlotFilter,
-    DexSwigVaultAddressFilter,
-)
-
 page = await swig.dex.transactions.list(
     swig_config_address=swig_config_address,
     network="mainnet",
     page_size=25,
-    filters=[
-        DexStartSlotFilter(357_000_000),
-        DexEndSlotFilter(358_000_000),
-        DexProtocolFilter("raydium-clmm"),
-        DexActionTypeFilter("swap"),
-        DexSwigVaultAddressFilter(swig_vault_address),
-    ],
+    start_slot=357_000_000,
+    end_slot=358_000_000,
+    protocol="raydium-clmm",
+    action_type="swap",
+    swig_vault_address=swig_vault_address,
 )
 
 for transaction in page.transactions:
@@ -73,19 +61,17 @@ for transaction in page.transactions:
 
 </CodeGroup>
 
-Transactions come newest first. `filters` is optional:
+Transactions come newest first. Every filter is optional:
 
-| TypeScript `kind` | Python | Selects |
+| TypeScript | Python | Selects |
 | :--- | :--- | :--- |
-| `startSlot`, `endSlot` | `DexStartSlotFilter`, `DexEndSlotFilter` | transactions in an inclusive slot range |
-| `protocol` | `DexProtocolFilter` | transactions with an action on that protocol |
-| `actionType` | `DexActionTypeFilter` | transactions with an action of that type |
-| `swigVaultAddress` | `DexSwigVaultAddressFilter` | transactions with an action from that vault or sub-account |
+| `startSlot`, `endSlot` | `start_slot`, `end_slot` | transactions in an inclusive slot range |
+| `protocol` | `protocol` | transactions with an action on that protocol |
+| `actionType` | `action_type` | transactions with an action of that type |
+| `swigVaultAddress` | `swig_vault_address` | transactions with an action from that vault or sub-account |
 
-Filters combine with AND, their order does not matter, and each kind may
-appear once; the API refuses a repeated kind. The action filters must all match
-the same action. A matching transaction still carries every DEX action the Swig
-executed in it.
+Filters combine with AND. The action filters must all match the same action. A
+matching transaction still carries every DEX action the Swig executed in it.
 
 Protocols are `pump-swap`, `meteora-dlmm`, `raydium-amm-v4`, `raydium-cpmm`,
 `raydium-clmm`, and `orca-whirlpool`. Action types are `swap`,
@@ -108,7 +94,7 @@ do {
   const page = await swig.dex.transactions.list({
     swigConfigAddress,
     network: 'mainnet',
-    filters: [{ kind: 'actionType', value: 'swap' }],
+    actionType: 'swap',
     pageToken,
   });
   // handle page.transactions
@@ -122,7 +108,7 @@ while True:
     page = await swig.dex.transactions.list(
         swig_config_address=swig_config_address,
         network="mainnet",
-        filters=[DexActionTypeFilter("swap")],
+        action_type="swap",
         page_token=page_token,
     )
     # handle page.transactions
@@ -198,7 +184,7 @@ pool only when the instruction names one.
 const { positions } = await swig.dex.positions.list({
   swigConfigAddress,
   network: 'mainnet',
-  filters: [{ kind: 'positionStatus', value: 'open' }],
+  positionStatus: 'open',
 });
 
 for (const position of positions) {
@@ -213,12 +199,12 @@ for (const position of positions) {
 ```
 
 ```python Python
-from swig_developer_sdk import DexOpenPosition, DexPositionStatusFilter
+from swig_developer_sdk import DexOpenPosition
 
 result = await swig.dex.positions.list(
     swig_config_address=swig_config_address,
     network="mainnet",
-    filters=[DexPositionStatusFilter("open")],
+    position_status="open",
 )
 
 for position in result.positions:
@@ -239,10 +225,9 @@ exists.
 `updatedSlot` / `updated_slot` is the slot of the read the state came from.
 Latest state is currently recorded for Raydium CLMM positions only.
 
-Positions take `positionStatus` (`DexPositionStatusFilter`, `open` or
-`closed`), `protocol` (`DexProtocolFilter`), and `swigVaultAddress`
-(`DexSwigVaultAddressFilter`) filters, each applied to the position, and page
-the same way as transactions.
+Positions take `positionStatus` / `position_status` (`open` or `closed`),
+`protocol`, and `swigVaultAddress` / `swig_vault_address` filters, each applied
+to the position, and page the same way as transactions.
 
 ## Underlying routes
 
