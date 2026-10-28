@@ -256,6 +256,7 @@
             "group": "Balances and Funding",
             "pages": [
               "developer-sdk/wallet-reads",
+              "developer-sdk/dex-activity",
               "developer-sdk/ramp"
             ]
           },
@@ -309,6 +310,7 @@
             "pages": [
               "developer-api/transactions",
               "developer-api/wallets",
+              "developer-api/dex",
               "developer-api/paymaster",
               "developer-api/ramp"
             ]
