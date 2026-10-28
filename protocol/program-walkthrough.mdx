@@ -13,7 +13,7 @@ In practice, most wallets move through this path:
 1. create the wallet with `CreateV1`
 2. add or update roles with the authority-management instructions
 3. execute wallet actions through `SignV2`
-4. optionally layer on sessions, sub-accounts, or recovery
+4. optionally layer on sessions, sub-accounts, authorization locks, or recovery
 5. eventually migrate, transfer assets, or close the wallet
 
 ## Instruction families
@@ -26,6 +26,7 @@ In practice, most wallets move through this path:
 | General execution | `SignV2` | authenticate a role and execute wallet instructions |
 | Sub-accounts | `CreateSubAccountV1`, `WithdrawFromSubAccountV1`, `SubAccountSignV1`, `ToggleSubAccountV1` | manage segregated balances and sub-account execution |
 | Recovery | `RecoverAuthorityV1` | rotate one signer authority through the constrained recovery path |
+| Authorization locks | `AddAuthorizationLockV1`, `RemoveAuthorizationLockV1` | reserve part of a wallet asset until an expiry slot, then release or prune it |
 
 ## Wallet creation and role management
 
@@ -64,6 +65,9 @@ These flows are important, but they are extensions around the main role model:
   path
 - `RecoverAuthorityV1` rotates an authority through a narrower recovery rule
   set
+- authorization-lock instructions reserve funds that `SignV2` then refuses to
+  spend below, for every role, until the lock is released or expires. See
+  [Authorization Locks](/protocol/authorization-locks)
 
 Use the dedicated execution pages when you are building or debugging one of
 those flows.

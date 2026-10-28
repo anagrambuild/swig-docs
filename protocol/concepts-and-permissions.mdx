@@ -56,13 +56,15 @@ Actions are typed permission records attached to roles.
 | Program access | `Program`, `ProgramAll`, `ProgramCurated`, `ProgramScope` | CPI access from the wallet |
 | Staking | `StakeLimit`, `StakeRecurringLimit`, `StakeAll` | stake-related execution |
 | Sub-accounts | `SubAccount` | sub-account creation, signing, and control |
+| Authorization locks | `ManageAuthorizationLocks` | reserving wallet funds within the role's own limits |
 | Lifecycle and recovery | `CloseSwigAuthority`, `RecoveryAuthority` | closing wallets and constrained recovery |
 
 ## Time-based limits are measured in slots
 
 Every time-bounded permission in Swig counts **slots**, not seconds. This
 applies to `SolRecurringLimit`, `TokenRecurringLimit`, `StakeRecurringLimit`,
-their destination variants, and session durations on `*Session` authorities.
+their destination variants, session durations on `*Session` authorities, and
+the `max_duration_slots` bound on `ManageAuthorizationLocks`.
 
 <Warning>
 Solana is reducing slot time from 400ms to 200ms in four steps
@@ -114,6 +116,10 @@ The two permission families fail in opposite directions, so round accordingly:
 - `ProgramCurated` is looser than per-program rules, but still not fully open.
 - `ProgramScope` is the narrowest program control. It binds a program, a target
   account, and numeric field offsets so the program can enforce scoped limits.
+- `ManageAuthorizationLocks { max_duration_slots }` lets a role reserve wallet
+  funds up to its own spending limits for an asset, for at most
+  `max_duration_slots`. Active locks bind every role, including `All`. See
+  [Authorization Locks](/protocol/authorization-locks).
 
 ## Common role shapes
 

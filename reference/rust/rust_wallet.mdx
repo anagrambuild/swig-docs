@@ -105,6 +105,73 @@ pub fn create_session(
 
 Creates a new session for temporary authority delegation.
 
+## Authorization Locks
+
+Locks reserve part of the wallet's SOL or token balance until an expiry slot.
+See [Authorization Locks](/protocol/authorization-locks) for the rules and
+[the recipe](/examples/authorization_locks) for a full flow.
+
+### Locking SOL
+
+```rust
+pub fn add_sol_authorization_lock(
+    &mut self,
+    amount: u64,
+    expiry_slot: u64,
+) -> Result<Signature, SwigError>
+```
+
+Reserves `amount` lamports of the wallet address's balance until `expiry_slot`.
+
+### Locking Tokens
+
+```rust
+pub fn add_token_authorization_lock(
+    &mut self,
+    mint: &Pubkey,
+    amount: u64,
+    expiry_slot: u64,
+) -> Result<Signature, SwigError>
+```
+
+Reserves `amount` of the wallet's associated token account for `mint`. The token
+program (SPL Token or Token-2022) is read from the mint account.
+
+### Locking Any Asset Account
+
+```rust
+pub fn add_authorization_lock(
+    &mut self,
+    asset_account: Pubkey,
+    mint: [u8; 32],
+    amount: u64,
+    expiry_slot: u64,
+) -> Result<Signature, SwigError>
+```
+
+Lower-level form. Pass the wallet address and an all-zero mint for SOL, or any
+token account owned by the wallet address and its mint.
+
+### Releasing or Pruning a Lock
+
+```rust
+pub fn remove_authorization_lock(&mut self, lock_id: u32) -> Result<Signature, SwigError>
+```
+
+Releases a lock created by the current role, or prunes an expired lock. The
+wallet's rent claimer, if any, is resolved automatically.
+
+### Reading Locks
+
+```rust
+pub fn get_authorization_locks(&self) -> Result<Vec<AuthorizationLock>, SwigError>
+pub fn get_active_authorization_locks(&self) -> Result<Vec<AuthorizationLock>, SwigError>
+```
+
+`get_authorization_locks` returns every stored lock, including expired locks
+that have not been pruned. `get_active_authorization_locks` returns only locks
+still active at the current slot.
+
 ## Wallet Information
 
 ### Displaying Wallet Details
@@ -120,6 +187,7 @@ Displays detailed information about the wallet, including:
 - Balance
 - Authority details
 - Permissions
+- Authorization locks, if any
 
 ### Getting Wallet Balance
 
@@ -190,6 +258,28 @@ let signature = wallet.add_authority(
         },
     ],
 )?;
+```
+
+### Granting and Using an Authorization Lock Role
+
+```rust
+wallet.add_authority(
+    AuthorityType::Ed25519,
+    &card_authority_bytes,
+    vec![
+        Permission::ManageAuthorizationLocks {
+            max_duration_slots: 216_000,
+        },
+        Permission::Sol {
+            amount: 2_000_000_000, // backs the role's holds
+            recurring: None,
+        },
+    ],
+)?;
+
+// As the card role:
+let slot = wallet.get_current_slot()?;
+wallet.add_sol_authorization_lock(1_500_000_000, slot + 400)?;
 ```
 
 ### Creating a Session
