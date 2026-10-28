@@ -49,20 +49,27 @@ tokens without the wallet's signature.
 
 ## Who can create a lock
 
-`AddAuthorizationLockV1` creates a lock. The acting role must hold one of:
+`AddAuthorizationLockV1` creates a lock. Each lock carries its own amount and
+expiry. The acting role must hold `ManageAuthorizationLocks
+{ max_duration_slots }`. `All` alone is not enough.
 
-- `All` or `AllButManageAuthority`. These roles can already spend everything,
-  so they can lock any amount up to the account's unreserved balance, for any
-  duration.
-- `ManageAuthorizationLocks { max_duration_slots }`. This is the delegated
-  form, with two bounds:
-  - **Duration:** `expiry_slot - current_slot` must be at most
-    `max_duration_slots`.
-  - **Amount:** the role's active locks on a mint, including the new one, must
-    fit within what the role's own spending limits for that mint still allow.
-    A role with no SOL or token limit for the asset cannot lock it.
+- **Duration (every role):** `expiry_slot - current_slot` must be at most the
+  role's `max_duration_slots`.
+- **Amount, for roles that can spend everything:** a role that also holds
+  `All` or `AllButManageAuthority` can lock up to the account's unreserved
+  balance.
+- **Amount, for every other role:** the role can lock any SOL or token asset,
+  but its active locks on that asset, including the new one, must fit within
+  what its own spending limits for the asset still allow. For example, a role
+  with `ManageAuthorizationLocks` and limits on SOL, USDC and USDT can lock each
+  of those up to its limit, and cannot lock an asset it has no limit for.
 
-A delegated role's limits keep backing its locks. After every `SignV2` the
+A role cannot set or change its own `max_duration_slots`. Another role with
+`ManageAuthority` (or `All`) grants or changes it, and a role may always drop
+the permission from itself. The root role is the exception: no other role can
+manage it, so it sets its own bound.
+
+A limited role's spending limits keep backing its locks. After every `SignV2` the
 role's remaining allowance must still cover its active locks, so a role cannot
 spend the allowance that backs its own reservation.
 
@@ -98,12 +105,14 @@ Removing `ManageAuthorizationLocks` stops the role from creating new locks.
 Existing locks still run to expiry, and the creator can still release them. A
 delegate therefore cannot make itself irrevocable by continually renewing locks.
 
-<Warning>
-`All` and `AllButManageAuthority` locks have no duration bound. A long-lived
-lock from such a role pins that role until the lock expires or the role
-releases it. Grant `ManageAuthorizationLocks` with a tight
-`max_duration_slots` to delegates instead of broad roles.
-</Warning>
+Because every lock is bounded by its creator's `max_duration_slots`, the
+longest a role can be pinned is the duration someone else granted it.
+
+<Note>
+An existing wallet's root role cannot lock until it grants itself
+`ManageAuthorizationLocks`, for example with `UpdateAuthorityV1` `AddActions`
+on role 0.
+</Note>
 
 ## Durations are measured in slots
 

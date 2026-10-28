@@ -109,7 +109,8 @@ export const ErrorData = {
     { code: "86 (0x56)", name: "AuthorizationLockNotFound", desc: "No authorization lock exists with the given id" },
     { code: "87 (0x57)", name: "AuthorizationLockNotOwner", desc: "Only the creating role may release an active authorization lock" },
     { code: "88 (0x58)", name: "AuthorizationLockActive", desc: "The operation is blocked while an authorization lock is active" },
-    { code: "89 (0x59)", name: "AuthorizationLockViolated", desc: "The transaction would spend a locked account below its reserved amount, or change its token authority, delegate, or state" }
+    { code: "89 (0x59)", name: "AuthorizationLockViolated", desc: "The transaction would spend a locked account below its reserved amount, or change its token authority, delegate, or state" },
+    { code: "90 (0x5A)", name: "AuthorizationLockDurationSelfUpdate", desc: "A role may not set or change its own maximum lock duration" }
   ],
   instruction: [
     { code: "2000 (0x7D0)", name: "MissingInstructions", desc: "No instructions found in the instruction data" },

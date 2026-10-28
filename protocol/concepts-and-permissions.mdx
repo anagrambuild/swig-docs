@@ -116,10 +116,12 @@ The two permission families fail in opposite directions, so round accordingly:
 - `ProgramCurated` is looser than per-program rules, but still not fully open.
 - `ProgramScope` is the narrowest program control. It binds a program, a target
   account, and numeric field offsets so the program can enforce scoped limits.
-- `ManageAuthorizationLocks { max_duration_slots }` lets a role reserve wallet
-  funds up to its own spending limits for an asset, for at most
-  `max_duration_slots`. Active locks bind every role, including `All`. See
-  [Authorization Locks](/protocol/authorization-locks).
+- `ManageAuthorizationLocks { max_duration_slots }` is required for every
+  authorization lock, including for `All`. Each lock lasts at most
+  `max_duration_slots`. With `All` or `AllButManageAuthority` a role can lock
+  up to the wallet's balance; otherwise it can lock up to its own spending
+  limits. A role cannot change its own bound. Active locks bind every role.
+  See [Authorization Locks](/protocol/authorization-locks).
 
 ## Common role shapes
 

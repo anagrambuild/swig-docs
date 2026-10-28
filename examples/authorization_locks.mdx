@@ -19,8 +19,25 @@ The flow:
 
 ### Grant the delegated role
 
-The delegate can only lock up to its own spending limit for an asset, and only
-for up to `max_duration_slots`.
+The delegate can lock any asset it has a spending limit for, up to that limit,
+and only for up to `max_duration_slots`. It cannot change its own
+`max_duration_slots`.
+
+A role with `All` or `AllButManageAuthority` also needs
+`ManageAuthorizationLocks` to lock. It can then lock up to the wallet's balance,
+still within its `max_duration_slots`. To let the root role lock, have it grant
+itself the permission:
+
+```rust
+use swig_sdk::types::UpdateAuthorityData;
+
+wallet.update_authority(
+    0,
+    UpdateAuthorityData::AddActions(vec![Permission::ManageAuthorizationLocks {
+        max_duration_slots: 216_000,
+    }]),
+)?;
+```
 
 ```rust
 use swig_sdk::{authority::AuthorityType, Permission};
@@ -164,7 +181,9 @@ In interactive mode (`swig -i`), use the **Authorization Locks** menu.
 
 | Error | Cause |
 |-------|-------|
+| `PermissionDeniedMissingPermission` | the role lacks `ManageAuthorizationLocks`, even if it has `All` |
 | `InvalidAuthorizationLockExpiry` | expiry is not in the future, or exceeds the role's `max_duration_slots` |
+| `AuthorizationLockDurationSelfUpdate` | a role tried to set or change its own `max_duration_slots` |
 | `AuthorizationLockExceedsSpendLimit` | the role's holds on this asset would exceed its spending limit |
 | `AuthorizationLockExceedsBalance` | active holds on the account would exceed its balance |
 | `AuthorizationLockNotOwner` | another role tried to release an active hold |
