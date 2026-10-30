@@ -136,6 +136,70 @@ instructions.extend(builder.sign_v2_instruction(
 If the spend is larger than the released hold and would dip into another
 active hold, the whole transaction fails with `AuthorizationLockViolated`.
 
+### Lock from a program (`ProgramExec`)
+
+A `ProgramExec` role can hold `ManageAuthorizationLocks` too, so an on-chain
+program can place and release holds. The SDK lock helpers work with a
+`ProgramExecClientRole`. To build the instructions directly, use the
+`swig_interface` builders. The program's instruction must pass the Swig config
+and the wallet address as its first two accounts:
+
+```rust
+use swig_interface::{AddAuthorizationLockV1Instruction, RemoveAuthorizationLockV1Instruction};
+
+// Your program's instruction: accounts 0 and 1 must be the swig config and
+// the swig wallet address, and its data must start with the role's prefix.
+let proof = Instruction {
+    program_id: card_program_id,
+    accounts: vec![
+        AccountMeta::new_readonly(swig_account, false),
+        AccountMeta::new_readonly(wallet_address, false),
+        // ...the program's own accounts
+    ],
+    data: authorize_hold_data,
+};
+
+// Returns [proof, add_lock]. Use new_with_program_exec_ix_index to point at
+// a proof instruction at a specific transaction index instead.
+let ixs = AddAuthorizationLockV1Instruction::new_with_program_exec(
+    swig_account,
+    fee_payer.pubkey(),
+    proof.clone(),
+    wallet_address,
+    wallet_address,  // asset account: the wallet address for SOL
+    card_role_id,
+    [0u8; 32],       // all-zero mint for SOL
+    1_500_000_000,
+    slot + 400,
+)?;
+
+// Returns [proof, remove_lock].
+let ixs = RemoveAuthorizationLockV1Instruction::new_with_program_exec(
+    swig_account,
+    fee_payer.pubkey(),
+    proof,
+    wallet_address,
+    card_role_id,
+    lock_id,
+    None, // the wallet's rent claimer, if one is configured
+)?;
+```
+
+The Ed25519, Secp256k1, and Secp256r1 remove builders also take the wallet
+address, right after the authority arguments:
+
+```rust
+let ix = RemoveAuthorizationLockV1Instruction::new_with_ed25519_authority(
+    swig_account,
+    fee_payer.pubkey(),
+    card_authority.pubkey(),
+    wallet_address,
+    card_role_id,
+    lock_id,
+    None,
+)?;
+```
+
 ## CLI
 
 The `swig` CLI has the same operations. Each command also takes
@@ -189,5 +253,7 @@ In interactive mode (`swig -i`), use the **Authorization Locks** menu.
 | `AuthorizationLockNotOwner` | another role tried to release an active hold |
 | `AuthorizationLockActive` | the operation (remove role, close wallet, ...) is blocked by an active hold |
 | `AuthorizationLockViolated` | a transaction would spend a locked account below its reserved amount |
+| `InvalidSeedSwigAccount` | account 1 is not the wallet's canonical wallet address |
+| `PermissionDeniedProgramExecInvalidConfigAccount` / `...InvalidWalletAccount` | the `ProgramExec` proof instruction's first two accounts are not the Swig config and wallet address |
 
 See [Error Types](/reference/error-types) for codes.

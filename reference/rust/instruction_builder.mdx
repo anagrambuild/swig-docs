@@ -146,7 +146,9 @@ pub fn add_authorization_lock(
 Creates instructions that reserve `amount` of `asset_account` until
 `expiry_slot`. Use the wallet address and an all-zero mint for native SOL, or a
 token account owned by the wallet address and its mint. Token locks also pass
-the mint account.
+the mint account. With a `ProgramExecClientRole`, the returned instructions
+start with the role's preceding instruction, which must pass the Swig config and
+wallet address as its first two accounts.
 
 ### Removing a Lock
 
@@ -159,7 +161,8 @@ pub fn remove_authorization_lock(
 ) -> Result<Vec<Instruction>, SwigError>
 ```
 
-Creates instructions that release a lock or prune an expired one. Pass the
+Creates instructions that release a lock or prune an expired one. The wallet
+address is derived from the Swig account and passed automatically. Pass the
 wallet's rent claimer when one is configured. To capture a hold, put these
 instructions and a `sign_v2_instruction` spend in the same transaction.
 

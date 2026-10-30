@@ -50,7 +50,8 @@ tokens without the wallet's signature.
 ## Who can create a lock
 
 `AddAuthorizationLockV1` creates a lock. Each lock carries its own amount and
-expiry. The acting role must hold `ManageAuthorizationLocks
+expiry. The acting role can use any authority type, including `ProgramExec` and
+`ProgramExecSession`, and must hold `ManageAuthorizationLocks
 { max_duration_slots }`. `All` alone is not enough.
 
 - **Duration (every role):** `expiry_slot - current_slot` must be at most the
@@ -90,6 +91,39 @@ The payer funds the config account's rent growth for each new lock.
 Rent freed by removal goes to the configured
 [rent claimer](/developer-sdk/rent-claimers) if one is set, otherwise to the
 payer.
+
+## Instruction accounts
+
+`AddAuthorizationLockV1` (discriminator `25`):
+
+| Index | Account | Notes |
+|-------|---------|-------|
+| 0 | Swig config | writable |
+| 1 | Swig wallet address | read-only; must be the wallet's canonical PDA |
+| 2 | Payer | writable, signer; funds the config's rent growth |
+| 3 | System program | |
+| 4 | Asset account | read-only; the wallet address for SOL, or a token account it owns |
+| 5 | Mint | read-only; token locks only, required for Token-2022 |
+
+`RemoveAuthorizationLockV1` (discriminator `26`):
+
+| Index | Account | Notes |
+|-------|---------|-------|
+| 0 | Swig config | writable |
+| 1 | Swig wallet address | read-only; must be the wallet's canonical PDA, otherwise `InvalidSeedSwigAccount` |
+| 2 | Payer | writable, signer; receives freed rent when no rent claimer is set |
+| 3 | System program | |
+| 4 | Rent claimer | writable; only when the wallet has one configured |
+
+Authority accounts follow, as for other instructions: the Ed25519 or session
+key signer, or the instructions sysvar for Secp256r1 and `ProgramExec` roles.
+
+The Swig config and wallet address come first so `ProgramExec` roles can
+authorize locks. The preceding instruction that a `ProgramExec` role
+authenticates against must pass the Swig config and the wallet address, in that
+order, as its first two accounts. A `ProgramExecSession` role opens a session
+through its program as usual, then signs lock instructions with the session
+key.
 
 ## Effect on role management
 
