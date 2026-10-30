@@ -13,7 +13,11 @@ export const ErrorData = {
     { code: "1004 (0x3EC)", name: "InvalidSwigData", desc: "Swig account data is invalid or malformed" },
     { code: "1005 (0x3ED)", name: "RoleNotFound", desc: "Specified role could not be found" },
     { code: "1006 (0x3EE)", name: "PermissionLoadError", desc: "Error loading permissions" },
-    { code: "1007 (0x3EF)", name: "InvalidAuthorityMustHaveAtLeastOneAction", desc: "Adding an authority requires at least one action" }
+    { code: "1007 (0x3EF)", name: "InvalidAuthorityMustHaveAtLeastOneAction", desc: "Adding an authority requires at least one action" },
+    { code: "1013 (0x3F5)", name: "InvalidAuthorizationLockLayout", desc: "The stored authorization-lock entry is malformed" },
+    { code: "1014 (0x3F6)", name: "AuthorizationLockLimitReached", desc: "The wallet already stores the maximum of 32 authorization locks" },
+    { code: "1015 (0x3F7)", name: "DuplicateDestinationLimit", desc: "A role may hold at most one destination limit of each type per destination and mint" },
+    { code: "1016 (0x3F8)", name: "DuplicateTokenLimit", desc: "A role may hold at most one general token limit of each type per mint" }
   ],
   authentication: [
     { code: "3000 (0xBB8)", name: "InvalidAuthority", desc: "Invalid authority provided" },
@@ -95,7 +99,18 @@ export const ErrorData = {
     { code: "41 (0x29)", name: "InvalidSwigTokenAccountOwner", desc: "Invalid token account owner" },
     { code: "42 (0x2A)", name: "InvalidProgramScopeBalanceFields", desc: "Invalid program scope balance field configuration" },
     { code: "43 (0x2B)", name: "AccountDataModifiedUnexpectedly", desc: "Account data was modified in unexpected ways during instruction execution" },
-    { code: "44 (0x2C)", name: "PermissionDeniedCannotUpdateRootAuthority", desc: "Cannot update root authority (ID 0)" }
+    { code: "44 (0x2C)", name: "PermissionDeniedCannotUpdateRootAuthority", desc: "Cannot update root authority (ID 0)" },
+    { code: "80 (0x50)", name: "InvalidAuthorizationLockInstructionDataTooShort", desc: "Authorization lock instruction data is too short" },
+    { code: "81 (0x51)", name: "InvalidAuthorizationLockAmount", desc: "Authorization lock amount must be non-zero" },
+    { code: "82 (0x52)", name: "InvalidAuthorizationLockExpiry", desc: "Lock expiry must be a future slot within the role's max lock duration" },
+    { code: "83 (0x53)", name: "InvalidAuthorizationLockAsset", desc: "Lock asset must be the wallet address (SOL) or an initialized token account of the mint owned by it, with no delegate or foreign close authority" },
+    { code: "84 (0x54)", name: "AuthorizationLockExceedsBalance", desc: "Active locks on the asset account would exceed its balance" },
+    { code: "85 (0x55)", name: "AuthorizationLockExceedsSpendLimit", desc: "The role's active locks for this asset would exceed its spending limit" },
+    { code: "86 (0x56)", name: "AuthorizationLockNotFound", desc: "No authorization lock exists with the given id" },
+    { code: "87 (0x57)", name: "AuthorizationLockNotOwner", desc: "Only the creating role may release an active authorization lock" },
+    { code: "88 (0x58)", name: "AuthorizationLockActive", desc: "The operation is blocked while an authorization lock is active" },
+    { code: "89 (0x59)", name: "AuthorizationLockViolated", desc: "The transaction would spend a locked account below its reserved amount, or change its token authority, delegate, or state" },
+    { code: "90 (0x5A)", name: "AuthorizationLockDurationSelfUpdate", desc: "A role may not set or change its own maximum lock duration" }
   ],
   instruction: [
     { code: "2000 (0x7D0)", name: "MissingInstructions", desc: "No instructions found in the instruction data" },

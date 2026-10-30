@@ -1,0 +1,161 @@
+---
+title: "Authorization Locks"
+sidebarTitle: "Authorization Locks"
+---
+
+An authorization lock reserves part of one wallet asset until an expiry slot. It
+works like a card authorization hold: a role reserves funds now and captures
+them later, and nothing else in the wallet can spend those funds in the
+meantime.
+
+Locks are stored on the Swig config account and are enforced on every
+`SignV2` execution, for every role, including `All`.
+
+## What a lock covers
+
+Each lock records:
+
+| Field | Meaning |
+|-------|---------|
+| `lock_id` | sequential id, unique within the wallet |
+| `role_id` | the role that created the lock |
+| `asset_account` | the wallet address (native SOL) or one token account owned by it |
+| `mint` | the token mint, or all zeros for native SOL |
+| `amount` | the reserved amount, in lamports or token base units |
+| `expiry_slot` | the slot at which the lock stops binding |
+
+A lock is active while `current_slot < expiry_slot`. Expired locks no longer
+bind anything, but they stay stored until someone prunes them. A wallet can
+store at most 32 locks, expired ones included.
+
+## How locks are enforced
+
+While a lock is active:
+
+- No transaction may leave the locked account below
+  `min(balance_before, reserved)`, where `reserved` is the sum of active locks
+  on that account. The account can still receive funds, and anything above the
+  reserved amount can still be spent.
+- A locked token account must keep the wallet as its authority, with no
+  delegate and no foreign close authority. A mint's freeze authority can still
+  freeze or thaw the account.
+- The wallet cannot be closed with `CloseSwigV1`, and a locked token account
+  cannot be closed with `CloseTokenAccountV1`.
+
+Native SOL locks only count lamports above the wallet address's rent-exempt
+minimum. Token locks need an initialized token account. Token-2022 mints with a
+permanent delegate are rejected, because a permanent delegate could move the
+tokens without the wallet's signature.
+
+## Who can create a lock
+
+`AddAuthorizationLockV1` creates a lock. Each lock carries its own amount and
+expiry. The acting role can use any authority type, including `ProgramExec` and
+`ProgramExecSession`, and must hold `ManageAuthorizationLocks
+{ max_duration_slots }`. `All` alone is not enough.
+
+- **Duration (every role):** `expiry_slot - current_slot` must be at most the
+  role's `max_duration_slots`.
+- **Amount, for roles that can spend everything:** a role that also holds
+  `All` or `AllButManageAuthority` can lock up to the account's unreserved
+  balance.
+- **Amount, for every other role:** the role can lock any SOL or token asset,
+  but its active locks on that asset, including the new one, must fit within
+  what its own spending limits for the asset still allow. For example, a role
+  with `ManageAuthorizationLocks` and limits on SOL, USDC and USDT can lock each
+  of those up to its limit, and cannot lock an asset it has no limit for.
+
+A role cannot set or change its own `max_duration_slots`. Another role with
+`ManageAuthority` (or `All`) grants or changes it, and a role may always drop
+the permission from itself. The root role is the exception: no other role can
+manage it, so it sets its own bound.
+
+A limited role's spending limits keep backing its locks. After every `SignV2` the
+role's remaining allowance must still cover its active locks, so a role cannot
+spend the allowance that backs its own reservation.
+
+The payer funds the config account's rent growth for each new lock.
+
+## Capturing, releasing, and pruning
+
+`RemoveAuthorizationLockV1` deletes a lock.
+
+- **Release:** the creating role can remove its own lock at any time. To
+  capture a reservation, put the release and the spend in the same
+  transaction: release the lock, then execute the transfer through `SignV2`.
+- **Prune:** after a lock expires, any role holding `All`,
+  `AllButManageAuthority`, `ManageAuthority`, or `ManageAuthorizationLocks`
+  can remove it to reclaim space.
+- No other role can remove an active lock. This includes the root `All` role.
+
+Rent freed by removal goes to the configured
+[rent claimer](/developer-sdk/rent-claimers) if one is set, otherwise to the
+payer.
+
+## Instruction accounts
+
+`AddAuthorizationLockV1` (discriminator `25`):
+
+| Index | Account | Notes |
+|-------|---------|-------|
+| 0 | Swig config | writable |
+| 1 | Swig wallet address | read-only; must be the wallet's canonical PDA |
+| 2 | Payer | writable, signer; funds the config's rent growth |
+| 3 | System program | |
+| 4 | Asset account | read-only; the wallet address for SOL, or a token account it owns |
+| 5 | Mint | read-only; token locks only, required for Token-2022 |
+
+`RemoveAuthorizationLockV1` (discriminator `26`):
+
+| Index | Account | Notes |
+|-------|---------|-------|
+| 0 | Swig config | writable |
+| 1 | Swig wallet address | read-only; must be the wallet's canonical PDA, otherwise `InvalidSeedSwigAccount` |
+| 2 | Payer | writable, signer; receives freed rent when no rent claimer is set |
+| 3 | System program | |
+| 4 | Rent claimer | writable; only when the wallet has one configured |
+
+Authority accounts follow, as for other instructions: the Ed25519 or session
+key signer, or the instructions sysvar for Secp256r1 and `ProgramExec` roles.
+
+The Swig config and wallet address come first so `ProgramExec` roles can
+authorize locks. The preceding instruction that a `ProgramExec` role
+authenticates against must pass the Swig config and the wallet address, in that
+order, as its first two accounts. A `ProgramExecSession` role opens a session
+through its program as usual, then signs lock instructions with the session
+key.
+
+## Effect on role management
+
+A lock is only useful if its creator stays able to capture it. While a role
+holds an active lock:
+
+- it cannot be removed with `RemoveAuthorityV1`
+- another role cannot replace its authority with `ReplaceAuthorityV1`
+- another role cannot update its actions with `UpdateAuthorityV1`, except to
+  remove only `ManageAuthorizationLocks`
+
+Removing `ManageAuthorizationLocks` stops the role from creating new locks.
+Existing locks still run to expiry, and the creator can still release them. A
+delegate therefore cannot make itself irrevocable by continually renewing locks.
+
+Because every lock is bounded by its creator's `max_duration_slots`, the
+longest a role can be pinned is the duration someone else granted it.
+
+<Note>
+An existing wallet's root role cannot lock until it grants itself
+`ManageAuthorizationLocks`, for example with `UpdateAuthorityV1` `AddActions`
+on role 0.
+</Note>
+
+## Durations are measured in slots
+
+`max_duration_slots` and `expiry_slot` count slots, not seconds. Slot time is
+dropping toward 200ms, so a duration sized for 400ms slots ends sooner in
+wall-clock time than intended. See
+[time-based limits](/protocol/concepts-and-permissions#time-based-limits-are-measured-in-slots).
+
+## Use it from the SDK and CLI
+
+See the [authorization locks recipe](/examples/authorization_locks) for Rust SDK
+and CLI examples.

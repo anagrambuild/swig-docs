@@ -128,6 +128,44 @@ pub fn create_session_instruction(
 
 Creates an instruction to create a new session for temporary authority delegation.
 
+## Authorization Locks
+
+### Adding a Lock
+
+```rust
+pub fn add_authorization_lock(
+    &self,
+    asset_account: Pubkey,
+    mint: [u8; 32],
+    amount: u64,
+    expiry_slot: u64,
+    current_slot: Option<u64>,
+) -> Result<Vec<Instruction>, SwigError>
+```
+
+Creates instructions that reserve `amount` of `asset_account` until
+`expiry_slot`. Use the wallet address and an all-zero mint for native SOL, or a
+token account owned by the wallet address and its mint. Token locks also pass
+the mint account. With a `ProgramExecClientRole`, the returned instructions
+start with the role's preceding instruction, which must pass the Swig config and
+wallet address as its first two accounts.
+
+### Removing a Lock
+
+```rust
+pub fn remove_authorization_lock(
+    &self,
+    lock_id: u32,
+    rent_claimer: Option<Pubkey>,
+    current_slot: Option<u64>,
+) -> Result<Vec<Instruction>, SwigError>
+```
+
+Creates instructions that release a lock or prune an expired one. The wallet
+address is derived from the Swig account and passed automatically. Pass the
+wallet's rent claimer when one is configured. To capture a hold, put these
+instructions and a `sign_v2_instruction` spend in the same transaction.
+
 ## Utility Functions
 
 ### Getting the Swig Account

@@ -1,0 +1,259 @@
+---
+title: "Authorization Locks"
+description: "Reserve wallet funds for a delegated role, then capture or release them"
+---
+
+This recipe gives a card-processor role the ability to place holds on a wallet's
+funds, the way a card network authorizes a payment before settling it. Read
+[Authorization Locks](/protocol/authorization-locks) for the full rules.
+
+The flow:
+
+1. The owner adds a delegated role with `ManageAuthorizationLocks` and a
+   spending limit.
+2. The delegate locks part of the wallet's balance.
+3. The delegate captures the hold by releasing it and spending in one
+   transaction, or releases it without spending. Otherwise the hold expires.
+
+## Rust SDK
+
+### Grant the delegated role
+
+The delegate can lock any asset it has a spending limit for, up to that limit,
+and only for up to `max_duration_slots`. It cannot change its own
+`max_duration_slots`.
+
+A role with `All` or `AllButManageAuthority` also needs
+`ManageAuthorizationLocks` to lock. It can then lock up to the wallet's balance,
+still within its `max_duration_slots`. To let the root role lock, have it grant
+itself the permission:
+
+```rust
+use swig_sdk::types::UpdateAuthorityData;
+
+wallet.update_authority(
+    0,
+    UpdateAuthorityData::AddActions(vec![Permission::ManageAuthorizationLocks {
+        max_duration_slots: 216_000,
+    }]),
+)?;
+```
+
+```rust
+use swig_sdk::{authority::AuthorityType, Permission};
+
+wallet.add_authority(
+    AuthorityType::Ed25519,
+    card_authority.pubkey().as_ref(),
+    vec![
+        // Holds may last at most ~1 day at 400ms slots (less as slot time drops).
+        Permission::ManageAuthorizationLocks {
+            max_duration_slots: 216_000,
+        },
+        // Backs the role's SOL holds and spending.
+        Permission::Sol {
+            amount: 2_000_000_000,
+            recurring: None,
+        },
+    ],
+)?;
+```
+
+### Place a hold
+
+With the wallet switched to the delegate's role:
+
+```rust
+let slot = wallet.get_current_slot()?;
+
+// Hold 1.5 SOL for the next 400 slots.
+wallet.add_sol_authorization_lock(1_500_000_000, slot + 400)?;
+
+// Hold tokens in the wallet's associated token account for `mint`.
+// SPL Token and Token-2022 mints are both supported.
+wallet.add_token_authorization_lock(&mint, 600, slot + 400)?;
+```
+
+For a token account that is not the wallet's ATA, call
+`add_authorization_lock(asset_account, mint.to_bytes(), amount, expiry_slot)`
+directly. For native SOL, pass the wallet address and an all-zero mint.
+
+### Read holds
+
+```rust
+// Every stored lock, including expired locks that have not been pruned.
+let all = wallet.get_authorization_locks()?;
+
+// Only locks that still bind at the current slot.
+let active = wallet.get_active_authorization_locks()?;
+for lock in active {
+    println!(
+        "lock {} reserves {} until slot {} (role {})",
+        lock.lock_id, lock.amount, lock.expiry_slot, lock.role_id
+    );
+}
+```
+
+`display_swig()` also prints an **AUTHORIZATION LOCKS** section and shows each
+role's `ManageAuthorizationLocks` bound.
+
+### Release or prune a hold
+
+```rust
+wallet.remove_authorization_lock(lock_id)?;
+```
+
+The creating role can release its lock at any time. After a lock expires, any
+role with `All`, `AllButManageAuthority`, `ManageAuthority`, or
+`ManageAuthorizationLocks` can prune it.
+
+### Capture a hold
+
+To capture, release the lock and spend the funds in the same transaction. Build
+both instructions with the delegate's `SwigInstructionBuilder`:
+
+```rust
+use solana_system_interface::instruction::transfer;
+use swig_sdk::{Ed25519ClientRole, SwigInstructionBuilder};
+
+let mut builder = SwigInstructionBuilder::new(
+    swig_id,
+    Box::new(Ed25519ClientRole::new(card_authority.pubkey())),
+    fee_payer.pubkey(),
+    card_role_id,
+);
+let slot = rpc_client.get_slot()?;
+
+// Pass the wallet's rent claimer here if one is configured.
+let mut instructions = builder.remove_authorization_lock(lock_id, None, Some(slot))?;
+instructions.extend(builder.sign_v2_instruction(
+    vec![transfer(&wallet_address, &merchant, 1_500_000_000)],
+    Some(slot),
+)?);
+// Sign with the fee payer and the card authority, then send.
+```
+
+If the spend is larger than the released hold and would dip into another
+active hold, the whole transaction fails with `AuthorizationLockViolated`.
+
+### Lock from a program (`ProgramExec`)
+
+A `ProgramExec` role can hold `ManageAuthorizationLocks` too, so an on-chain
+program can place and release holds. The SDK lock helpers work with a
+`ProgramExecClientRole`. To build the instructions directly, use the
+`swig_interface` builders. The program's instruction must pass the Swig config
+and the wallet address as its first two accounts:
+
+```rust
+use swig_interface::{AddAuthorizationLockV1Instruction, RemoveAuthorizationLockV1Instruction};
+
+// Your program's instruction: accounts 0 and 1 must be the swig config and
+// the swig wallet address, and its data must start with the role's prefix.
+let proof = Instruction {
+    program_id: card_program_id,
+    accounts: vec![
+        AccountMeta::new_readonly(swig_account, false),
+        AccountMeta::new_readonly(wallet_address, false),
+        // ...the program's own accounts
+    ],
+    data: authorize_hold_data,
+};
+
+// Returns [proof, add_lock]. Use new_with_program_exec_ix_index to point at
+// a proof instruction at a specific transaction index instead.
+let ixs = AddAuthorizationLockV1Instruction::new_with_program_exec(
+    swig_account,
+    fee_payer.pubkey(),
+    proof.clone(),
+    wallet_address,
+    wallet_address,  // asset account: the wallet address for SOL
+    card_role_id,
+    [0u8; 32],       // all-zero mint for SOL
+    1_500_000_000,
+    slot + 400,
+)?;
+
+// Returns [proof, remove_lock].
+let ixs = RemoveAuthorizationLockV1Instruction::new_with_program_exec(
+    swig_account,
+    fee_payer.pubkey(),
+    proof,
+    wallet_address,
+    card_role_id,
+    lock_id,
+    None, // the wallet's rent claimer, if one is configured
+)?;
+```
+
+The Ed25519, Secp256k1, and Secp256r1 remove builders also take the wallet
+address, right after the authority arguments:
+
+```rust
+let ix = RemoveAuthorizationLockV1Instruction::new_with_ed25519_authority(
+    swig_account,
+    fee_payer.pubkey(),
+    card_authority.pubkey(),
+    wallet_address,
+    card_role_id,
+    lock_id,
+    None,
+)?;
+```
+
+## CLI
+
+The `swig` CLI has the same operations. Each command also takes
+`--authority-type`, `--authority`, and `--authority-kp`, or falls back to the
+saved default authority.
+
+Grant the delegated role. Repeat `--permissions` once per permission:
+
+```bash
+swig add-authority --swig-id <ID> \
+    --new-authority <CARD_PUBKEY> --new-authority-type Ed25519 \
+    --permissions '{"type":"manageAuthorizationLocks","maxDurationSlots":216000}' \
+    --permissions '{"type":"sol","amount":2000000000}'
+```
+
+Place, list, and release holds as the delegate:
+
+```bash
+# Hold 1.5 SOL for 400 slots (or use --expiry-slot <SLOT>)
+swig add-authorization-lock --swig-id <ID> --amount 1500000000 --duration-slots 400
+
+# Hold tokens in the wallet's ATA for a mint
+swig add-authorization-lock --swig-id <ID> --mint <MINT> --amount 600 --duration-slots 400
+
+# List active holds; add --all to include expired, unpruned holds
+swig list-authorization-locks --swig-id <ID>
+
+# Release a hold, or prune an expired one
+swig remove-authorization-lock --swig-id <ID> --lock-id <LOCK_ID>
+```
+
+Revoke the delegate's ability to place new holds. This is allowed even while it
+holds active locks:
+
+```bash
+swig update-authority --swig-id <ID> --authority-to-update-id <ROLE_ID> \
+    --operation RemoveActionsByType --action-types ManageAuthorizationLocks
+```
+
+In interactive mode (`swig -i`), use the **Authorization Locks** menu.
+
+## Common errors
+
+| Error | Cause |
+|-------|-------|
+| `PermissionDeniedMissingPermission` | the role lacks `ManageAuthorizationLocks`, even if it has `All` |
+| `InvalidAuthorizationLockExpiry` | expiry is not in the future, or exceeds the role's `max_duration_slots` |
+| `AuthorizationLockDurationSelfUpdate` | a role tried to set or change its own `max_duration_slots` |
+| `AuthorizationLockExceedsSpendLimit` | the role's holds on this asset would exceed its spending limit |
+| `AuthorizationLockExceedsBalance` | active holds on the account would exceed its balance |
+| `AuthorizationLockNotOwner` | another role tried to release an active hold |
+| `AuthorizationLockActive` | the operation (remove role, close wallet, ...) is blocked by an active hold |
+| `AuthorizationLockViolated` | a transaction would spend a locked account below its reserved amount |
+| `InvalidSeedSwigAccount` | account 1 is not the wallet's canonical wallet address |
+| `PermissionDeniedProgramExecInvalidConfigAccount` / `...InvalidWalletAccount` | the `ProgramExec` proof instruction's first two accounts are not the Swig config and wallet address |
+
+See [Error Types](/reference/error-types) for codes.

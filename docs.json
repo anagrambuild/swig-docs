@@ -59,6 +59,7 @@
               "protocol/program-walkthrough",
               "protocol/signing-and-execution",
               "protocol/sessions-and-subaccounts",
+              "protocol/authorization-locks",
               "protocol/recovery-model"
             ]
           },
@@ -159,6 +160,7 @@
                       "examples/secp256r1_authority",
                       "examples/sessions",
                       "examples/sub_accounts",
+                      "examples/authorization_locks",
                       "examples/v2_features",
                       "examples/multi_authority",
                       "examples/migrating-from-squads"
