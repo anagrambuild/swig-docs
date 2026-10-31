@@ -11,7 +11,8 @@ and submits the transaction.
 Choose the actions from the [Permissions](/developer-sdk/permissions)
 reference, then follow this guide to add the role.
 
-General role creation is available in TypeScript `0.10.0` and Python `0.9.0`.
+General role creation is available in TypeScript `0.10.0`, Python `0.9.0`, and
+Rust through `WalletClient::prepare_add_role`.
 
 ## Before you begin
 
@@ -24,9 +25,14 @@ You need:
 - the public authority value for the new role
 - one or more actions for the new role
 
-The address variables below are base58 strings. `signAndSubmit` /
+The TypeScript and Python address variables are base58 strings. `signAndSubmit` /
 `sign_and_submit` represents your application-owned signing, RPC submission,
 and confirmation helper.
+
+Rust examples use `wallet`, the configured `WalletClient` from
+[Rust integration](/developer-sdk/integration-paths#rust). Supply
+`swig_config_address`, `fee_payer`, `admin_public_key`, and
+`new_role_public_key` as `Pubkey` values.
 
 ## Add a scoped SOL-transfer role
 
@@ -86,6 +92,30 @@ prepared = await wallet.roles.add(
 await sign_and_submit(prepared)
 ```
 
+```rust Rust
+use solana_pubkey::pubkey;
+use swig_developer_sdk::{PrepareAddRoleArgs, WalletAuthority, WalletPermission};
+
+let prepared = wallet
+    .prepare_add_role(PrepareAddRoleArgs {
+        swig_config_address,
+        fee_payer,
+        requester_authority: WalletAuthority::Ed25519 {
+            public_key: admin_public_key,
+        },
+        authority: WalletAuthority::Ed25519 {
+            public_key: new_role_public_key,
+        },
+        actions: vec![
+            WalletPermission::Program {
+                program_id: pubkey!("11111111111111111111111111111111"),
+            },
+            WalletPermission::SolLimit { amount: 1_000_000 },
+        ],
+    })
+    .await?;
+```
+
 </CodeGroup>
 
 Both actions belong to the same new role. `program` permits the System Program
@@ -112,6 +142,11 @@ role ID. Adding the authority creates a new role whose ID is assigned by Swig.
 Continue to [Participant Sets](/developer-sdk/participant-sets) for member
 approval collection and compilation.
 
+Rust uses `WalletAuthority::{Ed25519, Secp256r1, Secp256k1, ParticipantSet}`.
+Ed25519 keys and ParticipantSet addresses are `Pubkey` values. The secp256
+variants take compressed SEC1 public keys as `[u8; 33]`. For a new
+`ParticipantSet` authority, set `role_id: None`.
+
 <Note>
   The authority being added may use any supported shape above. The existing
   authority requesting the add-role operation must use Ed25519 or secp256r1.
@@ -135,6 +170,10 @@ roles_result = await wallet.roles.list()
 print(roles_result.roles)
 ```
 
+```rust Rust
+let roles_result = wallet.list_roles(&swig_config_address).await?;
+```
+
 </CodeGroup>
 
 Wait for the add-role transaction to confirm before using the new authority.
@@ -149,6 +188,12 @@ application-owned signing layer.
   authority.
 - Add the transaction-level signatures required by the serialized transaction
   before submission.
+
+Rust reports an empty action list, unsupported requester, invalid curve key,
+or new ParticipantSet authority with a role ID as
+`PrepareAddRoleError::InvalidInput`. It returns a `PreparedTransaction` with a
+native `VersionedTransaction` in `transaction`; retain its signature requests
+through your [signing flow](/developer-sdk/signers).
 
 ## What to read next
 
