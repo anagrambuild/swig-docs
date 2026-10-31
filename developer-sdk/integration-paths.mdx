@@ -3,7 +3,7 @@ title: "Choose an SDK Language"
 sidebarTitle: "Choose a Language"
 ---
 
-TypeScript and Python expose the same prepare-first server model. Choose the
+TypeScript, Python, and Rust expose a prepare-first server model. Choose the
 language that owns your trusted application runtime.
 
 ## TypeScript
@@ -37,17 +37,135 @@ swig = SwigClient(
 Install from PyPI with `pip install swig-developer-sdk`. Python exposes signing
 helpers from the package root.
 
+## Rust
+
+The examples target the native Rust SDK version `0.1.0`. Publication on
+crates.io is pending. Use the dependency below once the release is available.
+
+Rust 1.87 or later is required. Add the SDK and an async runtime to your
+application's `Cargo.toml`. Resolver 3 selects dependencies compatible with the
+declared Rust version when creating a new lockfile.
+
+```toml
+[package]
+name = "swig-server-example"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.87"
+
+[workspace]
+resolver = "3"
+
+[dependencies]
+swig-developer-sdk = "0.1.0"
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
+```
+
+Commit your application's `Cargo.lock`. The task examples use these additional
+dependencies. Add only the ones imported by your chosen example.
+
+```toml
+solana-pubkey = "4.1"
+solana-transaction = { version = "3.1", features = ["bincode"] }
+solana-keypair = "3.1"
+solana-signer = "3"
+solana-signature = "3.1"
+k256 = { version = "0.13", features = ["ecdsa"] }
+p256 = { version = "0.13", features = ["ecdsa"] }
+async-trait = "0.1"
+http = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+```
+
+### Construct the clients
+
+Your application loads the API key and passes it explicitly. The SDK does not
+read environment variables or load `.env` files. This example uses
+`SWIG_API_KEY` and the optional `SWIG_API_BASE_URL` application variables.
+The default URL is `https://api.onswig.com`.
+
+```rust
+use std::env;
+use swig_developer_sdk::{ClientConfig, Network, PaymasterClient, WalletClient};
+
+let mut config = ClientConfig::new(env::var("SWIG_API_KEY")?, Network::Devnet);
+config.http.base_url = match env::var("SWIG_API_BASE_URL") {
+    Ok(url) => Some(url),
+    Err(env::VarError::NotPresent) => None,
+    Err(error) => return Err(error.into()),
+};
+
+let wallet = WalletClient::new(config.clone())?;
+let paymaster = PaymasterClient::new(config.clone())?;
+```
+
+Construction validates configuration without sending requests. Reuse the
+clients. Rust takes the network from `ClientConfig`, rather than overriding it
+on each method call. Use `Network::Mainnet` for mainnet operations and ensure
+your confirmation RPC uses the same network.
+
+For local development, point `SWIG_API_BASE_URL` at your local Swig API.
+That setting does not configure the backend's Solana RPC.
+
+Ramp additionally needs `configuration_id`, a `String` from your portal setup,
+and an explicit provider environment.
+
+```rust
+use swig_developer_sdk::{RampClient, RampConfig, RampEnvironment};
+
+let ramp = RampClient::new(
+    config,
+    Some(RampConfig {
+        configuration_id,
+        environment: RampEnvironment::Sandbox,
+    }),
+)?;
+```
+
+### Configure HTTP behavior
+
+`config.http.request_timeout_ms` is optional and must be positive when set.
+It defaults to no SDK request timeout. `config.http.retry_options` defaults to
+three retries with an initial one-second delay and a backoff multiplier of two.
+Retries apply only to operations that permit them. Sponsorship and Ramp pages
+describe their request-ID requirements. A malformed successful response is
+returned as an error, not retried.
+
+### Handle method errors
+
+Each method returns its own error enum. Match the cases your application can
+handle and propagate the rest. Successful results use native types such as
+`Pubkey` and `VersionedTransaction`. Backend JSON encoding stays inside the SDK.
+
+```rust
+use swig_developer_sdk::GetPolicyError;
+
+let policy = match wallet.get_policy(&policy_id).await {
+    Ok(policy) => Some(policy),
+    Err(GetPolicyError::PolicyNotFound { .. }) => None,
+    Err(error) => return Err(error.into()),
+};
+```
+
+Task snippets show calls inside your application's existing async context.
+They use `?` to propagate errors through an enclosing `Result`-returning function.
+Reuse these clients and supply the inputs described on each page. Authorize
+operations before signing. See [Signers](/developer-sdk/signers) for native key
+handling.
+
 ## Comparison
 
-| Capability | TypeScript | Python |
-| :--- | :--- | :--- |
-| Wallet preparation | yes | yes |
-| Wallet reads and ramp | yes | yes |
-| Custom transactions | yes | yes |
-| Sponsorship | yes | yes |
-| Application-owned signing helpers | `/signers` | package root |
+| Capability | TypeScript | Python | Rust preview |
+| :--- | :--- | :--- | :--- |
+| Wallet preparation | yes | yes | `WalletClient` |
+| Wallet reads | yes | yes | `WalletClient` |
+| Ramp | yes | yes | `RampClient` |
+| Custom transactions | yes | yes | native `Instruction` inputs |
+| Sponsorship | yes | yes | `PaymasterClient` |
+| Local signing | `/signers` callbacks | package-root callbacks | native keys and signing traits |
 
-Both SDKs expose the full server surface: preparation, custom transactions,
-wallet reads, ramp, paymaster balance, and sponsorship. Your application owns
+The task pages describe supported operations and language-specific limits.
+Rust currently has no hosted guardian-recovery or rent-claimer methods.
+Your application owns
 its HTTP routes, authentication, authorization, validation, and response
 format.
