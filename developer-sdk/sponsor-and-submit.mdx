@@ -13,9 +13,23 @@ models:
 Signing happens in application-owned wallet or custody code first. Sponsoring
 does not replace it. If useful, the narrow
 [signing helpers](/developer-sdk/signers) assemble an
-application-provided signature into the prepared transaction.
+authority signature into the prepared transaction. Rust uses native
+`VersionedTransaction` values throughout this flow. Initialize its separate
+`PaymasterClient` with [Rust setup](/developer-sdk/integration-paths#rust).
 
 ## Sponsor one transaction
+
+For sponsorship, read the API paymaster address and pass it as `fee_payer` to
+wallet preparation. The sponsor adds that payer's outer signature. Your
+application supplies the other required signatures first.
+
+For Rust, configure `wallet` and `paymaster` for the same network. The wallet
+and destination addresses are `Pubkey` values, `requester_authority` is a `WalletAuthority`,
+`lamports` is a `u64`, and `idempotency_key` is an `Option<String>`.
+The Rust example's `sign_transaction` is application-provided. It receives
+`&PreparedTransaction` and returns a native `VersionedTransaction` with the
+required application signatures, leaving the paymaster's signature for
+sponsorship. See [Signers](/developer-sdk/signers) for the signing flow.
 
 <CodeGroup dropdown>
 
@@ -47,7 +61,35 @@ submitted = await swig.transactions.sponsor(
 # submitted.spent_by_paymaster
 ```
 
+```rust Rust
+use swig_developer_sdk::{PrepareTransferSolArgs, SponsorSignedTransactionArgs};
+
+let funding = paymaster.get_balance().await?;
+let prepared = wallet
+    .prepare_transfer_sol(PrepareTransferSolArgs {
+        swig_config_address,
+        fee_payer: funding.address,
+        destination,
+        amount: lamports,
+        requester_authority,
+    })
+    .await?;
+
+let signed_transaction = sign_transaction(&prepared).await?;
+
+let submitted = paymaster
+    .sponsor(SponsorSignedTransactionArgs {
+        transaction: signed_transaction,
+        idempotency_key,
+    })
+    .await?;
+```
+
 </CodeGroup>
+
+For direct RPC submission, pass your own fee payer during preparation and obtain
+all required outer signatures. Changing the fee payer after signing changes the
+message and invalidates signatures.
 
 The SDK handles the base58 payload encoding the paymaster expects. The response
 carries the request id, the submitted signature, and what the paymaster spent.
@@ -55,13 +97,18 @@ There is no status field. A returned signature means the Solana RPC accepted
 the transaction; it may still be pending and is not confirmation or finality.
 Track it through your RPC provider when your product needs either.
 
-For single-transaction sponsorship, `network` resolves from the call and then
-the client default. If neither is set, the paymaster defaults to mainnet.
+In TypeScript and Python, `network` resolves from the call and then the client
+default. If neither is set, the paymaster defaults to mainnet. Rust always uses
+the `Network` supplied when constructing `PaymasterClient`.
+
+Rust returns a native `Signature`. `spent_by_paymaster` is an `i64` and may be
+negative. The SDK handles transaction encoding, so callers need no base64 or
+base58 conversion.
 
 ## Retry safely with an idempotency key
 
-Sponsorship is the one `POST` the SDKs will retry, and only when you pass an
-idempotency key.
+Sponsorship permits retries when you pass an idempotency key. Other operations,
+such as [Ramp order creation](/developer-sdk/ramp), have their own replay rules.
 
 <CodeGroup dropdown>
 
@@ -92,11 +139,19 @@ about, because a blind replay could pay twice.
 Derive the key from something stable in your own domain — an order id, a
 payment id — not from a fresh random value per attempt.
 
+For Rust, use `Some(nonempty_key)` to enable eligible retries of the identical
+serialized request. `None` or an empty key disables sponsorship retries.
+Keep the same signed transaction and key when reconciling a lost response.
+`SponsorError::IdempotencyConflict` and a lost response do not establish whether
+submission happened. Resolve the existing attempt before creating another.
+
 ## Sponsor a bundle
 
 `sponsorBundle` / `sponsor_bundle` submits one to five signed transactions as a
 single bundle. Use it when several transactions must land together, such as the
 ordered plan returned by `wallet.prepare(...)`.
+
+For Rust, `signed_transactions` is an ordered `Vec<VersionedTransaction>`.
 
 <CodeGroup dropdown>
 
@@ -130,6 +185,17 @@ bundle = await swig.transactions.sponsor_bundle(
 # bundle.estimated_spent_by_paymaster
 ```
 
+```rust Rust
+use swig_developer_sdk::SponsorSignedTransactionBundleArgs;
+
+let bundle = paymaster
+    .sponsor_bundle(SponsorSignedTransactionBundleArgs {
+        transactions: signed_transactions,
+        idempotency_key,
+    })
+    .await?;
+```
+
 </CodeGroup>
 
 Constraints the SDK enforces before sending:
@@ -144,8 +210,19 @@ Constraints the SDK enforces before sending:
 A returned `bundleId` means Jito accepted the bundle. The bundle may still be
 pending; acceptance is not confirmation or finality.
 
-Obtain each required application signature before sending the ordered bundle
-to the server.
+Before collecting application signatures, satisfy these backend requirements:
+
+- Include System Program transfers totaling at least 1,000 lamports across
+  the bundle, from the API paymaster to backend-recognized Jito tip accounts.
+- Keep tip destinations in static account keys, not address lookup tables.
+- Other instructions must not include the paymaster in their account lists,
+  even as a read-only account.
+
+The SDK does not add tip instructions. Obtain each required application
+signature before sending the ordered bundle.
+
+Rust rejects a non-mainnet client with
+`UnsupportedNetwork` and an invalid count with `InvalidBundleSize`.
 
 ## When sponsor submission fits
 
@@ -167,12 +244,23 @@ balance = await swig.paymaster.get_balance(network="mainnet")
 # balance.configured, balance.address, balance.balance_lamports, balance.balance_sol
 ```
 
+```rust Rust
+let balance = paymaster.get_balance().await?;
+let idp_balance = paymaster.get_idp_balance().await?;
+```
+
 </CodeGroup>
 
 `getIdpBalance()` / `get_idp_balance()` reads the IdP paymaster instead of the
 API paymaster.
 
+Rust returns `GetPaymasterBalanceError::NotConfigured` when the selected
+paymaster is absent. A successful result has its ID, kind, address, label, and
+balances. It has no `configured` boolean.
+
 ## Transaction categories still matter
+
+TypeScript and Python expose these preparation categories:
 
 - `clientAuthorityTransactions` / `client_authority_transactions` contain
   explicit embedded `secp256r1` or `secp256k1` signature requests
@@ -181,6 +269,11 @@ API paymaster.
 
 Use the serialized transaction's required signer set as the final authority
 before sending either category to a fee payer or sponsor.
+
+Rust returns one `PreparedTransaction` rather than those categorized arrays.
+Complete participant compilation and embedded signatures when requested.
+Then sign the required outer slots. Follow [Signers](/developer-sdk/signers)
+before passing the resulting native transaction to sponsorship or your RPC.
 
 ## Portal admin vs runtime usage
 
