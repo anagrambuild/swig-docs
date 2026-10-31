@@ -3,14 +3,16 @@ title: "Signers"
 sidebarTitle: "Signers"
 ---
 
-The Developer SDK remains a server-side product: `SwigClient` and the API key
-stay on your server. After the server prepares a transaction, the TypeScript
-`/signers` entrypoint provides a small set of helpers for application-owned
-wallets and passkeys.
+Keep hosted clients and the API key on your server. After preparation,
+TypeScript's `/signers` entrypoint and Python's signing helpers connect to
+application-owned wallets and passkeys through callbacks. These helpers accept
+no API key, make no hosted API calls, and never receive a private key.
 
-The helpers accept no API key, cannot call Swig's hosted API, and never receive
-a private key. Your application still owns user authorization, the signer, and
-key custody.
+Rust provides native signers that hold shared local keys through `Arc` and
+operate on native Solana transactions. They also make no hosted API calls.
+Your application owns user authorization, signer selection, and key custody
+for every language. See [Rust setup](/developer-sdk/integration-paths#rust) for
+the dependencies used in these examples.
 
 ## Decide how to sign
 
@@ -21,13 +23,33 @@ required signer in the serialized Solana transaction instead, so the array can
 be empty while the Ed25519 transaction signature is still missing.
 
 Match the signing path to the requester authority used during preparation and
-to the transaction's required signer set. Use each signature request to select
-and patch the corresponding `secp256r1` or `secp256k1` signer.
+to the transaction's required signer set. Rust's `TransactionSigner` fills
+embedded Swig authority signatures: it consumes a `PreparedTransaction` and
+returns a `VersionedTransaction`. Every `signature_requests` entry must match
+the same concrete signer's authority and public key. Select a signer that can
+handle the complete preparation.
+
+Apply signatures in this order:
+
+1. Collect and compile any [ParticipantSet approvals](/developer-sdk/participant-sets).
+2. Fill any remaining embedded secp256k1 or secp256r1 signatures.
+3. Add outer Solana transaction signatures, including the fee payer and any
+   required Ed25519 authority, after the message is final.
+
+Rust's native transaction signers reject pending participant approvals and,
+when embedded signatures need patching, existing outer signatures. Changing
+instruction data after outer signing invalidates those signatures. The signers
+check signing targets and authority matching; your application must check the
+transaction's intent, permissions, and freshness before signing or submitting.
 
 ## Ed25519 and application-defined signers
 
-Use the generic helper when your application already knows how to sign a
-serialized Solana transaction:
+TypeScript and Python use a callback when your application already knows how
+to sign a serialized Solana transaction. Rust uses native Solana signing APIs
+to add the signature at the required signer's index while preserving the
+message and every other signature. In the Rust snippet, `transaction` is the
+final `VersionedTransaction` and `signer` is your application's
+`solana_keypair::Keypair`. Run it inside your fallible signing function:
 
 <CodeGroup dropdown>
 
@@ -58,16 +80,49 @@ signed = await sign_prepared_transaction(
 )
 ```
 
+```rust Rust
+use std::io;
+
+use solana_signer::Signer;
+
+let mut signed_transaction = transaction;
+signed_transaction.sanitize()?;
+let required = usize::from(signed_transaction.message.header().num_required_signatures);
+let signer_index = signed_transaction
+    .message
+    .static_account_keys()
+    .iter()
+    .take(required)
+    .position(|public_key| public_key == &signer.pubkey())
+    .ok_or_else(|| io::Error::other("key is not a required transaction signer"))?;
+let signature = signer.try_sign_message(&signed_transaction.message.serialize())?;
+let slot = signed_transaction
+    .signatures
+    .get_mut(signer_index)
+    .ok_or_else(|| io::Error::other("required signature slot is missing"))?;
+*slot = signature;
+```
+
 </CodeGroup>
 
-The application callback receives the base64 serialized transaction and the
-full prepared record, then returns the signed base64 serialized transaction.
-The SDK does not load or store the signing key.
+The TypeScript/Python callback receives the base64 serialized transaction and
+the full prepared record, then returns the signed base64 serialized
+transaction. Those callback helpers do not load or store the signing key.
+For a direct Ed25519 preparation with no pending approvals or embedded
+signatures, use `prepared.transaction` as the Rust snippet's input. Otherwise,
+use the transaction returned by compilation or embedded signing. Repeat for each
+application-owned required Ed25519 signer; sponsorship can add the paymaster's
+signature afterward. Other pages use `sign_transaction` as an application-owned
+async hook that returns this native signed transaction. It is not an SDK method.
 
 ## Secp256r1 and passkeys
 
-The passkey adapter requests an assertion from the application environment and
-patches the returned WebAuthn data into the prepared Swig transaction:
+The TypeScript and Python passkey adapters request an assertion from the
+application environment and patch its WebAuthn data into the prepared Swig
+transaction. Rust's `Secp256r1TransactionSigner` signs raw P-256 authority
+requests using a local `p256::ecdsa::SigningKey`. Here, `signing_key` is your
+application's `Arc<p256::ecdsa::SigningKey>` and `prepared` is the returned
+`PreparedTransaction`:
 
 <CodeGroup dropdown>
 
@@ -101,16 +156,30 @@ signed = await sign_prepared_swig_transaction(
 )
 ```
 
+```rust Rust
+use std::sync::Arc;
+
+use swig_developer_sdk::{Secp256r1TransactionSigner, TransactionSigner};
+
+let signer = Secp256r1TransactionSigner::new(Arc::clone(&signing_key));
+let transaction = signer.sign_prepared_transaction(prepared).await?;
+```
+
 </CodeGroup>
 
 The TypeScript passkey adapter can run in a WebAuthn environment. It has no
 access to the server client or API key. Python uses an application-provided
 assertion callback and does not initiate browser navigation itself.
+The Rust signer holds the supplied local key and performs no browser passkey
+ceremony. Use the native signer for a raw secp256r1 authority preparation.
 
 ## Secp256k1 and EVM wallets
 
-The EVM adapter wraps an EIP-1193 provider with `personal_sign` and formats the
-result for a Swig `secp256k1` authority:
+The TypeScript and Python EVM adapters wrap an EIP-1193 provider with
+`personal_sign` and format the result for a Swig `secp256k1` authority. Rust's
+`Secp256k1TransactionSigner` signs native raw authority requests using a local
+`k256::ecdsa::SigningKey`. Here, `signing_key` is your application's
+`Arc<k256::ecdsa::SigningKey>`:
 
 <CodeGroup dropdown>
 
@@ -147,14 +216,75 @@ signed = await sign_prepared_swig_transaction(
 )
 ```
 
+```rust Rust
+use std::sync::Arc;
+
+use swig_developer_sdk::{Secp256k1TransactionSigner, TransactionSigner};
+
+let signer = Secp256k1TransactionSigner::new(Arc::clone(&signing_key));
+let transaction = signer.sign_prepared_transaction(prepared).await?;
+```
+
 </CodeGroup>
+
+The Rust transaction signer uses the raw authority signing format. It is a
+different path from an EVM provider's EIP-191 `personal_sign` request and from
+the detached [secp256k1 participant signer](/developer-sdk/participant-sets#collect-member-approvals).
+Both native secp transaction signers accept `Arc<SigningKey>` through `new`;
+their `from_bytes(&[u8; 32])` constructors validate a private scalar and return
+an error for invalid key material. `Arc::clone` keeps the application's key
+handle available without copying the private key. The signing method borrows
+the signer, so it can sign another preparation.
+
+## Implement a Rust signing policy
+
+Implement `TransactionSigner` when your application needs its own signing
+boundary. This wrapper enforces an application approval deadline, then delegates
+native authority validation and signing to the SDK:
+
+```rust Rust
+use std::time::Instant;
+
+use async_trait::async_trait;
+use solana_transaction::versioned::VersionedTransaction;
+use swig_developer_sdk::{
+    PreparedTransaction, Secp256k1TransactionSigner, TransactionSignError,
+    TransactionSigner,
+};
+
+struct ApprovalDeadlineSigner {
+    signer: Secp256k1TransactionSigner,
+    approval_deadline: Instant,
+}
+
+#[async_trait]
+impl TransactionSigner for ApprovalDeadlineSigner {
+    async fn sign_prepared_transaction(
+        &self,
+        prepared: PreparedTransaction,
+    ) -> Result<VersionedTransaction, TransactionSignError> {
+        if Instant::now() >= self.approval_deadline {
+            return Err(TransactionSignError::InvalidPreparation(
+                "application approval has expired",
+            ));
+        }
+        self.signer.sign_prepared_transaction(prepared).await
+    }
+}
+```
+
+Set `approval_deadline` from your application's authorization policy. Check the
+operation's intent before invoking the signer. This local deadline is separate
+from the transaction's blockhash and on-chain authorization expiry, which the
+application must also check.
 
 ## Return to the server
 
 Send the signed serialized transaction back through an authenticated
 application route. The server can then call
-`swig.transactions.sponsor(...)`, submit through its own RPC path, and track
-confirmation or finality.
+the language's sponsorship path, submit through its own RPC path, and track
+confirmation or finality. See [Sponsor & Submit](/developer-sdk/sponsor-and-submit)
+for TypeScript, Python, and Rust submission options.
 
 Keep the Swig developer API key, signer object, private key, and raw credential
 material inside their owning trust boundaries.
