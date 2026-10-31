@@ -5,6 +5,11 @@ sidebarTitle: "Swaps and Batches"
 
 Use the built-in helpers when your app needs more than one simple transfer.
 
+Rust calls these methods on `wallet`, the reusable `WalletClient` from
+[Rust integration](/developer-sdk/integration-paths#rust). Supply addresses as
+`Pubkey` values and `requester_authority` as a `WalletAuthority`. Amounts are
+`u64` values in lamports or the token mint's smallest units.
+
 ## Jupiter swaps
 
 <CodeGroup dropdown>
@@ -33,15 +38,43 @@ prepared_swap = await wallet.swap.jupiter(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{PrepareSwapArgs, SwapOptions};
+
+let prepared_swap = wallet
+    .prepare_swap(PrepareSwapArgs {
+        swig_config_address,
+        fee_payer,
+        requester_authority: requester_authority.clone(),
+        input_mint,
+        output_mint,
+        amount: 10_000,
+        options: Some(SwapOptions {
+            slippage_bps: Some(100),
+            destination_owner: Some(destination_owner),
+            wrap_and_unwrap_sol: Some(true),
+            ..SwapOptions::default()
+        }),
+    })
+    .await?;
+```
+
 </CodeGroup>
 
 `destinationAccount` is the recipient owner. The backend resolves the output
 ATA for SPL outputs or the native destination for unwrapped SOL.
 
+Rust names this field `SwapOptions::destination_owner`. Swap preparation
+accepts Ed25519 and secp256r1 requesters. A zero amount, an unsupported
+requester, or `ComputeUnitPricePercentile::BasisPoints` above 10,000 returns
+`PrepareSwapError::InvalidInput`. Other optional settings include tips,
+compute-unit price percentile, maximum accounts, and blockhash expiry slots.
+
 ## Grouped operations
 
 Use `wallet.prepare(...)` when you want the backend to shape a batch instead of
-calling single-operation helpers one by one. Both SDKs send this request to
+calling single-operation helpers one by one. Rust uses
+`WalletClient::prepare_transfers`. All three SDKs send this request to
 `POST /transaction/prepare/batch`.
 
 <CodeGroup dropdown>
@@ -84,7 +117,46 @@ prepared = await wallet.prepare(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{PrepareOperation, PrepareTransfersArgs};
+
+let prepared = wallet
+    .prepare_transfers(PrepareTransfersArgs {
+        swig_config_address,
+        fee_payer,
+        requester_authority: requester_authority.clone(),
+        operations: vec![
+            PrepareOperation::TransferSol {
+                destination,
+                amount: 1_000_000,
+            },
+            PrepareOperation::TransferToken {
+                mint,
+                destination_owner,
+                amount: 10_000,
+            },
+        ],
+    })
+    .await?;
+```
+
 </CodeGroup>
+
+Rust supports SOL and token transfer operations in this method. It accepts
+Ed25519, secp256r1, and ParticipantSet requesters. An empty operation list, a
+zero amount, or a secp256k1 requester returns
+`PrepareTransfersError::InvalidInput`.
+
+Rust currently requires the backend to return exactly one prepared transaction,
+even when the request contains several operations. A response containing zero
+or multiple transactions returns
+`PrepareTransfersError::InvalidResponse("expected exactly one prepared transaction")`.
+Use TypeScript or Python when the plan needs multiple transactions.
+
+Both Rust methods return a `PreparedTransaction` containing a native
+`VersionedTransaction` and signing metadata. Continue to
+[Signers](/developer-sdk/signers) and
+[Sponsor & Submit](/developer-sdk/sponsor-and-submit).
 
 ## When to use this page
 
