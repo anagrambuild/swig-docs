@@ -107,7 +107,11 @@ Creates a new session for temporary authority delegation.
 
 ## Authorization Locks
 
-Locks reserve part of the wallet's SOL or token balance until an expiry slot.
+Locks hold part of the wallet's SOL or token balance until an expiry slot,
+like a card authorization hold. Other roles, `All` included, can spend only the
+balance minus the locks they don't hold. The holder can spend its held funds
+with `sign_v2`: each spend lowers ("captures") its locks on that account,
+oldest first, and is charged to its limits.
 See [Authorization Locks](/protocol/authorization-locks) for the rules and
 [the recipe](/examples/authorization_locks) for a full flow.
 
@@ -158,8 +162,9 @@ token account owned by the wallet address and its mint.
 pub fn remove_authorization_lock(&mut self, lock_id: u32) -> Result<Signature, SwigError>
 ```
 
-Releases a lock created by the current role, or prunes an expired lock. The
-wallet's rent claimer, if any, is resolved automatically.
+Releases a lock created by the current role, voiding whatever it still
+reserves, or prunes an expired or fully captured (amount 0) lock. The wallet's
+rent claimer, if any, is resolved automatically.
 
 ### Reading Locks
 
@@ -168,9 +173,10 @@ pub fn get_authorization_locks(&self) -> Result<Vec<AuthorizationLock>, SwigErro
 pub fn get_active_authorization_locks(&self) -> Result<Vec<AuthorizationLock>, SwigError>
 ```
 
-`get_authorization_locks` returns every stored lock, including expired locks
-that have not been pruned. `get_active_authorization_locks` returns only locks
-still active at the current slot.
+`get_authorization_locks` returns every stored lock, including expired and
+fully captured (amount 0) locks that have not been pruned. `amount` is what is
+still reserved. `get_active_authorization_locks` returns only locks that still
+bind: unexpired, with a non-zero amount.
 
 ## Wallet Information
 
@@ -271,7 +277,7 @@ wallet.add_authority(
             max_duration_slots: 216_000,
         },
         Permission::Sol {
-            amount: 2_000_000_000, // backs the role's holds
+            amount: 2_000_000_000, // caps the role's holds; charged on spend
             recurring: None,
         },
     ],
@@ -280,6 +286,10 @@ wallet.add_authority(
 // As the card role:
 let slot = wallet.get_current_slot()?;
 wallet.add_sol_authorization_lock(1_500_000_000, slot + 400)?;
+
+// Spending from the wallet captures the hold: the lock drops to 0.5 SOL.
+let wallet_address = wallet.get_swig_wallet_address()?;
+wallet.sign_v2(vec![transfer(&wallet_address, &merchant, 1_000_000_000)], None)?;
 ```
 
 ### Creating a Session

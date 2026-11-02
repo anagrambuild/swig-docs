@@ -56,7 +56,7 @@ Actions are typed permission records attached to roles.
 | Program access | `Program`, `ProgramAll`, `ProgramCurated`, `ProgramScope` | CPI access from the wallet |
 | Staking | `StakeLimit`, `StakeRecurringLimit`, `StakeAll` | stake-related execution |
 | Sub-accounts | `SubAccount` | sub-account creation, signing, and control |
-| Authorization locks | `ManageAuthorizationLocks` | reserving wallet funds within the role's own limits |
+| Authorization locks | `ManageAuthorizationLocks` | holding wallet funds for the role, within its own limits |
 | Lifecycle and recovery | `CloseSwigAuthority`, `RecoveryAuthority` | closing wallets and constrained recovery |
 
 ## Time-based limits are measured in slots
@@ -120,8 +120,11 @@ The two permission families fail in opposite directions, so round accordingly:
   authorization lock, including for `All`. Each lock lasts at most
   `max_duration_slots`. With `All` or `AllButManageAuthority` a role can lock
   up to the wallet's balance; otherwise it can lock up to its own spending
-  limits. A role cannot change its own bound. Active locks bind every role.
-  See [Authorization Locks](/protocol/authorization-locks).
+  limits. A role cannot change its own bound. Like a card authorization hold,
+  an active lock keeps every other role, `All` included, off the held funds,
+  while the holder can spend them, which captures the lock. Limits are charged
+  when the holder spends, not when it locks. See
+  [Authorization Locks](/protocol/authorization-locks).
 
 ## Common role shapes
 

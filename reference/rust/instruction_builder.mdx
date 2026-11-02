@@ -161,10 +161,11 @@ pub fn remove_authorization_lock(
 ) -> Result<Vec<Instruction>, SwigError>
 ```
 
-Creates instructions that release a lock or prune an expired one. The wallet
-address is derived from the Swig account and passed automatically. Pass the
-wallet's rent claimer when one is configured. To capture a hold, put these
-instructions and a `sign_v2_instruction` spend in the same transaction.
+Creates instructions that release a lock or prune an expired or fully captured
+one. The wallet address is derived from the Swig account and passed
+automatically. Pass the wallet's rent claimer when one is configured. To capture
+a hold, the holder doesn't remove it: it spends from the locked account with
+`sign_v2_instruction`, which lowers the lock by the amount spent.
 
 ## Utility Functions
 
