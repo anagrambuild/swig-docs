@@ -575,9 +575,9 @@ let transfer = ramp
 
 </CodeGroup>
 
-Preparation and submission are not retried automatically. TypeScript and
-Python raise unless the transfer has landed. Rust returns a `RampTransfer`
-on HTTP success, so inspect its state. Rust quote requests also send once.
+Preparation and submission are not retried automatically. The API returns
+success after the transfer lands. Rust exposes the result as `RampTransfer`.
+Rust quote requests also send once.
 
 Keep signed transactions out of logs. See
 [Submit a transfer](/developer-api/ramp#submit-a-transfer) for detailed responses.
