@@ -16,6 +16,8 @@ The flow:
 3. The delegate captures the hold by spending through `SignV2`, which lowers
    the lock by the amount spent. It can release whatever is left. Otherwise the
    hold expires.
+4. Once the delegate's holds are inactive, the owner can remove its role, which
+   also deletes its lock records.
 
 ## Rust SDK
 
@@ -138,6 +140,21 @@ reserved. After a lock expires or is fully captured, any role with `All`,
 `AllButManageAuthority`, `ManageAuthority`, or `ManageAuthorizationLocks` can
 prune it to reclaim its rent.
 
+### Remove the delegate
+
+Once all of the delegate's holds are inactive (expired or fully captured), the
+owner can remove its role. The removal also deletes the delegate's lock records
+and refunds their rent with the role's:
+
+```rust
+// As a role with All or ManageAuthority:
+wallet.remove_authority(card_authority.pubkey().as_ref())?;
+```
+
+While any of its holds is still active, removal fails with
+`AuthorizationLockActive`, even if its other holds have expired. Release the
+remaining holds as the delegate, or wait for them to expire.
+
 ### Lock from a program (`ProgramExec`)
 
 A `ProgramExec` role can hold `ManageAuthorizationLocks` too, so an on-chain
@@ -258,7 +275,7 @@ In interactive mode (`swig -i`), use the **Authorization Locks** menu.
 | `AuthorizationLockExceedsSpendLimit` | the role's holds on this asset would exceed what its limits still allow, either when locking or after a spend |
 | `AuthorizationLockExceedsBalance` | active holds on the account would exceed its balance |
 | `AuthorizationLockNotOwner` | another role tried to release an active hold |
-| `AuthorizationLockActive` | the operation (remove role, close wallet, ...) is blocked by an active hold |
+| `AuthorizationLockActive` | the operation (remove role, close wallet, ...) is blocked by an active hold. Removing a role waits until all of its holds are inactive |
 | `AuthorizationLockViolated` | a transaction would spend into a hold that another role holds, or change a locked token account's authority, delegate, or state |
 | `InvalidSeedSwigAccount` | account 1 is not the wallet's canonical wallet address |
 | `PermissionDeniedProgramExecInvalidConfigAccount` / `...InvalidWalletAccount` | the `ProgramExec` proof instruction's first two accounts are not the Swig config and wallet address |

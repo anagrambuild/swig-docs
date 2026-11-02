@@ -56,9 +56,15 @@ can't spend into another role's lock, because the floor above applies to it
 too. Inflows never raise a lock.
 
 A lock captured to 0 stays stored with `amount == 0`. It is inactive, and it
-can be pruned like an expired lock. `SignV2` has no payer or rent-claimer
-account, so it never resizes the config. `RemoveAuthorizationLockV1` reclaims
-the space.
+stays stored until it is pruned with `RemoveAuthorizationLockV1` or removed
+along with its holder's role.
+
+Locks don't change what `SignV2` needs or touches:
+
+- it needs no extra accounts because of locks. A transaction's accounts are the
+  same with or without them;
+- it never resizes the config account or moves lamports for locks. A capture
+  only rewrites the lock's stored amount in place.
 
 ### Worked example
 
@@ -160,6 +166,9 @@ lock to spend it.
   `AllButManageAuthority`, `ManageAuthority`, or `ManageAuthorizationLocks`
   can remove it to reclaim space. The holder can too.
 - No other role can remove an active lock. This includes the root `All` role.
+- **With the role:** removing a holder's role with `RemoveAuthorityV1` also
+  prunes its inactive locks. See
+  [Removing a lock holder](#removing-a-lock-holder).
 
 Rent freed by removal goes to the configured
 [rent claimer](/developer-sdk/rent-claimers) if one is set, otherwise to the
@@ -201,17 +210,38 @@ key.
 ## Effect on role management
 
 A lock is only useful if its holder stays able to spend it. While a role holds
-an active lock:
+any active lock, even if its other locks are inactive:
 
-- it cannot be removed with `RemoveAuthorityV1`
-- another role cannot replace its authority with `ReplaceAuthorityV1`
-- another role cannot update its actions with `UpdateAuthorityV1`, except to
-  remove only `ManageAuthorizationLocks`
+- it cannot be removed with `RemoveAuthorityV1`, not even by itself. This fails
+  with `AuthorizationLockActive`
+- another role cannot replace its authority with `ReplaceAuthorityV1`. Its locks
+  don't block it from rotating its own authority
+- another role cannot update its actions with `UpdateAuthorityV1`, except for a
+  `RemoveActionsByType` that removes only `ManageAuthorizationLocks`
 
 Removing `ManageAuthorizationLocks` stops the role from creating new locks.
 Existing locks still run to expiry, and the holder can still spend or release
-them. A
-delegate therefore cannot make itself irrevocable by continually renewing locks.
+them. A delegate therefore cannot make itself irrevocable by continually
+renewing locks.
+
+Once all of a role's locks are inactive (expired or fully captured), these
+restrictions lift. `UpdateAuthorityV1` and `ReplaceAuthorityV1` then work as
+usual and leave the role's lock records in place.
+
+### Removing a lock holder
+
+A role whose locks are all inactive can be removed with `RemoveAuthorityV1`.
+The usual permission rules apply. A role with `All` or `ManageAuthority` can
+remove it, and so can the role itself. `AllButManageAuthority` can't remove
+other roles.
+
+The same instruction prunes the role's lock records:
+
+- its inactive locks are deleted, and their rent is refunded with the role's,
+  to the rent claimer if one is set, otherwise to the payer
+- other roles' locks and the wallet's lock-id counter are kept
+- role ids and lock ids are never reused, so a role added later inherits
+  nothing from the removed one
 
 Because every lock is bounded by its creator's `max_duration_slots`, the
 longest a role can be pinned is the duration someone else granted it.

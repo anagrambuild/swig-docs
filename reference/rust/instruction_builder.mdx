@@ -96,7 +96,10 @@ pub fn remove_authority(
 ) -> Result<Instruction, SwigError>
 ```
 
-Creates an instruction to remove an existing authority.
+Creates an instruction to remove an existing authority. The program rejects it
+with `AuthorizationLockActive` while the role holds an active
+[authorization lock](/protocol/authorization-locks), and otherwise also prunes
+the role's inactive lock records.
 
 ### Replacing Authorities
 
