@@ -19,7 +19,17 @@ The flow:
 4. Once the delegate's holds are inactive, the owner can remove its role, which
    also deletes its lock records.
 
-## Rust SDK
+## Rust Protocol SDK
+
+These examples target the auth-lock draft of
+[`swig-protocol-sdk/solana/rust/sdk`](https://github.com/anagrambuild/swig-protocol-sdk/tree/codex/protocol-rust-auth-locks/solana/rust/sdk).
+Use that branch through Git or a local checkout while reviewing it. The published
+`swig-sdk`, `swig-interface`, and `swig-state` 3.0.0 crates do not yet include
+these lock APIs. The direct `swig_interface` examples also require wallet
+revision `4628591963a1f6d9196bae67b25fba6c4a9fb0ab`.
+
+The [hosted Developer SDK](/developer-sdk/authorization-locks) has separate
+TypeScript, Python, and Rust APIs for preparing backend-built transactions.
 
 ### Grant the delegated role
 
@@ -33,7 +43,7 @@ still within its `max_duration_slots`. To let the root role lock, have it grant
 itself the permission:
 
 ```rust
-use swig_sdk::types::UpdateAuthorityData;
+use swig_sdk::{types::UpdateAuthorityData, Permission};
 
 wallet.update_authority(
     0,
@@ -221,6 +231,11 @@ let ix = RemoveAuthorizationLockV1Instruction::new_with_ed25519_authority(
 ```
 
 ## CLI
+
+These commands target the CLI changes in
+[wallet PR #240](https://github.com/anagrambuild/swig-wallet/pull/240).
+Those changes remain in `swig-wallet` after the Rust SDK moves to the Protocol
+SDK repository. Use the feature branch until the CLI is released.
 
 The `swig` CLI has the same operations. Each command also takes
 `--authority-type`, `--authority`, and `--authority-kp`, or falls back to the

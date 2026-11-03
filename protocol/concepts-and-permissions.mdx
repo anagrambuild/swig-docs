@@ -120,7 +120,8 @@ The two permission families fail in opposite directions, so round accordingly:
   authorization lock, including for `All`. Each lock lasts at most
   `max_duration_slots`. With `All` or `AllButManageAuthority` a role can lock
   up to the wallet's balance; otherwise it can lock up to its own spending
-  limits. A role cannot change its own bound. Like a card authorization hold,
+  limits. A delegated role cannot change its own bound; the root role can
+  configure its own. Like a card authorization hold,
   an active lock keeps every other role, `All` included, off the held funds,
   while the holder can spend them, which captures the lock. Limits are charged
   when the holder spends, not when it locks. See

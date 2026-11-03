@@ -241,6 +241,7 @@
             "pages": [
               "developer-sdk/create-wallets",
               "developer-sdk/rent-claimers",
+              "developer-sdk/authorization-locks",
               "developer-sdk/add-roles-and-permissions",
               "developer-sdk/transfers-and-swaps",
               "developer-sdk/swaps-and-batches",

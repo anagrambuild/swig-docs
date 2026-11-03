@@ -110,6 +110,9 @@ Creates a new session for temporary authority delegation.
 
 ## Authorization Locks
 
+These APIs target the Rust auth-lock draft, not the published 3.0.0 crates.
+Use the source revisions in the [recipe](/examples/authorization_locks).
+
 Locks hold part of the wallet's SOL or token balance until an expiry slot,
 like a card authorization hold. Other roles, `All` included, can spend only the
 balance minus the locks they don't hold. The holder can spend its held funds

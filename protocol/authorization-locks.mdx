@@ -11,6 +11,11 @@ is the capture.
 Locks are stored on the Swig config account and are enforced on every `SignV2`
 execution, on both the `All` path and the limited path.
 
+This feature is pending the authorization-lock program release. The Protocol SDK
+TypeScript implementation lives in [swig-protocol-sdk](https://github.com/anagrambuild/swig-protocol-sdk/tree/main/solana/typescript).
+The Rust port and hosted Developer SDK support are under review; the published
+Rust protocol crates at `3.0.0` do not expose the lock APIs below.
+
 ## What a lock covers
 
 Each lock records:
@@ -262,4 +267,5 @@ wall-clock time than intended. See
 ## Use it from the SDK and CLI
 
 See the [authorization locks recipe](/examples/authorization_locks) for Rust SDK
-and CLI examples.
+and CLI examples, or the [Developer SDK guide](/developer-sdk/authorization-locks)
+for hosted TypeScript, Python, and Rust preparation.
