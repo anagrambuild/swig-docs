@@ -82,9 +82,13 @@ let slot = wallet.get_current_slot()?;
 
 // Hold 1.5 SOL for the next 400 slots.
 wallet.add_sol_authorization_lock(1_500_000_000, slot + 400)?;
+```
 
-// Hold tokens in the wallet's associated token account for `mint`.
-// SPL Token and Token-2022 mints are both supported.
+To hold tokens instead, first grant the delegate a matching token spending
+permission with capacity for at least 600 base units. The SOL-only grant above
+cannot authorize this hold. SPL Token and Token-2022 mints are supported:
+
+```rust
 wallet.add_token_authorization_lock(&mint, 600, slot + 400)?;
 ```
 
@@ -172,7 +176,18 @@ program can place and release holds. The program spends a hold through
 `SignV2` as usual. The SDK lock helpers work with a
 `ProgramExecClientRole`. To build the instructions directly, use the
 `swig_interface` builders. The program's instruction must pass the Swig config
-and the wallet address as its first two accounts:
+and the wallet address as its first two accounts.
+
+The authorizing program must also validate the exact Swig lock instruction and
+its account metas before approving it: add/remove operation, acting role,
+asset/mint, amount and expiry for add, or lock ID and rent recipient for remove.
+Bind those values to the caller's authorization, for example by inspecting the
+following instruction through the instructions sysvar. A matching prefix and
+wallet pair alone do not authorize a particular hold; a generic approval could
+otherwise be reused with a changed amount, expiry, or lock ID.
+
+The builder example assumes `authorize_hold_data` and the authorizing program
+implement that binding:
 
 ```rust
 use swig_interface::{AddAuthorizationLockV1Instruction, RemoveAuthorizationLockV1Instruction};
