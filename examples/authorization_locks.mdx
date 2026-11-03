@@ -301,7 +301,7 @@ In interactive mode (`swig -i`), use the **Authorization Locks** menu.
 |-------|-------|
 | `PermissionDeniedMissingPermission` | the role lacks `ManageAuthorizationLocks`, even if it has `All` |
 | `InvalidAuthorizationLockExpiry` | expiry is not in the future, or exceeds the role's `max_duration_slots` |
-| `AuthorizationLockDurationSelfUpdate` | a role tried to set or change its own `max_duration_slots` |
+| `AuthorizationLockDurationSelfUpdate` | a non-root role tried to set or change its own `max_duration_slots` |
 | `AuthorizationLockExceedsSpendLimit` | the role's holds on this asset would exceed what its limits still allow, either when locking or after a spend |
 | `AuthorizationLockExceedsBalance` | active holds on the account would exceed its balance |
 | `AuthorizationLockNotOwner` | another role tried to release an active hold |
