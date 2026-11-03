@@ -1,12 +1,12 @@
 ---
 title: "Reserve a wallet address"
 sidebarTitle: "Reservation Addresses"
-description: "Derive a Solana wallet address from an owner key, save its activation package, and create the wallet later."
+description: "Derive a Solana wallet address from an owner key and activate it with an external payer."
 ---
 
 A reservation gives you a Swig wallet address before you send a transaction.
-Supply the owner's public key, save the activation package, and let a funded
-payer activate the wallet when you need it.
+Supply the owner's public key, then let a funded payer activate the wallet
+when you need it.
 
 Reservation runs locally: it needs no RPC, signature, or on-chain account.
 Activation requires a Swig deployment that supports `CreateReservedV1`.
@@ -41,20 +41,26 @@ The same program ID, owner type, canonical public key, and salt produce the same
 addresses in TypeScript and Rust. Compressed and uncompressed SEC1 input keys
 normalize to the same reservation.
 
-## Reserve and save
+## Reserve and activate
 
-This Classic example takes an Ed25519 owner's public key and returns the two
-addresses and bytes to store. It sends no transaction.
+### TypeScript
+
+This Classic example reserves an Ed25519 wallet and prepares its activation
+instructions using the same reservation object.
 
 ```typescript
-import { type PublicKey } from "@solana/web3.js";
+import { ComputeBudgetProgram, type PublicKey } from "@solana/web3.js";
 import {
   AuthorityType,
+  getCreateReservedSwigInstruction,
   ReservationV1,
   SWIG_PROGRAM_ADDRESS_STRING,
 } from "@swig-wallet/classic";
 
-export async function reserveWallet(ownerPublicKey: PublicKey) {
+export async function reserveAndPrepareActivation(
+  ownerPublicKey: PublicKey,
+  payer: PublicKey,
+) {
   const reservation = ReservationV1.create({
     programId: SWIG_PROGRAM_ADDRESS_STRING,
     authorityType: AuthorityType.Ed25519,
@@ -62,59 +68,25 @@ export async function reserveWallet(ownerPublicKey: PublicKey) {
     addressOptions: { accountIndex: 0 },
   });
   const addresses = await reservation.addresses();
+  const instructions = [
+    ComputeBudgetProgram.setComputeUnitLimit({ units: 600_000 }),
+    await getCreateReservedSwigInstruction({ reservation, payer }),
+  ];
 
   return {
-    packageBytes: reservation.toBytes(),
+    reservation,
     configAddress: addresses.swigAddress.toBase58(),
     walletAddress: addresses.walletAddress.toBase58(),
+    instructions,
   };
 }
 ```
 
-Store the **exact package bytes** and keep the **wallet address** in a trusted
-record. The package contains public data, not a signing key, but changing it
-can change the destination. Encode the bytes as base64 or hex if your storage
-requires text.
-
 Use `walletAddress` as the SOL deposit address and as the owner when deriving
 token accounts. Use `configAddress` to fetch roles and build wallet operations.
 
-## Restore and prepare activation
-
-Import with the expected program ID and compare the derived wallet address
-with your trusted record before accepting a restored package.
-
-```typescript
-import { ComputeBudgetProgram, type PublicKey } from "@solana/web3.js";
-import {
-  getCreateReservedSwigInstruction,
-  ReservationV1,
-  SWIG_PROGRAM_ADDRESS_STRING,
-} from "@swig-wallet/classic";
-
-export async function prepareActivation(
-  packageBytes: Uint8Array,
-  expectedWalletAddress: string,
-  payer: PublicKey,
-) {
-  const reservation = ReservationV1.fromBytes(
-    packageBytes,
-    SWIG_PROGRAM_ADDRESS_STRING,
-  );
-  const addresses = await reservation.addresses();
-  if (addresses.walletAddress.toBase58() !== expectedWalletAddress) {
-    throw new Error("Restored wallet address differs from the trusted record");
-  }
-
-  return [
-    ComputeBudgetProgram.setComputeUnitLimit({ units: 600_000 }),
-    await getCreateReservedSwigInstruction({ reservation, payer }),
-  ];
-}
-```
-
-Add these instructions to a transaction, sign with the payer, submit through
-your Solana client, and confirm the transaction. The builder performs no RPC
+Add the returned `instructions` to a transaction, sign with the payer, submit
+through your Solana client, and confirm the transaction. The builder performs no RPC
 or submission. The 600,000-unit compute budget accommodates P-256 validation;
 the activation builder itself does not add a compute-budget instruction.
 
@@ -129,11 +101,11 @@ and transaction fee. The program fixes role `0` to the committed owner with
 `All` permissions; the payer cannot substitute an owner or permission set.
 Activation preserves SOL deposited before account creation.
 
-## Rust
+### Rust
 
-The Rust flow uses the same package bytes and addresses. This example reserves
-an Ed25519 wallet, verifies the saved package, and builds activation instructions
-without sending them. It uses `solana-sdk` 4.x and
+The Rust flow uses the same package bytes and addresses. Pass the reservation
+returned by `reserve_wallet` to `prepare_activation` to build instructions for
+the payer. This example uses `solana-sdk` 4.x and
 `solana-compute-budget-interface` 3.x alongside the source `swig-sdk` crate.
 
 ```rust
@@ -154,16 +126,10 @@ pub fn reserve_wallet(owner: Pubkey) -> Result<ReservationV1, ReservationError> 
 }
 
 pub fn prepare_activation(
-    package_bytes: &[u8],
-    expected_wallet: Pubkey,
+    reservation: &ReservationV1,
     payer: Pubkey,
-) -> Result<Vec<Instruction>, Box<dyn std::error::Error>> {
-    let reservation =
-        ReservationV1::from_bytes(package_bytes, swig_interface::program_id())?;
-    let (instruction, addresses) = reservation.create_instruction(payer)?;
-    if addresses.wallet_address != expected_wallet {
-        return Err("restored wallet differs from the trusted record".into());
-    }
+) -> Result<Vec<Instruction>, ReservationError> {
+    let (instruction, _) = reservation.create_instruction(payer)?;
     Ok(vec![
         ComputeBudgetInstruction::set_compute_unit_limit(600_000),
         instruction,
@@ -172,8 +138,8 @@ pub fn prepare_activation(
 ```
 
 Add `swig-interface` at the same version/revision used by `swig-sdk` for
-`program_id()`. Save `reservation.package_bytes` and
-`reservation.addresses()?.wallet_address` when reserving.
+`program_id()`. Call `reservation.addresses()?` to get `swig_address` for the
+config and `wallet_address` for deposits.
 
 For a wallet API that handles RPC and activation, use
 [`SwigWallet::from_reservation`](https://github.com/anagrambuild/swig-protocol-sdk/blob/main/solana/rust/sdk/src/wallet.rs).
@@ -188,12 +154,72 @@ errors.
   current on-chain roles for signing and authority management.
 - Retrying activation for the same valid active reservation preserves its
   authorities, counters, and permissions, including owner rotations.
-- Keep the original package after a rotation: it identifies the wallet's
+- If you saved the package, keep it after a rotation: it identifies the wallet's
   creation address, while current on-chain roles determine who can act.
 - A closed config retains a tombstone. Activation cannot recreate it.
 - Reserved wallets use **address-bound V2 subaccounts**. The TypeScript legacy
   V1 subaccount helpers are incompatible; use the Rust V2 subaccount APIs when
   you need that flow.
+
+## Optional: load a saved reservation
+
+Use the existing reservation object while it is available. If you save a
+reservation for a later session, store its exact package bytes
+and keep the wallet address in a trusted record. The package contains public
+data, but changing it can change the destination. Encode the bytes as base64
+or hex if your storage requires text.
+
+When loading, check the expected program ID and compare the derived wallet
+address with your trusted record. The loaded reservation can be passed to
+the same activation builder used above.
+
+### TypeScript
+
+Save `reservation.toBytes()` and the returned `walletAddress`.
+
+```typescript
+import {
+  ReservationV1,
+  SWIG_PROGRAM_ADDRESS_STRING,
+} from "@swig-wallet/classic";
+
+export async function loadReservation(
+  packageBytes: Uint8Array,
+  expectedWalletAddress: string,
+): Promise<ReservationV1> {
+  const reservation = ReservationV1.fromBytes(
+    packageBytes,
+    SWIG_PROGRAM_ADDRESS_STRING,
+  );
+  const addresses = await reservation.addresses();
+  if (addresses.walletAddress.toBase58() !== expectedWalletAddress) {
+    throw new Error("Restored wallet address differs from the trusted record");
+  }
+  return reservation;
+}
+```
+
+### Rust
+
+Save `reservation.package_bytes` and
+`reservation.addresses()?.wallet_address`.
+
+```rust
+use solana_sdk::pubkey::Pubkey;
+use swig_sdk::reservation::ReservationV1;
+
+pub fn load_reservation(
+    package_bytes: &[u8],
+    expected_wallet: Pubkey,
+) -> Result<ReservationV1, Box<dyn std::error::Error>> {
+    let reservation =
+        ReservationV1::from_bytes(package_bytes, swig_interface::program_id())?;
+    if reservation.addresses()?.wallet_address != expected_wallet {
+        return Err("restored wallet differs from the trusted record".into());
+    }
+    Ok(reservation)
+}
+```
 
 ## Package compatibility
 
