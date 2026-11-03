@@ -75,8 +75,8 @@ export async function reserveAndPrepareActivation(
 
   return {
     reservation,
-    configAddress: addresses.swigAddress.toBase58(),
-    walletAddress: addresses.walletAddress.toBase58(),
+    configAddress: addresses.swigAddress,
+    walletAddress: addresses.walletAddress,
     instructions,
   };
 }
@@ -84,6 +84,8 @@ export async function reserveAndPrepareActivation(
 
 Use `walletAddress` as the SOL deposit address and as the owner when deriving
 token accounts. Use `configAddress` to fetch roles and build wallet operations.
+Classic returns Web3.js `PublicKey` values, so `configAddress` can be passed
+directly to `fetchSwig`.
 
 Add the returned `instructions` to a transaction, sign with the payer, submit
 through your Solana client, and confirm the transaction. The builder performs no RPC
@@ -92,9 +94,9 @@ the activation builder itself does not add a compute-budget instruction.
 
 For Solana Kit, import `ReservationV1` and `getCreateReservedSwigInstruction`
 from `@swig-wallet/kit`. Pass the payer as a Kit `Address`; the builder returns
-a Kit instruction. Derive Kit addresses with
-`addresses.swigAddress.toAddress()` and `addresses.walletAddress.toAddress()`.
-Include the same compute limit for P-256 owners.
+a Kit instruction. `await reservation.addresses()` returns Kit `Address` values
+for both `swigAddress` and `walletAddress`, ready to use with Kit helpers.
+Include a 600,000-unit compute limit for P-256 owners.
 
 Only the external payer signs activation. It pays the required account top-ups
 and transaction fee. The program fixes role `0` to the committed owner with
@@ -175,7 +177,8 @@ the same activation builder used above.
 
 ### TypeScript
 
-Save `reservation.toBytes()` and the returned `walletAddress`.
+Save `reservation.toBytes()` and `walletAddress.toBase58()` from the Classic
+example. Kit addresses are already base58 strings.
 
 ```typescript
 import {
