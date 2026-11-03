@@ -73,6 +73,8 @@ Transactions come newest first. Every filter is optional:
 
 Filters combine with AND. The action filters must all match the same action. A
 matching transaction still carries every DEX action the Swig executed in it.
+The backend answers `400` when `startSlot` / `start_slot` is after `endSlot` /
+`end_slot`.
 
 Protocols are `pump-swap`, `meteora-dlmm`, `raydium-amm-v4`, `raydium-cpmm`,
 `raydium-clmm`, and `orca-whirlpool`. Action types are `swap`,
@@ -87,9 +89,9 @@ filters. The cursor is the page's last row: `{ slot, transactionSignature }`
 for transactions and `{ protocol, dexPositionAddress }` for positions
 (`DexTransactionCursor` and `DexPositionCursor` in both SDKs). It is absent
 (`undefined` / `None`) on the last page. The backend does not tie a cursor to
-the filters it came from, so keep them the same yourself. Each page is one API
-query, so a larger `pageSize` / `page_size`, up to 100, reads a long history
-in fewer requests.
+the filters it came from, so keep them the same yourself. `pageSize` /
+`page_size` defaults to 25, and the backend caps it at 100. Each page is one
+API query, so a larger page reads a long history in fewer requests.
 
 <CodeGroup dropdown>
 
