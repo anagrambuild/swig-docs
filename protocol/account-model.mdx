@@ -10,12 +10,16 @@ graph.
 
 | Address | Derived from | Why it exists |
 |---------|--------------|---------------|
-| Swig config account | `["swig", id]` | stores wallet identity and role data |
+| Swig config account | `["swig", id]` for legacy creation; `["rsv", commitment]` for reservations | stores wallet identity and role data |
 | Wallet-address PDA | `["swig-wallet-address", swig account]` | signs normal wallet execution |
-| Sub-account PDA | `["sub-account", swig id, role_id]` | optional segregated balance bucket for one role |
+| Legacy sub-account PDA | `["sub-account", swig id, role_id]` | optional segregated balance bucket for one role |
 
 Most higher-level SDKs hand you the config account and wallet address together
 because the program needs both.
+
+[Reservation addresses](/solana/reservation-addresses) bind the initial owner
+to the config address before activation. Use the returned config address for
+wallet operations; the stored reservation commitment is not a legacy wallet ID.
 
 ## What the config account stores
 
@@ -74,10 +78,12 @@ This split matters because:
 
 ## Where sub-accounts fit
 
-Sub-accounts are not standalone wallets. They are role-scoped balance buckets
-derived from the parent Swig ID and a specific `role_id`.
+Sub-accounts are not standalone wallets. Legacy V1 subaccounts are role-scoped
+balance buckets derived from the parent Swig ID and a specific `role_id`.
+Reserved wallets use V2 subaccounts derived from the parent config address;
+see [reservation addresses](/solana/reservation-addresses).
 
-When a sub-account is created, the `SubAccount` action stores metadata for:
+When a legacy V1 sub-account is created, the `SubAccount` action stores metadata for:
 
 - the sub-account public key
 - the PDA bump
