@@ -13,9 +13,9 @@ write.
 
 | Method | Route | Authentication |
 | :--- | :--- | :--- |
-| `POST` | `/wallet/api/swig/{swig_config_address}/dex/transactions:search` | API key |
+| `POST` | `/wallet/api/swig/{swig_config_address}/dex/transactions` | API key |
 | `GET` | `/wallet/api/swig/{swig_config_address}/dex/transactions/{transaction_signature}` | API key |
-| `POST` | `/wallet/api/swig/{swig_config_address}/dex/positions:search` | API key |
+| `POST` | `/wallet/api/swig/{swig_config_address}/dex/positions` | API key |
 
 Send your API key:
 
@@ -23,9 +23,13 @@ Send your API key:
 Authorization: Bearer sk_your_api_key
 ```
 
-The two searches are `POST` requests with a JSON body, and the
-single-transaction read is a `GET`. All three only read, so they are safe to
-retry.
+The two lists are `POST` requests so that their filters can travel in a JSON
+body, and the single-transaction read is a `GET`. All three only read, so they
+are safe to retry.
+
+Every request with a valid API key counts as one API query against your
+organization's monthly allowance, including a retried request and one answered
+with `400` or `404`.
 
 ## Ownership
 
@@ -57,15 +61,15 @@ protocols have no positions.
 
 ## List DEX transactions
 
-`POST /wallet/api/swig/{swig_config_address}/dex/transactions:search`
+`POST /wallet/api/swig/{swig_config_address}/dex/transactions`
 
 Request body:
 
 | Field | Type | Description |
 | :--- | :--- | :--- |
 | `network` | enum | Required. `NETWORK_DEVNET` or `NETWORK_MAINNET` |
-| `pageSize` | number | Optional. Defaults to 25; values above 100 are capped at 100 |
-| `pageToken` | string | Optional. The `nextPageToken` of the previous page |
+| `pageSize` | number | Optional. `0` or absent means 25; values above 100 are capped at 100 |
+| `cursor` | object | Optional. The `nextCursor` of the previous page, `{ "slot", "transactionSignature" }` |
 | `filters` | array | Optional. Each filter is an object with exactly one of the keys below |
 
 Filters:
@@ -86,15 +90,15 @@ filters do not change the order: transactions come newest first by slot, then
 by signature.
 
 ```bash
-curl -X POST "https://api.onswig.com/wallet/api/swig/<swig-config-address>/dex/transactions:search" \
+curl -X POST "https://api.onswig.com/wallet/api/swig/<swig-config-address>/dex/transactions" \
   -H "Authorization: Bearer sk_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
     "network": "NETWORK_MAINNET",
-    "pageSize": 25,
+    "pageSize": 2,
     "filters": [
-      { "startSlot": "357000000" },
-      { "endSlot": "358000000" },
+      { "startSlot": "449000000" },
+      { "endSlot": "450000000" },
       { "protocol": "DEX_PROTOCOL_RAYDIUM_CLMM" },
       { "actionType": "DEX_ACTION_TYPE_LIQUIDITY_ADD" },
       { "swigVaultAddress": "<swig-vault-address>" }
@@ -102,13 +106,16 @@ curl -X POST "https://api.onswig.com/wallet/api/swig/<swig-config-address>/dex/t
   }'
 ```
 
+The response for a mainnet Swig, with its addresses replaced and shortened to
+the first of the page's two transactions:
+
 ```json
 {
   "transactions": [
     {
       "swigConfigAddress": "<swig-config-address>",
       "transactionSignature": "<transaction-signature>",
-      "slot": "357894221",
+      "slot": "449776519",
       "blockTime": "2026-09-23T17:52:56Z",
       "actions": [
         {
@@ -136,9 +143,19 @@ curl -X POST "https://api.onswig.com/wallet/api/swig/<swig-config-address>/dex/t
       ]
     }
   ],
-  "nextPageToken": "<opaque-token>"
+  "nextCursor": {
+    "slot": "449761733",
+    "transactionSignature": "<second-transaction-signature>"
+  }
 }
 ```
+
+Response fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `transactions` | array | The page's transactions, newest first |
+| `nextCursor` | object | The page's last transaction, `{ "slot", "transactionSignature" }`; absent on the last page. See [Pagination](#pagination) |
 
 Transaction fields:
 
@@ -215,10 +232,11 @@ the Swig executed no indexed DEX action in that transaction.
 
 ## List latest DEX positions
 
-`POST /wallet/api/swig/{swig_config_address}/dex/positions:search`
+`POST /wallet/api/swig/{swig_config_address}/dex/positions`
 
-The request body takes the same `network`, `pageSize`, `pageToken`, and
-`filters` fields as the transaction search. Filters:
+The request body takes the same `network`, `pageSize`, `cursor`, and `filters`
+fields as the transaction list. A position cursor is
+`{ "protocol", "dexPositionAddress" }`. Filters:
 
 | Key | Type | Selects |
 | :--- | :--- | :--- |
@@ -231,19 +249,36 @@ applies to the position. Positions are ordered by protocol, then position
 address. The order never depends on state, so a position that closes does not
 move.
 
+A second page, read by sending the first page's `nextCursor` back:
+
 ```bash
-curl -X POST "https://api.onswig.com/wallet/api/swig/<swig-config-address>/dex/positions:search" \
+curl -X POST "https://api.onswig.com/wallet/api/swig/<swig-config-address>/dex/positions" \
   -H "Authorization: Bearer sk_your_api_key" \
   -H "Content-Type: application/json" \
   -d '{
     "network": "NETWORK_MAINNET",
-    "filters": [{ "positionStatus": "POSITION_STATUS_OPEN" }]
+    "pageSize": 2,
+    "cursor": {
+      "protocol": "DEX_PROTOCOL_RAYDIUM_CLMM",
+      "dexPositionAddress": "<last-position-address-of-page-one>"
+    }
   }'
 ```
+
+The response for a mainnet Swig, with its addresses replaced:
 
 ```json
 {
   "positions": [
+    {
+      "swigConfigAddress": "<swig-config-address>",
+      "swigVaultAddress": "<swig-vault-address>",
+      "protocol": "DEX_PROTOCOL_RAYDIUM_CLMM",
+      "dexPositionAddress": "<closed-position-address>",
+      "closed": {},
+      "updatedSlot": "463003458",
+      "sourceTransactionSignature": "<close-transaction-signature>"
+    },
     {
       "swigConfigAddress": "<swig-config-address>",
       "swigVaultAddress": "<swig-vault-address>",
@@ -253,7 +288,7 @@ curl -X POST "https://api.onswig.com/wallet/api/swig/<swig-config-address>/dex/p
         "dexPoolAddress": "<pool-address>",
         "state": {
           "raydiumClmm": {
-            "liquidityRaw": "11001375020588076",
+            "liquidityRaw": "31003875058020941",
             "tickLowerIndex": 1,
             "tickUpperIndex": 2,
             "tokenFeesOwed0": "7970766",
@@ -262,22 +297,23 @@ curl -X POST "https://api.onswig.com/wallet/api/swig/<swig-config-address>/dex/p
           }
         }
       },
-      "updatedSlot": "454258553",
+      "updatedSlot": "463003458",
       "sourceTransactionSignature": "<transaction-signature>"
-    },
-    {
-      "swigConfigAddress": "<swig-config-address>",
-      "swigVaultAddress": "<swig-vault-address>",
-      "protocol": "DEX_PROTOCOL_RAYDIUM_CLMM",
-      "dexPositionAddress": "<closed-position-address>",
-      "closed": {},
-      "updatedSlot": "454258553",
-      "sourceTransactionSignature": "<close-transaction-signature>"
     }
   ],
-  "nextPageToken": ""
+  "nextCursor": {
+    "protocol": "DEX_PROTOCOL_RAYDIUM_CLMM",
+    "dexPositionAddress": "<open-position-address>"
+  }
 }
 ```
+
+Response fields:
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `positions` | array | The page's positions, by protocol, then position address |
+| `nextCursor` | object | The page's last position, `{ "protocol", "dexPositionAddress" }`; absent on the last page. See [Pagination](#pagination) |
 
 Position fields:
 
@@ -301,23 +337,29 @@ separate action; the close itself appears in the transaction history.
 
 ## Pagination
 
-- `pageToken` is opaque. Pass the previous `nextPageToken` back with the same
-  `network`, Swig, and filters; their order does not matter. Any other change
-  refuses the token with `400`. An empty `nextPageToken` means the last page.
+- `nextCursor` is the sort key of the page's last row: `{ slot,
+  transactionSignature }` for transactions, `{ protocol, dexPositionAddress }`
+  for positions. Send it back unchanged as `cursor`, and the next page starts
+  after that row.
+- `nextCursor` is absent on the last page.
+- Keep the same `network`, Swig, and filters for every page. A cursor is a
+  position in the sort order, not a token tied to the request it came from, so
+  a cursor sent with different filters is not refused: it reads the new
+  filters' rows after that position.
 - Pages stay stable while new transactions are indexed: a newer transaction
   appears at the start of a fresh walk, not inside one already in progress.
-- A token is not a credential. Every page checks the API key and ownership
+- A cursor is not a credential. Every page checks the API key and ownership
   again.
-- Each page is one API request. A larger `pageSize`, up to 100, reads a long
+- Each page is one API query. A larger `pageSize`, up to 100, reads a long
   history in fewer requests.
 
 ## Errors
 
 | Status | Cause |
 | :--- | :--- |
-| `400` | Missing or unspecified `network`; a malformed Swig address, vault, or signature; a filter with no kind (`{}`), or a repeated filter kind; an explicit `*_UNSPECIFIED` filter; `startSlot` after `endSlot`; a slot out of range; a page token that is malformed or was issued for a different request |
+| `400` | Missing or unspecified `network`; a malformed Swig address, vault, or signature; a filter with no kind (`{}`), or a repeated filter kind; an explicit `*_UNSPECIFIED` filter; `startSlot` after `endSlot`; a slot or cursor slot out of range; a position cursor without a supported `protocol`; or your organization is not eligible for API usage because its subscription is inactive |
 | `401` | Missing or invalid API key |
 | `404` | The Swig is unknown, inactive, or another organization's; or, for a single transaction, the Swig has no indexed DEX action in it |
-| `429` | Your organization reached its plan's monthly API request limit |
+| `429` | Your organization reached its plan's API query limit for the current calendar month (UTC) |
 
 See [Errors](/developer-api/errors) for the general error format.

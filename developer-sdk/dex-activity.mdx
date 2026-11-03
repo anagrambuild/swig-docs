@@ -5,12 +5,13 @@ sidebarTitle: "Read DEX Activity"
 
 `swig.dex` reads what Swig's index recorded about a Swig your API key's
 organization owns: its DEX transaction history and the latest state of its
-liquidity positions. The lists are API-key `POST` searches and `get` is an
-API-key `GET`. All of them only read and follow the client's retry policy, so
-they are safe to repeat. The network may also come from the client.
+liquidity positions. The lists are API-key `POST`s that carry their filters in
+the body, and `get` is an API-key `GET`. All of them only read and follow the
+client's retry policy, so they are safe to repeat. Each call counts as one API
+query against your organization's monthly allowance, and so does each retried
+attempt. The network may also come from the client.
 
-TypeScript `0.12.0` and Python `0.11.0` add these reads. They require a backend
-with the DEX API routes.
+TypeScript `0.12.0` and Python `0.11.0` add these reads.
 
 ## List DEX transactions
 
@@ -81,39 +82,47 @@ before any request is sent.
 
 ## Page through results
 
-Pass `nextPageToken` / `next_page_token` back as `pageToken` / `page_token`
-with the same network and filters. A token used with other filters is refused.
-The last page has no token. Each page is one API request, so a larger
-`pageSize` / `page_size`, up to 100, reads a long history in fewer requests.
+Pass `nextCursor` / `next_cursor` back as `cursor` with the same network and
+filters. The cursor is the page's last row: `{ slot, transactionSignature }`
+for transactions and `{ protocol, dexPositionAddress }` for positions
+(`DexTransactionCursor` and `DexPositionCursor` in both SDKs). It is absent
+(`undefined` / `None`) on the last page. The backend does not tie a cursor to
+the filters it came from, so keep them the same yourself. Each page is one API
+query, so a larger `pageSize` / `page_size`, up to 100, reads a long history
+in fewer requests.
 
 <CodeGroup dropdown>
 
 ```typescript TypeScript
-let pageToken: string | undefined;
+import type { DexTransactionCursor } from '@swig-wallet/developer-sdk';
+
+let cursor: DexTransactionCursor | undefined;
 do {
   const page = await swig.dex.transactions.list({
     swigConfigAddress,
     network: 'mainnet',
     actionType: 'swap',
-    pageToken,
+    cursor,
   });
   // handle page.transactions
-  pageToken = page.nextPageToken;
-} while (pageToken);
+  cursor = page.nextCursor;
+} while (cursor);
 ```
 
 ```python Python
-page_token = None
+from swig_developer_sdk import DexTransactionCursor
+
+cursor: DexTransactionCursor | None = None
 while True:
     page = await swig.dex.transactions.list(
         swig_config_address=swig_config_address,
         network="mainnet",
         action_type="swap",
-        page_token=page_token,
+        cursor=cursor,
     )
     # handle page.transactions
-    page_token = page.next_page_token
-    if page_token is None:
+    cursor = page.next_cursor
+    if cursor is None:
         break
 ```
 
@@ -233,9 +242,9 @@ to the position, and page the same way as transactions.
 
 | Read | Route |
 | :--- | :--- |
-| Transaction history | `POST /wallet/api/swig/{swig_config_address}/dex/transactions:search` |
+| Transaction history | `POST /wallet/api/swig/{swig_config_address}/dex/transactions` |
 | One transaction | `GET /wallet/api/swig/{swig_config_address}/dex/transactions/{transaction_signature}` |
-| Latest positions | `POST /wallet/api/swig/{swig_config_address}/dex/positions:search` |
+| Latest positions | `POST /wallet/api/swig/{swig_config_address}/dex/positions` |
 
 See the [DEX API](/developer-api/dex) for the exact parameters and response
 shapes. These are API-key routes and must be called from a trusted server. If
