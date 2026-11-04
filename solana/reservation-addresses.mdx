@@ -14,11 +14,29 @@ Verify support on your target cluster before funding a reserved address.
 
 ## Set up the SDK
 
-The examples use the reservation APIs in
+The examples use the published **3.0.0** reservation APIs from
 [`swig-protocol-sdk`](https://github.com/anagrambuild/swig-protocol-sdk).
-The TypeScript reservation APIs in this guide require a source build containing
-`ReservationV1` and `getCreateReservedSwigInstruction`. Follow the
-[Solana source setup](https://github.com/anagrambuild/swig-protocol-sdk/tree/main/solana).
+Install Classic for Web3.js applications:
+
+```bash
+npm install @swig-wallet/classic@3.0.0 @solana/web3.js@^1.98.0
+```
+
+For Solana Kit applications, install Kit instead:
+
+```bash
+npm install @swig-wallet/kit@3.0.0 @solana/kit@^2.1.0
+```
+
+For the Rust examples, add these published crates to `Cargo.toml`:
+
+```toml
+[dependencies]
+swig-sdk = "3.0.0"
+swig-interface = "3.0.0"
+solana-sdk = "4"
+solana-compute-budget-interface = "3"
+```
 
 - **TypeScript:** `ReservationV1` is exported by `@swig-wallet/lib`,
   `@swig-wallet/classic`, and `@swig-wallet/kit`.
@@ -108,7 +126,7 @@ Activation preserves SOL deposited before account creation.
 The Rust flow uses the same package bytes and addresses. Pass the reservation
 returned by `reserve_wallet` to `prepare_activation` to build instructions for
 the payer. This example uses `solana-sdk` 4.x and
-`solana-compute-budget-interface` 3.x alongside the source `swig-sdk` crate.
+`solana-compute-budget-interface` 3.x alongside `swig-sdk` 3.0.0.
 
 ```rust
 use solana_compute_budget_interface::ComputeBudgetInstruction;
@@ -139,8 +157,8 @@ pub fn prepare_activation(
 }
 ```
 
-Add `swig-interface` at the same version/revision used by `swig-sdk` for
-`program_id()`. Call `reservation.addresses()?` to get `swig_address` for the
+Use `swig-interface` 3.0.0 for `program_id()`, as shown above.
+Call `reservation.addresses()?` to get `swig_address` for the
 config and `wallet_address` for deposits.
 
 For a wallet API that handles RPC and activation, use
