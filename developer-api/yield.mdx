@@ -1,0 +1,208 @@
+---
+title: "Yield API"
+sidebarTitle: "Yield"
+---
+
+Use the Yield API to stake SOL from an existing Swig wallet.
+Native Solana staking uses validators on the Swig allowlist.
+Every route operates on one Swig wallet config.
+
+Prepare routes return unsigned transactions. If role preparation reuses an
+existing role, it returns role metadata instead.
+Authorize each prepared transaction. Sign it with the required signers. Then submit it.
+See [transaction preparation and signing](/developer-api/transactions) for the
+shared `PreparedTransaction` contract.
+
+## Auth
+
+Use an API key:
+
+```text
+Authorization: Bearer sk_your_api_key
+```
+
+Set `network` to `NETWORK_MAINNET` or `NETWORK_DEVNET` for every route.
+The API checks that the wallet config belongs to the API key's organization.
+If the wallet belongs to another organization, the API returns `NOT_FOUND`.
+
+## Routes
+
+| Method | Route | Purpose |
+| :--- | :--- | :--- |
+| `POST` | `/api/yield/{swig_config_address}/role/prepare` | Reuse or prepare a role that can stake |
+| `POST` | `/api/yield/{swig_config_address}/deposit/prepare` | Fund and delegate a new position |
+| `POST` | `/api/yield/{swig_config_address}/exit/prepare` | Deactivate all or part of a position |
+| `POST` | `/api/yield/{swig_config_address}/withdraw/prepare` | Withdraw an inactive position to the wallet |
+| `GET` | `/api/yield/{swig_config_address}/options` | Allowlisted validators with live rates |
+| `GET` | `/api/yield/{swig_config_address}/estimate` | Project rewards at a validator's rate |
+| `GET` | `/api/yield/{swig_config_address}/positions` | Indexed positions |
+| `GET` | `/api/yield/{swig_config_address}/summary` | Position and reward totals |
+| `GET` | `/api/yield/{swig_config_address}/rewards` | Recorded reward credits |
+
+Lamport amounts are unsigned decimal strings in requests and responses.
+Timestamps are RFC 3339 strings.
+
+## Wallet envelope
+
+Deposit, exit, and withdrawal take a `wallet` object. Its
+`swigConfigAddress` must match the route.
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `network` | enum | `NETWORK_MAINNET` or `NETWORK_DEVNET` |
+| `swigConfigAddress` | string | The Swig wallet config |
+| `feePayer` | string | Signing key that pays fees and any new position's rent |
+| `roleId` | number, optional | Role to act with; omitted selects the qualifying role with the lowest role ID |
+| `requesterAuthority` | object | `ed25519`, `secp256r1`, or `participantSet` authority |
+
+## Prepare a role
+
+`POST /api/yield/{swig_config_address}/role/prepare`
+
+```json
+{
+  "network": "NETWORK_MAINNET",
+  "swigConfigAddress": "...",
+  "feePayer": "...",
+  "yieldAuthority": { "ed25519": { "publicKey": "..." } },
+  "validatorVoteAddress": "...",
+  "maxDepositLamports": "10000000000",
+  "roleManagerAuthority": { "ed25519": { "publicKey": "..." } }
+}
+```
+
+Use the optional `roleId` to select a candidate role for validation.
+If you omit it, the API selects the qualifying role with the lowest role ID held by `yieldAuthority`.
+`maxDepositLamports` must be greater than 0.
+The validator must currently accept deposits.
+
+The response is one of:
+
+- `existing`: `{ "roleId": 2, "actions": [...] }`. A role held by
+  `yieldAuthority` can already deposit up to `maxDepositLamports`, exit, and
+  withdraw. Roles with `All` or `AllButManageAuthority` qualify.
+  Other roles need the [program permissions](/developer-sdk/yield#prepare-a-role-that-can-stake), a general SOL allowance without
+  destination restrictions, and `StakeAll`.
+  Finite stake limits do not qualify for reuse.
+- `create`: `{ "transaction": PreparedTransaction, "yieldAuthority": ..., "actions": [...] }`.
+  An unsigned AddRole transaction for a new role with `Program(System)`,
+  `Program(Stake)`, `SolLimit(maxDepositLamports)`, and `StakeAll`.
+  Use an Ed25519 or Secp256r1 `roleManagerAuthority` with an `All` or `ManageAuthority` role.
+  After the transaction confirms, call the route again without `roleId` to find the new role.
+
+## Deposit
+
+`POST /api/yield/{swig_config_address}/deposit/prepare`
+
+```json
+{
+  "wallet": { "network": "NETWORK_MAINNET", "swigConfigAddress": "...", "feePayer": "...", "requesterAuthority": { "ed25519": { "publicKey": "..." } } },
+  "lamports": "5000000000",
+  "validatorVoteAddress": "...",
+  "positionSeed": "deposit-1"
+}
+```
+
+The response contains `transaction`, `positionAddress`, `validatorVoteAddress`,
+`delegatedLamports`, and `rentLamports`.
+The API derives the position with `createWithSeed(feePayer, positionSeed, Stake program)`.
+The Swig wallet is the staker and withdrawer. The position has no lockup.
+
+Use an ASCII `positionSeed` of 1–32 bytes. Keep the same seed when you retry.
+If the address already exists, the API returns `ALREADY_EXISTS`.
+The validator must currently accept deposits.
+
+## Exit
+
+`POST /api/yield/{swig_config_address}/exit/prepare`
+
+Full exit:
+
+```json
+{
+  "wallet": { "network": "NETWORK_MAINNET", "swigConfigAddress": "...", "feePayer": "...", "requesterAuthority": { "ed25519": { "publicKey": "..." } } },
+  "positionAddress": "...",
+  "all": {}
+}
+```
+
+Partial exit:
+
+```json
+{
+  "wallet": { "network": "NETWORK_MAINNET", "swigConfigAddress": "...", "feePayer": "...", "requesterAuthority": { "ed25519": { "publicKey": "..." } } },
+  "positionAddress": "...",
+  "partial": { "lamports": "2000000000", "positionSeed": "exit-1" }
+}
+```
+
+The response contains `transaction`, `exitingPositionAddress`,
+`deactivatingLamports`, and `additionalRentLamports`.
+A partial exit needs a fully active position.
+The exiting stake and the remaining stake must each meet the network's minimum delegation.
+
+Positions can still exit after their validator stops accepting deposits.
+The validator must remain on the allowlist for exit and withdrawal preparation.
+For a partial exit, use an ASCII `positionSeed` of 1–32 bytes.
+Keep the same seed when you retry.
+If the split address already exists, the API returns `ALREADY_EXISTS`.
+
+## Withdraw
+
+`POST /api/yield/{swig_config_address}/withdraw/prepare`
+
+```json
+{
+  "wallet": { "network": "NETWORK_MAINNET", "swigConfigAddress": "...", "feePayer": "...", "requesterAuthority": { "ed25519": { "publicKey": "..." } } },
+  "positionAddress": "..."
+}
+```
+
+The response contains `transaction`, `withdrawalLamports`, and `destinationWalletAddress`.
+The destination is the Swig wallet. The position must be fully inactive with no lockup in force.
+The withdrawal currently leaves the position's rent reserve in place.
+
+## Options and estimates
+
+`GET /api/yield/{swig_config_address}/options?network=NETWORK_MAINNET` returns
+`options[]` with `voteAddress`, `name`, `acceptsDeposits`, and `rate`.
+The rate contains `estimatedNetAprBps`, `commissionBps`, and `lastUpdatedAt`.
+The rate can be absent if the current network data cannot produce an annual
+percentage rate (APR) for that validator.
+
+`GET /api/yield/{swig_config_address}/estimate?network=…&validatorVoteAddress=…&principalLamports=…&horizonDays=…`
+returns `projection` with `estimatedRewardsLamports` =
+`principal × net APR × days / 365`, rounded down.
+Set `horizonDays` to 1–365. `principalLamports` must be positive.
+The validator must be on the allowlist.
+
+## Positions, summary, and rewards
+
+- `GET …/positions?network=…&pageSize=…&pageToken=…` returns `positions[]`,
+  `nextPageToken`, and `lastUpdatedAt`. Positions sort by address. Each has
+  `state` (`YIELD_POSITION_STATE_ACTIVATING`, `_ACTIVE`, `_DEACTIVATING`, or
+  `_INACTIVE`), `balanceLamports`, `rentLamports`, `positionLamports`,
+  `withdrawableLamports`, and `earningLamports`.
+- `GET …/summary?network=…` returns `totalPositionLamports` (excluding rent),
+  indexed `withdrawableLamports`, and `recordedRewardsLamports`.
+- `GET …/rewards?network=…&pageSize=…&pageToken=…` returns `rewards[]` with
+  `positionAddress`, `amountLamports`, and `earnedAt`, ordered oldest first by credit time.
+
+For an inactive position, indexed `withdrawableLamports` is the full balance, including rent.
+In other states, it is only SOL above the delegation and rent reserve.
+The withdrawal route needs an inactive position and keeps its rent reserve.
+Use its `withdrawalLamports` for the amount the prepared transaction will return.
+
+Each page has 50 entries by default, up to a maximum of 200.
+A page token works only for its original organization, network, and wallet.
+
+## Errors
+
+| gRPC code | HTTP | Meaning |
+| :--- | :--- | :--- |
+| `INVALID_ARGUMENT` | 400 | Bad input, unsupported validator, or unsupported network |
+| `NOT_FOUND` | 404 | Wallet not in your organization |
+| `PERMISSION_DENIED` | 403 | Role cannot perform the operation |
+| `FAILED_PRECONDITION` | 400 | Funds, position state, or lockup |
+| `ALREADY_EXISTS` | 409 | Position seed already used |
+| `UNAVAILABLE` | 503 | RPC, rate source, or index outage |

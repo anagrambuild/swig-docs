@@ -258,7 +258,8 @@
             "pages": [
               "developer-sdk/wallet-reads",
               "developer-sdk/dex-activity",
-              "developer-sdk/ramp"
+              "developer-sdk/ramp",
+              "developer-sdk/yield"
             ]
           },
           {
@@ -313,7 +314,8 @@
               "developer-api/wallets",
               "developer-api/dex",
               "developer-api/paymaster",
-              "developer-api/ramp"
+              "developer-api/ramp",
+              "developer-api/yield"
             ]
           },
           {
