@@ -5,8 +5,8 @@ sidebarTitle: "Yield"
 
 The Yield API earns on an existing Swig wallet. Native Solana staking to an
 allowlisted validator is the first yield method. Every route is scoped to one
-Swig wallet config, and prepare routes return unsigned transactions that the
-caller authorizes, signs, and submits.
+Swig wallet config. Prepare routes return unsigned transactions that the
+caller authorizes, signs, and submits, except when an existing role is reused.
 See [transaction preparation and signing](/developer-api/transactions) for the
 shared `PreparedTransaction` contract.
 
@@ -174,8 +174,9 @@ returns `projection` with `estimatedRewardsLamports` =
 - `GET …/rewards?network=…&pageSize=…&pageToken=…` returns `rewards[]` with
   `positionAddress`, `amountLamports`, and `earnedAt`, ordered oldest first by credit time.
 
-Indexed `withdrawableLamports` describes native stake-account availability.
-It can include rent and excess SOL in active positions. The withdrawal route
+Indexed `withdrawableLamports` is the full balance including rent for an
+inactive position. In other states, it is only SOL above the delegation and
+rent reserve. The withdrawal route
 requires an inactive position and retains rent; its returned
 `withdrawalLamports` is the amount the prepared transaction will return.
 

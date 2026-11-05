@@ -8,7 +8,8 @@ validator on the Swig allowlist is the first yield method; the client is named
 for yield so later methods use the same calls.
 
 Every call runs on your server and is scoped to one wallet config. Prepare
-calls return an unsigned `PreparedTransaction`: authorize it with the wallet
+calls return an unsigned `PreparedTransaction`, unless `prepareRole` reuses an
+existing role. Authorize each prepared transaction with the wallet
 authority, sign it with your fee payer, then submit or
 [sponsor](/developer-sdk/sponsor-and-submit) it exactly like a transfer.
 
@@ -275,9 +276,10 @@ projection = await swig.yields.estimate(
 - **Positions** carry a state (`activating`, `active`, `deactivating`, or
   `inactive`), the total balance, rent, `positionLamports` (balance excluding
   rent), the stake currently earning, and the native stake account's
-  `withdrawableLamports`. That indexed amount can include rent or excess SOL
-  in an active position; the withdrawal route requires an inactive position
-  and leaves its rent reserve in place. Use the prepared withdrawal's
+  `withdrawableLamports`. For an inactive position, that indexed amount is
+  its full balance including rent; in other states it is only SOL above the
+  delegation and rent reserve. The withdrawal route requires an inactive
+  position and leaves its rent reserve in place. Use the prepared withdrawal's
   `withdrawalLamports` for the amount the route will return.
 - **Summary** totals positions excluding rent, indexed `withdrawableLamports`,
   and recorded rewards. Rewards are already included in position balances.
