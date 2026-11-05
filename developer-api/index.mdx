@@ -4,7 +4,7 @@ sidebarTitle: "Overview"
 ---
 
 The Developer API is the API-key guarded REST surface behind Swig's hosted
-wallet, transaction, paymaster, and ramp runtime APIs.
+wallet, DEX, transaction, paymaster, and ramp runtime APIs.
 
 Use it when you want to call Swig's backend directly instead of using the
 [Developer SDK](/developer-sdk) helpers.
@@ -32,6 +32,9 @@ curl "https://api.onswig.com/paymaster/balance?network=devnet" \
   <Card title="Wallets" icon="wallet" href="/developer-api/wallets">
     Read balances, token history, roles, and policies
   </Card>
+  <Card title="DEX" icon="chart-line" href="/developer-api/dex">
+    A Swig's DEX transaction history and latest positions
+  </Card>
   <Card title="Paymaster" icon="credit-card" href="/developer-api/paymaster">
     Sign, sponsor, bundle, and check paymaster balances
   </Card>
@@ -49,6 +52,7 @@ curl "https://api.onswig.com/paymaster/balance?network=devnet" \
 | :--- | :--- |
 | [Transaction API](/developer-api/transactions) | Preparing unsigned or partially signed Solana transactions for Swig wallet flows |
 | [Wallet API](/developer-api/wallets) | Reading Swig wallet state, policies, balances, roles, and token history |
+| [DEX API](/developer-api/dex) | Reading a Swig's indexed DEX transactions and the latest state of its liquidity positions |
 | [Paymaster API](/developer-api/paymaster) | Signing or sponsoring transactions and checking paymaster balances |
 | [Ramp API](/developer-api/ramp) | Fiat ramp options, quotes, and orders in both directions |
 | [Identity boundary](/developer-api/identity) | Understanding why runtime identity is a public IdP surface, not an API-key one |

@@ -101,6 +101,7 @@
                   "tutorials/typescript/index",
                   "tutorials/typescript/env",
                   "tutorials/typescript/create",
+                  "solana/reservation-addresses",
                   "tutorials/typescript/managing_authorities",
                   "tutorials/typescript/sign",
                   "tutorials/embeded_wallet_para/index"
@@ -256,6 +257,7 @@
             "group": "Balances and Funding",
             "pages": [
               "developer-sdk/wallet-reads",
+              "developer-sdk/dex-activity",
               "developer-sdk/ramp",
               "developer-sdk/yield"
             ]
@@ -310,6 +312,7 @@
             "pages": [
               "developer-api/transactions",
               "developer-api/wallets",
+              "developer-api/dex",
               "developer-api/paymaster",
               "developer-api/ramp",
               "developer-api/yield"

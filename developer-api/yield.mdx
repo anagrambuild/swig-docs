@@ -7,6 +7,8 @@ The Yield API earns on an existing Swig wallet. Native Solana staking to an
 allowlisted validator is the first yield method. Every route is scoped to one
 Swig wallet config, and prepare routes return unsigned transactions that the
 caller authorizes, signs, and submits.
+See [transaction preparation and signing](/developer-api/transactions) for the
+shared `PreparedTransaction` contract.
 
 ## Auth
 
@@ -66,15 +68,22 @@ Deposit, exit, and withdrawal take a `wallet` object. Its
 }
 ```
 
+`roleId` is an optional candidate role to validate. Omit it to select the
+lowest qualifying role held by `yieldAuthority`. `maxDepositLamports` must be
+greater than zero, and the validator must currently accept deposits.
+
 The response is one of:
 
 - `existing`: `{ "roleId": 2, "actions": [...] }`. A role held by
   `yieldAuthority` can already deposit up to `maxDepositLamports`, exit, and
-  withdraw.
+  withdraw. Qualifying roles hold `All` or `AllButManageAuthority`, or the
+  required program permissions, a general SOL allowance without destination
+  restrictions, and `StakeAll`. Finite stake limits do not qualify for reuse.
 - `create`: `{ "transaction": PreparedTransaction, "yieldAuthority": ..., "actions": [...] }`.
   An unsigned AddRole transaction for a new role with `Program(System)`,
   `Program(Stake)`, `SolLimit(maxDepositLamports)`, and `StakeAll`. It requires
-  `roleManagerAuthority`, whose role must hold `All` or `ManageAuthority`. After
+  an Ed25519 or Secp256r1 `roleManagerAuthority` whose role holds `All` or
+  `ManageAuthority`. After
   it confirms, call the route again without `roleId` to resolve the new role.
 
 ## Deposit
@@ -102,11 +111,19 @@ currently accept deposits.
 `POST /api/yield/{swig_config_address}/exit/prepare`
 
 ```json
-{ "wallet": { ... }, "positionAddress": "...", "all": {} }
+{
+  "wallet": { "network": "NETWORK_MAINNET", "swigConfigAddress": "...", "feePayer": "...", "requesterAuthority": { "ed25519": { "publicKey": "..." } } },
+  "positionAddress": "...",
+  "all": {}
+}
 ```
 
 ```json
-{ "wallet": { ... }, "positionAddress": "...", "partial": { "lamports": "2000000000", "positionSeed": "exit-1" } }
+{
+  "wallet": { "network": "NETWORK_MAINNET", "swigConfigAddress": "...", "feePayer": "...", "requesterAuthority": { "ed25519": { "publicKey": "..." } } },
+  "positionAddress": "...",
+  "partial": { "lamports": "2000000000", "positionSeed": "exit-1" }
+}
 ```
 
 Returns `transaction`, `exitingPositionAddress`, `deactivatingLamports`, and
@@ -114,13 +131,19 @@ Returns `transaction`, `exitingPositionAddress`, `deactivatingLamports`, and
 both the exiting and the remaining stake must meet the network minimum
 delegation. Positions delegated to validators later disabled for deposits can
 still exit.
+The validator must remain listed for exit and withdrawal preparation.
+For partial exits, `positionSeed` is ASCII, 1–32 bytes. Preserve it across
+retries; an occupied split address returns `ALREADY_EXISTS`.
 
 ## Withdraw
 
 `POST /api/yield/{swig_config_address}/withdraw/prepare`
 
 ```json
-{ "wallet": { ... }, "positionAddress": "..." }
+{
+  "wallet": { "network": "NETWORK_MAINNET", "swigConfigAddress": "...", "feePayer": "...", "requesterAuthority": { "ed25519": { "publicKey": "..." } } },
+  "positionAddress": "..."
+}
 ```
 
 Returns `transaction`, `withdrawalLamports`, and `destinationWalletAddress`
@@ -131,12 +154,13 @@ The position's rent reserve currently stays in the position.
 
 `GET /api/yield/{swig_config_address}/options?network=NETWORK_MAINNET` returns
 `options[]` with `voteAddress`, `name`, `acceptsDeposits`, and `rate`
-(`estimatedNetAprBps`, `commissionBps`, `lastUpdatedAt`). Rates are cached for
-15 seconds.
+(`estimatedNetAprBps`, `commissionBps`, `lastUpdatedAt`). The rate can be absent
+when the current network observation cannot produce an APR for that validator.
 
 `GET /api/yield/{swig_config_address}/estimate?network=…&validatorVoteAddress=…&principalLamports=…&horizonDays=…`
 returns `projection` with `estimatedRewardsLamports` =
-`principal × net APR × days / 365`, rounded down. `horizonDays` is 1–365.
+`principal × net APR × days / 365`, rounded down. `horizonDays` is 1–365,
+`principalLamports` must be positive, and the validator must be listed.
 
 ## Positions, summary, and rewards
 
@@ -146,9 +170,14 @@ returns `projection` with `estimatedRewardsLamports` =
   `_INACTIVE`), `balanceLamports`, `rentLamports`, `positionLamports`,
   `withdrawableLamports`, and `earningLamports`.
 - `GET …/summary?network=…` returns `totalPositionLamports` (excluding rent),
-  `withdrawableLamports` (including rent), and `recordedRewardsLamports`.
+  indexed `withdrawableLamports`, and `recordedRewardsLamports`.
 - `GET …/rewards?network=…&pageSize=…&pageToken=…` returns `rewards[]` with
-  `positionAddress`, `amountLamports`, and `earnedAt`, ordered by credit time.
+  `positionAddress`, `amountLamports`, and `earnedAt`, ordered oldest first by credit time.
+
+Indexed `withdrawableLamports` describes native stake-account availability.
+It can include rent and excess SOL in active positions. The withdrawal route
+requires an inactive position and retains rent; its returned
+`withdrawalLamports` is the amount the prepared transaction will return.
 
 Page size defaults to 50 (maximum 200). Page tokens are bound to the
 organization, network, and wallet that issued them.
