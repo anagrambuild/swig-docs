@@ -39,7 +39,8 @@ If the wallet belongs to another organization, the API returns `NOT_FOUND`.
 | `GET` | `/api/yield/{swig_config_address}/summary` | Position and reward totals |
 | `GET` | `/api/yield/{swig_config_address}/rewards` | Recorded reward credits |
 
-Encode lamport amounts as unsigned decimal strings. The API returns timestamps as RFC 3339 strings.
+Lamport amounts are unsigned decimal strings in requests and responses.
+Timestamps are RFC 3339 strings.
 
 ## Wallet envelope
 
@@ -51,7 +52,7 @@ Deposit, exit, and withdrawal take a `wallet` object. Its
 | `network` | enum | `NETWORK_MAINNET` or `NETWORK_DEVNET` |
 | `swigConfigAddress` | string | The Swig wallet config |
 | `feePayer` | string | Signing key that pays fees and any new position's rent |
-| `roleId` | number, optional | Role to act with; omitted selects the lowest capable role |
+| `roleId` | number, optional | Role to act with; omitted selects the qualifying role with the lowest role ID |
 | `requesterAuthority` | object | `ed25519`, `secp256r1`, or `participantSet` authority |
 
 ## Prepare a role
@@ -80,7 +81,7 @@ The response is one of:
 - `existing`: `{ "roleId": 2, "actions": [...] }`. A role held by
   `yieldAuthority` can already deposit up to `maxDepositLamports`, exit, and
   withdraw. Roles with `All` or `AllButManageAuthority` qualify.
-  Other roles need the program permissions, a general SOL allowance without
+  Other roles need the [program permissions](/developer-sdk/yield#prepare-a-role-that-can-stake), a general SOL allowance without
   destination restrictions, and `StakeAll`.
   Finite stake limits do not qualify for reuse.
 - `create`: `{ "transaction": PreparedTransaction, "yieldAuthority": ..., "actions": [...] }`.
@@ -159,7 +160,7 @@ If the split address already exists, the API returns `ALREADY_EXISTS`.
 
 The response contains `transaction`, `withdrawalLamports`, and `destinationWalletAddress`.
 The destination is the Swig wallet. The position must be fully inactive with no lockup in force.
-The withdrawal leaves the position's rent reserve in place.
+The withdrawal currently leaves the position's rent reserve in place.
 
 ## Options and estimates
 

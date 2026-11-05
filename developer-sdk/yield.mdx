@@ -92,7 +92,8 @@ The signing authority needs a [role](/developer-sdk/permissions). `All` and
 | Fund deposits from the wallet | System program permission and enough SOL allowance |
 | Exit part of a position and withdraw | `StakeAll`, or a stake limit that covers the amount |
 
-Use `Program(Stake)` or `ProgramAll` with `StakeAll` to authorize Stake program instructions.
+`StakeAll` alone cannot authorize Stake program instructions.
+The role also needs `Program(Stake)` or `ProgramAll`.
 On the current Swig program, `ProgramCurated` does not cover
 the Stake program.
 
