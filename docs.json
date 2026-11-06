@@ -48,30 +48,21 @@
                   "examples/dev-portal/create-policy",
                   "examples/dev-portal/fetch-policy",
                   "developer-sdk/permissions",
-                  "developer-sdk/authorization-locks",
                   "developer-sdk/use-cases/guardian-recovery"
                 ]
               },
+              "developer-sdk/authorization-locks",
               "developer-sdk/custom-execution"
             ]
           },
           {
             "group": "Query",
             "pages": [
-              "query/wallets",
               "query/balances",
               "query/dex",
               "query/yield",
               "query/ramp",
-              "query/paymasters",
-              "query/public",
-              {
-                "group": "SDK examples",
-                "pages": [
-                  "developer-sdk/wallet-reads",
-                  "developer-sdk/dex-activity"
-                ]
-              }
+              "query/paymasters"
             ]
           },
           {
