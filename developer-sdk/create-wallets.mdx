@@ -1,7 +1,7 @@
 ---
 title: "Create a wallet"
 sidebarTitle: "Create a wallet"
-description: "Prepare a Swig wallet with an initial authority or a saved policy."
+description: "Reserve a wallet address or prepare creation with a root authority, initial authority, or saved policy."
 ---
 
 <span id="choose-an-interaction" />
@@ -11,10 +11,15 @@ description: "Prepare a Swig wallet with an initial authority or a saved policy.
 
 A Swig wallet holds assets and gives each authority a defined set of permissions.
 Use this flow when onboarding a user or creating an application-controlled wallet.
-You can supply an initial authority directly or reuse a saved policy template.
+You can supply an initial authority directly, reuse a saved policy template, or
+reserve an address from a root authority before creating the wallet.
 
 The SDK prepares transactions. Your application signs and submits them; the
 wallet exists on-chain after confirmation. Start with [Client setup](/developer-sdk/integration-paths).
+
+Address reservation requires TypeScript 0.12.0 or Python 0.11.0. The Rust
+reservation examples use the [SDK source](https://github.com/anagrambuild/swig-developer-sdk/tree/560660cf8119112d28f8ce7924c34e89517c5eed/rust),
+pending the next crates.io release.
 
 ## SDK examples
 
@@ -110,29 +115,129 @@ let created = wallet.prepare_create_wallet(PrepareCreateWalletArgs {
 ```
 </CodeGroup>
 
+### Reserve an address
+
+Derive the wallet's addresses from a root authority and an optional account index
+or salt. Address lookup creates no wallet or reservation record; the request counts
+toward API usage. Keep the same authority and options for activation.
+
+<CodeGroup>
+```typescript TypeScript
+const reserved = await swig.wallets.reserveAddress({
+  rootAuthority: { ed25519: { publicKey: userPublicKey } },
+  addressOptions: { accountIndex: 0 },
+});
+const walletAddress = reserved.wallet.walletAddress;
+const swigConfigAddress = reserved.wallet.swigConfigAddress;
+```
+
+```python Python
+reserved = await swig.wallets.reserve_address(
+    root_authority={"ed25519": {"public_key": user_public_key}},
+    account_index=0,
+)
+wallet_address = reserved.wallet.wallet_address
+swig_config_address = reserved.wallet.swig_config_address
+```
+
+```rust Rust
+use swig_developer_sdk::{
+    ReservationAddressOptions, ReserveWalletAddressArgs, WalletAuthority,
+};
+
+let reserved = wallet.reserve_address(ReserveWalletAddressArgs {
+    root_authority: WalletAuthority::Ed25519 { public_key: user_public_key },
+    address_options: Some(ReservationAddressOptions::AccountIndex(0)),
+}).await?;
+let wallet_address = reserved.wallet.wallet_address;
+let swig_config_address = reserved.wallet.swig_config_address;
+```
+</CodeGroup>
+
+`walletAddress` / `wallet_address` is the SOL deposit address and token-account
+owner. `swigConfigAddress` / `swig_config_address` identifies the wallet's roles.
+Confirm that the selected network supports
+[counterfactual creation](/solana/reservation-addresses) before funding an address.
+
+### Create the reserved wallet
+
+Use the same root authority and index or salt. The protocol initializes role `0`
+with that authority and `All` permission. A funded external fee payer signs the
+activation transaction; the root authority does not need to sign it.
+
+<CodeGroup>
+```typescript TypeScript
+const created = await swig.wallets.createReserved({
+  rootAuthority: { ed25519: { publicKey: userPublicKey } },
+  addressOptions: { accountIndex: 0 },
+  feePayer,
+});
+```
+
+```python Python
+created = await swig.wallets.create_reserved(
+    root_authority={"ed25519": {"public_key": user_public_key}},
+    account_index=0,
+    fee_payer=fee_payer,
+)
+```
+
+```rust Rust
+use swig_developer_sdk::{
+    PrepareCreateReservedWalletArgs, ReservationAddressOptions, WalletAuthority,
+};
+
+let created = wallet.prepare_create_reserved_wallet(PrepareCreateReservedWalletArgs {
+    root_authority: WalletAuthority::Ed25519 { public_key: user_public_key },
+    address_options: Some(ReservationAddressOptions::AccountIndex(0)),
+    fee_payer,
+}).await?;
+```
+</CodeGroup>
+
+The result contains the reserved addresses and one prepared transaction:
+`created.creationTransaction` in TypeScript, `created.creation_transaction` in
+Python, or `created.transaction` in Rust. Sign with the fee payer, submit, and
+confirm through the existing [Signing](/developer-sdk/signers) and
+[Paymaster](/developer-sdk/sponsor-and-submit) flow. Preparation records the
+create-wallet intent and prepared response, and counts toward API usage.
+
+Reusing the reservation preserves the address. Repeated on-chain activation
+preserves existing roles and balances; retain the original inputs after owner
+rotation. A closed wallet cannot be recreated from its reservation.
+
 <span id="follow-the-transaction-lifecycle" />
 
 ## Flow
 
 ```text
-Choose initial authority
-  └─ Prepare wallet
-      └─ Sign and submit
-          └─ Confirm
+Choose creation path
+  ├─ Authority / policy
+  │   └─ Prepare creation
+  └─ Reserve address
+      └─ Prepare creation
+Sign and submit
+  └─ Confirm
 ```
 
 ## Input
 
 | Parameter | Required | Description |
 | :--- | :--- | :--- |
-| `feePayer` / `fee_payer` | Yes | Public key paying transaction fees and account rent |
+| `feePayer` / `fee_payer` | For creation | Public key paying transaction fees and account rent |
 | `initialUser` / `initial_user` | For inline creation | Initial authority: Ed25519, secp256k1, or secp256r1 public key; also required when a saved policy asks for it |
 | `policyId` / `policy_id` | No | Saved policy ID; omit for inline creation |
+| `rootAuthority` / `root_authority` | For reservation and activation | Direct Ed25519, secp256k1, or secp256r1 public key; sessions and ParticipantSet roots are unsupported |
+| Account index | No | Integer from `0` through `4294967295`; defaults to `0`. TypeScript: `addressOptions.accountIndex`; Python: `account_index`; Rust: `ReservationAddressOptions::AccountIndex` |
+| Salt | Alternative to an index | Exactly 32 bytes. TypeScript: `addressOptions.salt` as `Uint8Array`; Python: `salt` as `bytes`; Rust: `ReservationAddressOptions::Salt([u8; 32])`. Supply either an index or a salt |
 | `network` | Yes, on the call or client | `mainnet` or `devnet`; Rust uses its configured `Network` |
 
 TypeScript/Python use address strings. Rust uses `Pubkey` for Ed25519 and
 compressed 33-byte SEC1 keys for secp256k1/secp256r1. An application supplies
 passkey or EVM public keys; credential creation remains in your signing layer.
+Reservation and activation use `rootAuthority` / `root_authority`; inline or
+policy creation uses `initialUser` / `initial_user`. Reserved activation has a
+fixed root role and accepts no policy template.
 
 ## Errors
 
@@ -140,4 +245,7 @@ passkey or EVM public keys; credential creation remains in your signing layer.
 | :--- | :--- |
 | Missing network or initial authority | Creation has no resolved network or the template needs an authority. Set the client network and supply the required initial authority. |
 | Invalid public key | The key cannot be decoded or is invalid for its curve. Use the correct authority type; Rust secp256 keys must be compressed 33-byte SEC1 keys. |
-| Unsupported creation plan in Rust | The response contains zero or multiple transactions. Use the TypeScript/Python ordered-plan flow for a multi-transaction creation. |
+| Unsupported creation plan in Rust | Ordinary wallet creation returned zero or multiple transactions. Use the TypeScript/Python ordered-plan flow for a multi-transaction creation. Reserved creation returns one transaction. |
+| Invalid reservation options | The account index is outside the unsigned 32-bit range, the salt is not 32 bytes, or both are supplied. Reuse the same valid options for lookup and creation. |
+| Invalid reserved-wallet response | The response has malformed addresses, a different network, an inconsistent transaction, or an unexpected transaction count or kind. Preparation has not submitted anything. |
+| Request or preparation failed | The API request or a preparation dependency failed. Retrying the same reservation inputs derives the same addresses; each admitted request counts toward API usage. |
