@@ -3,19 +3,36 @@ title: "Signing"
 description: "Authorize instructions with a wallet role before signing the Solana transaction."
 ---
 
-Start with the instructions your application wants the wallet to execute.
-Use the **wallet address** as the owner or source, then pass those instructions
-to `getSignInstructions` with the selected role ID.
+## Introduction
 
-There are two approvals: the role authorizes the wallet operation, and the
-fee payer signs the outer Solana transaction. For Ed25519, the authority also
-signs that outer transaction. For r1 or k1, a callback signs the authorization
-message while the SDK builds the instructions.
+Signing authorizes an operation through a chosen wallet role and prepares the instructions for a Solana transaction.
 
-## Ed25519 signer
+- **Use when:** you have instructions for a transfer, swap, or program call that the wallet should execute.
+- **For:** apps combining Swig authorization with Solana transaction construction.
 
-This example prepares a 0.001 SOL transfer for an existing Ed25519 role. The
-role needs System Program access and enough remaining SOL allowance, or `all()`.
+## How it works
+
+1. Build the inner operation with the wallet address as source or asset owner.
+2. Fetch current wallet state and choose a role with the required permissions.
+3. Call `getSignInstructions` with the role, inner instructions, and final fee payer.
+4. Collect the required transaction signatures, then send every returned instruction in order.
+
+## Who approves
+
+| Authority | Wallet approval | Outer transaction |
+| --- | --- | --- |
+| Ed25519 | Authority signature | Authority and payer sign |
+| Active session | Temporary key signature | Session key and payer sign |
+| Secp256r1 / Secp256k1 | Signing callback | Payer and other required Solana signers sign |
+| ProgramExec | Integration approval instruction | Payer and integration-required signers sign |
+
+The payer and authority may be different. Set the payer before requesting authorization and preserve the approved operation.
+
+## SDK example
+
+### Ed25519 signer
+
+Prepare a 0.001 SOL transfer. The selected role needs System Program access and sufficient SOL allowance, or `All` permission.
 
 ```typescript
 import { type Connection, type PublicKey, SystemProgram } from "@solana/web3.js";
@@ -39,16 +56,11 @@ async function prepareSolTransfer(
 }
 ```
 
-The final `false` selects the wallet rather than a subaccount. This function
-prepares instructions; it does not send them. Next,
-[sign and submit](/solana/transactions/sending) with the role's Ed25519 signer
-and payer. For an active session role, use its session key as the signer.
+The `false` argument selects the wallet rather than a subaccount. This returns instructions; [Sending transactions](/solana/transactions/sending) handles signing and submission.
 
-## r1 and k1 signers
+### Secp256r1 and Secp256k1 signers
 
-Use the callback from the [r1](/solana/authorities/secp256r1) or
-[k1](/solana/authorities/secp256k1) page. Prepare against fresh wallet state and
-a current slot:
+Use the callback from [Secp256r1](/solana/authorities/secp256r1) or [Secp256k1](/solana/authorities/secp256k1). Supply the instructions your wallet should execute:
 
 ```typescript
 import { type Connection, type PublicKey, type TransactionInstruction } from "@solana/web3.js";
@@ -71,10 +83,6 @@ async function authorizeWithExternalSigner(
 }
 ```
 
-Supply the actual transaction payer before requesting authorization. Preserve
-the returned instructions, their order, and the approved operation. For r1,
-the returned list includes signature verification. If the operation or signer
-state changes, rebuild and request authorization again.
-
-For authorization from another Solana program, use the
-[ProgramExec flow](/solana/authorities/program-exec).
+- Include all returned verification instructions in their original order.
+- If the operation or signer state changes, refetch and request fresh authorization.
+- Follow [ProgramExec](/solana/authorities/program-exec) for program-supplied approval.

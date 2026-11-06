@@ -19,7 +19,8 @@ owns the product documentation layout for this repository.
   Developer SDK Paymaster page at `developer-sdk/sponsor-and-submit.mdx`, covering
   setup, funding, and sponsorship. Redirect superseded guide URLs to it.
 - AI contains Install MCP. Protocol SDK and IdP SDK remain available in the
-  product selector and Additional resources.
+  product selector and Additional resources. Use the selector labels Developer
+  SDK, Solana Protocol, EVM Protocol, and Identity.
 - Use singular topic labels: Wallet, Member, Policy, Role, Participant set,
   Permission, Authorization lock, Balance, Transfer, Swap, and Paymaster.
   Use normal grammar in sentences and preserve exact API names and collection
@@ -71,6 +72,45 @@ Label illustrative output, preserve exact field names and integer encodings,
 and show language-specific shapes when they differ. A Python JSON view of a
 dataclass must include its nullable fields. Never present sample data as a live
 API response unless the request was actually performed.
+
+## Protocol SDK page layout
+
+This layout applies to every page in the Solana Protocol and EVM Protocol
+navigation. It takes precedence over the Wallet and Query layouts above for
+these products. Write for application developers using the SDK, not contributors
+building the protocol. Rewrite the explanation around the reader's task;
+rearranging existing blocks is not a full rewrite.
+
+1. **Introduction**: one sentence defining the feature, then short **Use when**
+   and **For** bullets explaining the situation and intended reader.
+2. **How it works**: a short numbered flow. Name who authorizes, where assets
+   live, and whether the SDK prepares or submits an operation when relevant.
+3. Add compact field or permission tables only where they help explain the
+   concept. Use **Type** as the type-column label. Show the fields and general
+   structure; avoid commentary about language naming conventions or internal
+   implementation details.
+4. **Flow**, only when a compact top-down text diagram adds clarity. For protocol
+   pages, use a cascading flow with indentation, branch characters (`├─`, `└─`),
+   and arrows. Do not use boxes, border lines, or padded containers. Keep lines
+   at most 26 characters; do not add a diagram merely to fill a template.
+5. **SDK example**: concrete, source-verified code with named inputs. Use H3
+   headings for multiple operations and language tabs for equivalent examples.
+   An overview or setup page may use installation/client setup as its example.
+   Keep any essential lifecycle or outcome notes close to the relevant example.
+
+Prefer lists, numbered steps, and tables to long paragraphs. Adapt the middle
+sections to the task while keeping the introduction, short explanation, and
+example on every page. Do not add boilerplate **What to do**, raw route maps,
+billing notes, or contributor test/deployment instructions. Keep material limits
+that change how an integrator can use the feature.
+
+For Solana, keep Overview at the product's top level, followed by Setup,
+Authorities, Permissions, Transactions, and Use cases. Group named permissions
+by Spending limits, Program access, and Administrative. Add a role and Remove a
+role are transaction actions. Use Ed25519, Secp256r1, Secp256k1, ProgramExec, and
+Sessions as authority labels, without shorthand suffixes. Use cases cover
+Transfers, Swaps, Authorization locks, and Recovery. Do not reintroduce the
+TypeScript quickstart, Guides group, or Participant set.
 
 ## Code and diagrams
 

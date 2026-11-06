@@ -3,15 +3,31 @@ title: "Secp256r1"
 description: "Use a passkey or P-256 signer to authorize a Solana wallet."
 ---
 
-Use r1 for passkeys and other P-256 signers. Register the public key on a role,
-then give the SDK a signing callback when preparing an operation. A separate
-Solana payer signs and pays for the transaction.
+## Introduction
 
-## Register a passkey
+A Secp256r1 authority lets a passkey or P-256 signer approve operations for a Solana wallet.
 
-Your passkey registration flow supplies the credential ID and its **33-byte
-compressed P-256 public key**. A credential ID or a complete WebAuthn
-registration response is not the public key.
+- **Use when:** you want wallet authorization through a passkey or another P-256 signing service.
+- **For:** apps connecting an existing passkey registration and authentication flow to Swig.
+
+## How it works
+
+1. Obtain the compressed public key from your passkey registration flow.
+2. Register it as a wallet authority and retain the credential ID.
+3. Use the WebAuthn callback to approve the SDK's operation challenge.
+4. Submit the returned verification and execution instructions with a Solana fee payer.
+
+## Inputs
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `compressedPublicKey` | 33 bytes | P-256 public key from registration |
+| `credentialId` | Bytes | Credential to request during authentication |
+| `rpId` | String | Relying-party ID for your passkey flow |
+
+The credential ID and registration response are not substitutes for the public key.
+
+## SDK example
 
 ```typescript
 import {
@@ -34,25 +50,8 @@ function passkeyAuthority(
 }
 ```
 
-Pass `authorityInfo` to [create a wallet](/solana/create-wallet) or
-[add a role](/solana/add-role). Store the public key and credential ID so the
-application can select the same credential later.
-
-## Authorize an operation
-
-Pass `signingFn`, `currentSlot: BigInt(await connection.getSlot())`, and the
-Solana payer's public key to the instruction builder. The callback requests a
-passkey assertion for the SDK's challenge. Submit every returned instruction
-in order, including signature verification.
-
-See [Signing](/solana/transactions/signing#r1-and-k1-signers) for the common
-builder call. Initiate passkey approval from a user action and handle
-cancellation before submitting a transaction.
-
-For an application that already holds a software P-256 key,
-`getSigningFnForSecp256r1PrivateKey(privateKey)` provides a signing callback.
-Passkeys keep the private key in the authenticator; use the WebAuthn callback
-for that flow.
-
-To avoid a passkey prompt for every operation, grant a limited
-[session](/solana/authorities/sessions).
+- Pass `authorityInfo` to [Create a wallet](/solana/create-wallet) or [Add a role](/solana/add-role).
+- Pass `signingFn`, the payer, and the current slot to [Signing](/solana/transactions/signing#secp256r1-and-secp256k1-signers).
+- Request the passkey assertion from a user action and handle cancellation before sending.
+- Keep every returned instruction in order, including signature verification.
+- For repeated app operations after one approval, use a limited [session](/solana/authorities/sessions).

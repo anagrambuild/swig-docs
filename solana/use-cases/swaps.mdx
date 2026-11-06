@@ -3,20 +3,35 @@ title: "Swaps"
 description: "Execute swap instructions with the Swig wallet as the asset owner."
 ---
 
-Request swap instructions from your DEX or aggregator for the **Swig wallet
-address**. Let the Swig SDK authorize those instructions using the role you
-selected. Your application controls the quote, slippage, and submission.
+## Introduction
 
-## Prepare the swap
+A swap authorizes DEX instructions with the Swig wallet as the owner of the traded assets.
 
-1. Fetch the wallet with `fetchSwig` and obtain its wallet address with `getSwigWalletAddress`.
-2. Request a quote for the input mint, output mint, amount, and maximum slippage.
-3. Ask the provider for instructions with the Swig wallet as the user/asset owner. Use a separate funded fee payer where the provider supports it.
-4. Check the source and destination accounts, input amount, minimum output, and required signers before authorizing.
+- **Use when:** your app has a quote from a DEX or aggregator and wants to execute it from a wallet.
+- **For:** trading interfaces and automated strategies integrating a provider's SDK.
 
-Use the provider's typed client to obtain `TransactionInstruction[]`. The
-following function accepts the wallet-owned execution instructions from that
-client; it does not fetch or decode a provider response.
+## How it works
+
+1. Read the wallet address and request a quote for the input mint, output mint, amount, and slippage.
+2. Ask the provider for instructions using that wallet as asset owner and a separate payer where supported.
+3. Check the route, token accounts, maximum input, minimum output, and required signers.
+4. Authorize wallet-owned execution through a role covering the route's programs and asset budgets.
+5. Compile, sign, and confirm the transaction with the route's lookup tables.
+
+## Instruction placement
+
+| Instructions | Placement |
+| --- | --- |
+| Wallet-owned swap execution | Inside `getSignInstructions` |
+| Provider compute budget | Outer transaction, in the provider-required position |
+| Payer-owned setup | Outer transaction, with its required signer |
+| Swig verification and execution | Preserve the SDK's returned ordering |
+
+Plan the complete ordering before requesting Secp256r1 or Secp256k1 authorization. If a route cannot preserve the required verification indexes, choose a compatible route or an Ed25519/session flow.
+
+## SDK example
+
+The provider's typed client supplies `walletSwapInstructions`. This helper authorizes that prepared route; it does not request a quote. Pass a freshly fetched wallet and the payer that will submit it.
 
 ```typescript
 import { type PublicKey, type TransactionInstruction } from "@solana/web3.js";
@@ -36,22 +51,6 @@ async function authorizeSwap(
 }
 ```
 
-The selected role needs access to the invoked programs and sufficient input
-asset allowance. Include SOL allowance if the wallet funds account creation
-or wrapped SOL. A routed swap can invoke more than one program; use a role
-configured for that route rather than broadening it automatically after a failure.
-
-## Submit and confirm
-
-Pass the returned instructions to [Sending transactions](/solana/transactions/sending).
-Load any address lookup tables required by the route and supply them when
-compiling the final transaction. Keep provider compute-budget and payer-owned
-setup instructions at their required outer-transaction positions; only
-wallet-owned execution belongs inside `getSignInstructions`.
-
-Plan those positions before requesting r1 or k1 authorization. If the selected
-SDK flow cannot preserve the required verification indexes and instruction
-order for a route, use a supported route or an Ed25519/session signing flow.
-
-Fetch a new quote when the route expires. If submission is uncertain, check
-the original signature before authorizing a replacement swap.
+- Grant access to each required program and sufficient input-asset allowance. Include SOL allowance when the wallet funds account creation or wrapped SOL.
+- [Send the result](/solana/transactions/sending) with the route's lookup tables and any separate setup instructions.
+- Refresh an expired quote before approval. If submission is uncertain, check the previous signature before authorizing another swap.

@@ -4,19 +4,47 @@ sidebarTitle: "Overview"
 description: "Create Solana wallets, control who can use them, and send transactions with the Swig Protocol SDK."
 ---
 
-Use the Swig Protocol SDK to add a programmable Solana wallet to your
-application. Create the wallet, give each signer the access it needs, and
-submit transactions through your own Solana RPC connection.
+## Introduction
 
-Each wallet has roles. A role pairs an **authority**—who can authorize an
-operation—with **permissions**—what that authority can do. For example, an
-owner can manage roles while an application's session key can spend only a
-limited amount of SOL.
+The Solana Protocol SDK lets your application create a Swig wallet, assign access, and execute transactions through a Solana RPC connection.
 
-## Install the SDK
+- **Use when:** you want to control wallet creation, authorization, and transaction submission in your application.
+- **For:** developers integrating wallets into apps, payment flows, and automated services.
+
+## How it works
+
+1. Create a wallet and keep its config address and asset-holding wallet address.
+2. Give each signer a role: an authority identifies who can approve; permissions define what it can do.
+3. Build the instructions for a transfer, swap, or other wallet action.
+4. Authorize with the selected role, sign the Solana transaction, then submit and confirm it.
+
+## Wallet structure
+
+| Concept | Purpose |
+| --- | --- |
+| Config address | Read roles and prepare wallet operations |
+| Wallet address | Receive SOL and own token accounts |
+| Authority | Approve an operation with a key, passkey, program, or session |
+| Permissions | Set program access, spending limits, and administrative capabilities |
+| Role | Pair one authority with its permissions and an on-chain ID |
+
+## Flow
+
+```text
+Wallet role
+├─ Authority approves
+└─ Permissions apply
+   ↓
+Prepare instructions
+   ↓
+Sign → send → confirm
+```
+
+## SDK example
+
+Install the SDK for your application:
 
 <CodeGroup>
-
 ```bash TypeScript
 npm install @swig-wallet/classic @solana/web3.js
 ```
@@ -24,46 +52,31 @@ npm install @swig-wallet/classic @solana/web3.js
 ```bash Rust
 cargo add swig-sdk swig-interface
 ```
-
 </CodeGroup>
 
-Choose `@swig-wallet/classic` for Web3.js 1.x or `@swig-wallet/kit` for Solana
-Kit. The TypeScript examples in these pages use Classic 3.0.0. Rust applications
-use `swig-sdk` for wallet operations and `swig-interface` for instruction
-builders. Use an RPC connection to a cluster with a compatible Swig deployment
-and a funded Solana fee payer.
-
-## Setup
-
-- [Create a wallet](/solana/create-wallet) with an initial authority and permissions.
-- Use [counterfactual creation](/solana/reservation-addresses) to derive its address now and activate it later.
+- These TypeScript examples use Classic with Web3.js 1.x. Solana Kit applications can use `@swig-wallet/kit`.
+- Use a Solana RPC connection, a funded fee payer, and a compatible Swig deployment.
+- Start with [Create a wallet](/solana/create-wallet), or derive an address first with [Counterfactual creation](/solana/reservation-addresses).
 
 ## Authorities
 
-Choose how your users or application authorize wallet operations:
+| Signer | Integration |
+| --- | --- |
+| [Ed25519](/solana/authorities/ed25519) | Solana keypair or wallet adapter |
+| [Secp256r1](/solana/authorities/secp256r1) | Passkey or P-256 signer |
+| [Secp256k1](/solana/authorities/secp256k1) | Ethereum signer |
+| [ProgramExec](/solana/authorities/program-exec) | Approval from a Solana program |
+| [Sessions](/solana/authorities/sessions) | Temporary application key |
 
-- [Ed25519](/solana/authorities/ed25519) for Solana signers.
-- [Secp256r1](/solana/authorities/secp256r1) for passkeys and P-256 signers.
-- [Secp256k1](/solana/authorities/secp256k1) for Ethereum signers.
-- [ProgramExec](/solana/authorities/program-exec) for authorization from another Solana program.
-- [Sessions](/solana/authorities/sessions) for temporary access through an application key.
+## Permissions and transactions
 
-## Permissions
-
-[Choose permissions](/solana/permissions) for spending, program access, and
-role management. Then [add a role](/solana/add-role) or
-[remove a role](/solana/remove-role) as access changes.
-
-## Transactions
-
-[Sign wallet operations](/solana/transactions/signing) with the selected role,
-then [send and confirm the transaction](/solana/transactions/sending).
-The SDK's instruction builders prepare instructions; your Solana client
-handles transaction signatures, submission, and confirmation.
+- Choose [spending limits](/solana/permissions/spending-limits), [program access](/solana/permissions/program-access), and [administrative permissions](/solana/permissions/administrative).
+- [Add a role](/solana/add-role) or [remove a role](/solana/remove-role) as access changes.
+- [Authorize instructions](/solana/transactions/signing), then [send the transaction](/solana/transactions/sending).
 
 ## Use cases
 
-- [Transfers](/solana/use-cases/transfers): send SOL or tokens from the wallet.
-- [Swaps](/solana/use-cases/swaps): execute a swap with the wallet as the owner.
-- [Authorization locks](/solana/use-cases/authorization-locks): reserve funds, capture a payment, or release the hold.
-- [Recovery](/solana/use-cases/recovery): give a guardian permission to replace a role's lost key.
+- [Transfers](/solana/use-cases/transfers): send SOL or tokens.
+- [Swaps](/solana/use-cases/swaps): trade wallet-owned assets.
+- [Authorization locks](/solana/use-cases/authorization-locks): hold, capture, and release funds.
+- [Recovery](/solana/use-cases/recovery): replace a lost signer through a guardian.

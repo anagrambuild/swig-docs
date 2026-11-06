@@ -3,15 +3,30 @@ title: "ProgramExec"
 description: "Use an existing Solana program's approval to authorize a wallet operation."
 ---
 
-Use ProgramExec when an existing approval or policy program authorizes wallet
-operations. Configure a role with that program's ID and authorization
-instruction prefix, then include its approval instruction when using the role.
-The role's permissions still limit what the wallet can do.
+## Introduction
 
-## Register the authority
+A ProgramExec authority accepts approval from a Solana program for a wallet operation.
 
-Obtain the program ID and exact authorization prefix from the integration
-you are using. The prefix must fit within 40 bytes.
+- **Use when:** an existing policy or approval integration decides whether an operation may proceed.
+- **For:** apps consuming an integration that supplies ProgramExec approval instructions.
+
+## How it works
+
+1. Obtain the integration's program ID and authorization instruction prefix.
+2. Create a role pairing that authority with the required wallet permissions.
+3. Ask the integration for an approval bound to the exact wallet operation.
+4. Pass the approval to the Swig builder, then submit the complete returned instruction list.
+
+## Approval contract
+
+- The authorization prefix fits within 40 bytes; use the integration's exact value.
+- For wallet execution, the approval instruction's first two accounts are the Swig config and wallet, in that order.
+- The builder accepts one approval instruction in `preInstructions` and includes it in its output.
+- Other management operations can have different approval account requirements; follow the integration's client.
+
+## SDK example
+
+### Register the integration
 
 ```typescript
 import { type PublicKey } from "@solana/web3.js";
@@ -25,15 +40,11 @@ function programAuthority(programId: PublicKey, authorizationPrefix: Uint8Array)
 }
 ```
 
-Pass the result to [add a role](/solana/add-role), with permissions scoped to
-the integration. An arbitrary program call is not an approval: use an
-integration whose approval binds the intended wallet operation.
+Pass this authority to [Add a role](/solana/add-role) with the permissions the integration needs.
 
-## Execute an approved operation
+### Authorize an operation
 
-The approval program's client supplies `approvalInstruction` for the exact
-operation. For a wallet transaction, its first two accounts must be the Swig
-config and wallet addresses, in that order.
+Supply a freshly fetched `swig`, its ProgramExec role ID, and the integration's approval for `walletInstructions`.
 
 ```typescript
 import { type PublicKey, type TransactionInstruction } from "@solana/web3.js";
@@ -53,12 +64,4 @@ async function prepareApprovedOperation(
 }
 ```
 
-The TypeScript builder accepts exactly one approval instruction in
-`preInstructions` and includes it in the returned list. Send that list once,
-in order, with the payer and any additional signers required by the approval
-program. See [Sending transactions](/solana/transactions/sending).
-
-Use the integration's own instructions for operations other than transaction
-execution; their approval account requirements can differ. A
-[ProgramExec session](/solana/authorities/sessions) lets the program authorize
-a temporary application key instead.
+[Send](/solana/transactions/sending) the returned list once, in order, with the payer and any signers required by the integration. The role's permissions still apply. Use [Sessions](/solana/authorities/sessions) if the integration should approve a temporary application key.

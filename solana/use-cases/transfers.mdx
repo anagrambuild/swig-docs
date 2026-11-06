@@ -3,27 +3,44 @@ title: "Transfers"
 description: "Send SOL and SPL tokens from a Swig wallet."
 ---
 
-Use the wallet address as the source of SOL and as the owner of its token
-accounts. The config address is for reading roles and preparing operations.
+## Introduction
 
-## Transfer SOL
+A transfer sends SOL or tokens from the wallet using a role with the matching asset allowance.
 
-Follow the [SOL signing example](/solana/transactions/signing#ed25519-signer),
-then [send the returned instructions](/solana/transactions/sending). A scoped
-role needs both `programLimit({ programId: SystemProgram.programId })` and a
-SOL spending permission such as `solLimit({ amount })`.
+- **Use when:** your application pays a recipient from wallet-owned funds.
+- **For:** payment flows, withdrawal screens, and automated disbursements.
 
-## Transfer tokens
+## How it works
 
-Install the SPL Token client:
+1. Fetch the wallet and use its wallet address as the source or token-account owner.
+2. Choose a role with access to the transfer program and the required spending budget.
+3. Build the transfer in integer base units and authorize it through Swig.
+4. Sign, submit, and confirm the returned transaction instructions.
+
+## Transfer inputs
+
+| Asset | Amount unit | Destination | Scoped permissions |
+| --- | --- | --- | --- |
+| SOL | Lamports | Recipient public key | System Program access and SOL allowance |
+| SPL token | Mint base units | Recipient token account | Token Program access and allowance for the mint |
+
+For tokens, create the recipient token account first if it does not exist. This example uses the original SPL Token program.
+
+## SDK example
+
+### SOL
+
+The [SOL signing example](/solana/transactions/signing#ed25519-signer) builds a 0.001 SOL transfer. Send its result using [Sending transactions](/solana/transactions/sending).
+
+### SPL tokens
+
+Install the token client:
 
 ```bash
 npm install @solana/spl-token
 ```
 
-This example uses an existing wallet token account and an existing recipient
-token account for the same mint. Fetch the mint's decimals and use integer
-base units for the amount. The example targets the original SPL Token program.
+Supply the mint, an existing destination token account for that mint, and an amount in base units. The function reads the mint's decimals and uses the wallet's associated token account as the source.
 
 ```typescript
 import { type Connection, type PublicKey } from "@solana/web3.js";
@@ -59,13 +76,7 @@ async function prepareTokenTransfer(
 }
 ```
 
-The `true` argument allows the wallet's PDA to own the associated token account.
-The recipient parameter is a **token account**, not the recipient's wallet
-address. Create it first if it does not exist.
-
-A scoped role needs access to the Token Program and
-`tokenLimit({ mint, amount })` or a matching recurring/destination limit.
-This example uses an Ed25519 role; supply signing options for r1 or k1 as
-shown in [Signing](/solana/transactions/signing).
-
-Next, [send and confirm](/solana/transactions/sending) the returned instructions.
+- `true` allows the wallet's program-derived address to own the associated token account.
+- Grant `tokenLimit({ mint, amount })` or a matching recurring/destination permission alongside Token Program access.
+- This example uses an Ed25519 role. Other authorities supply their [signing options](/solana/transactions/signing).
+- [Send and confirm](/solana/transactions/sending) the returned instructions with the role signer and payer.

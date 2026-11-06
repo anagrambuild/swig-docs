@@ -5,6 +5,8 @@ description: "Limit SOL, token, and staking operations by amount, window, or des
 
 ## Introduction
 
+Spending permissions set the asset, amount, renewal window, and destination a role can use.
+
 - **Use when:** a role should spend within a budget rather than have unrestricted access.
 - **For:** application signers, session keys, payment operators, and automated strategies.
 
@@ -43,7 +45,9 @@ The token `destination` is the receiving **token account**, not its owner's wall
 | `StakeRecurringLimit` | `stakeRecurringLimit({ recurringAmount, window })` | Recurring staking budget |
 | `StakeAll` | `stakeAll()` | Staking without an amount limit |
 
-## Example: a recurring SOL allowance
+## SDK example
+
+A recurring SOL allowance.
 
 ```typescript
 import { SystemProgram } from "@solana/web3.js";

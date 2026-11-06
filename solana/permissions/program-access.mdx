@@ -5,6 +5,8 @@ description: "Choose which Solana programs a role may call."
 
 ## Introduction
 
+Program permissions control which Solana applications a role may invoke.
+
 - **Use when:** a role needs to transfer, swap, or interact with a particular Solana application.
 - **For:** integrations that delegate wallet execution to an application signer or session key.
 
@@ -29,7 +31,9 @@ description: "Choose which Solana programs a role may call."
 - `ProgramCurated` depends on the deployed program's list; use explicit IDs when the application needs a fixed allowlist.
 - `ProgramAll` is highly privileged. Use it only when arbitrary program invocation is intended.
 
-## Example: allow System Program transfers
+## SDK example
+
+Allow System Program transfers.
 
 ```typescript
 import { SystemProgram } from "@solana/web3.js";

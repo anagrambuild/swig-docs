@@ -3,12 +3,30 @@ title: "Create a wallet"
 description: "Create a Solana wallet with an initial authority and fetch its deposit address."
 ---
 
-Start with a funded Solana payer and the public key of the wallet's owner.
-This example uses the same Ed25519 keypair for both and grants the owner
-`all()` so it can spend funds and manage roles.
+## Introduction
 
-Install the packages from [Setup](/solana). Pass a `Connection` for your
-chosen cluster and your application's signer to this function:
+Creating a wallet establishes its first authority and the permissions that authority can use.
+
+- **Use when:** your application needs an active wallet that can receive assets and execute transactions.
+- **For:** app developers onboarding a user or provisioning an application wallet.
+
+## How it works
+
+1. Choose the owner and a funded Solana fee payer.
+2. Generate a wallet ID and build the creation instruction.
+3. Submit the transaction and wait for confirmation.
+4. Fetch the wallet to obtain its asset address and current roles.
+
+## Addresses
+
+| Address | Use |
+| --- | --- |
+| `configAddress` | Read roles with `fetchSwig` and prepare operations |
+| `walletAddress` | Receive SOL and own token accounts |
+
+## SDK example
+
+This example uses one Ed25519 keypair as owner and payer. The owner receives `All` permission; the payer funds account creation and fees. Supply your RPC `Connection` and application-owned signer after [installing the SDK](/solana#sdk-example).
 
 ```typescript
 import {
@@ -49,17 +67,7 @@ async function createWallet(connection: Connection, owner: Keypair) {
 }
 ```
 
-Keep both addresses:
-
-- **Config address:** pass it to `fetchSwig` to read roles and prepare operations.
-- **Wallet address:** receive SOL here and use it as the owner of token accounts.
-
-The payer funds account creation and the transaction fee. A browser wallet can
-sign the transaction through its wallet adapter instead of using a local
-`Keypair`; see [Sending transactions](/solana/transactions/sending).
-
-For another owner type, use the matching [authority constructor](/solana#authorities).
-For an address you can derive from the owner before activation, use
-[counterfactual creation](/solana/reservation-addresses).
-
-Next, [add a role](/solana/add-role) with limited access for your application.
+- Store both returned addresses; use the wallet address for deposits.
+- Use another [authority constructor](/solana#authorities) for passkey, Ethereum, or program approval.
+- For a browser signer, use its wallet adapter as described in [Sending transactions](/solana/transactions/sending).
+- Give application signers narrower access with [Add a role](/solana/add-role).

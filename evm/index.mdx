@@ -1,20 +1,54 @@
 ---
 title: "EVM Protocol SDK"
 sidebarTitle: "Overview"
-description: "Create a wallet, give each key a role, and send direct or sponsored transfers."
+description: "Create wallets, assign roles, and execute direct or sponsored transactions."
 ---
 
-Use the **source-available TypeScript, Rust, and Python SDKs** with your own keys
-and RPC connection. You need a compatible Swig deployment from your operator;
-[Environment Setup](/evm/setup) explains how to obtain its details.
+## Introduction
 
-## Choose your language
+The EVM Protocol SDK connects your application to Swig wallets through your own RPC connection and signing keys.
 
-First [check out the latest SDK source](/evm/setup#set-up-the-examples).
-Run the matching setup command from the repository root:
+- **Use when:** you need direct control of wallet creation, permissions, and transaction execution.
+- **For:** app developers integrating a compatible EVM deployment in TypeScript, Rust, or Python.
+
+## How it works
+
+1. Connect to a compatible deployment and choose an application signer.
+2. Create a wallet with a root authority, then fund its vault.
+3. Add roles with permissions for the tasks their signers need.
+4. Execute through the wallet config and check the transaction or UserOperation result.
+
+## Wallet structure
+
+| Concept | Purpose |
+| --- | --- |
+| Account / config | Holds roles and receives wallet execution requests |
+| Vault | Holds the assets the wallet spends |
+| Authority | Identifies who may approve a role's operations |
+| Permission | Sets a role's capabilities and spending allowance |
+| Role ID | Selects the authority and permissions used for an operation |
+
+## Execution paths
+
+| Path | Authorization | Gas payer |
+| --- | --- | --- |
+| [Direct transfer](/evm/send-transfer) | Role's EOA sends a transaction | That EOA |
+| [Sponsored transfer](/evm/send-sponsored-transfer) | Role signs a UserOperation | Paymaster through a compatible bundler |
+
+Both paths spend assets from the vault and enforce the selected role's permissions.
+
+## SDK example
+
+The EVM SDKs are currently consumed from source. Obtain the repository first:
+
+```bash
+git clone https://github.com/anagrambuild/swig-protocol-sdk.git
+cd swig-protocol-sdk
+```
+
+Then install the language you use:
 
 <CodeGroup>
-
 ```bash TypeScript
 cd evm/typescript
 bun install --frozen-lockfile
@@ -29,33 +63,6 @@ cargo build --locked -p swig-evm --examples
 cd evm/python
 uv sync --locked
 ```
-
 </CodeGroup>
 
-TypeScript uses Viem, Rust uses Alloy, and Python uses Web3.py and eth-account.
-The guides keep the same language labels for each scenario. Swig supplies
-contract bindings, permission codecs, and a small smart-account adapter.
-
-## Get started
-
-1. [Set up your environment](/evm/setup) and connect to a compatible deployment.
-2. [Create a wallet](/evm/create-wallet) with a root authority and fund its vault.
-3. [Add a spending role](/evm/add-role) and [inspect its permissions](/evm/read-role).
-4. [Send a transfer](/evm/send-transfer) with the role's key paying gas.
-5. [Sponsor a transfer](/evm/send-sponsored-transfer) through a compatible bundler and paymaster.
-
-## Sponsored transfers
-
-Sponsored operations currently use **already deployed accounts and EntryPoint
-v0.9**, with one call per operation. The shared beacon requires a compatible
-bundler policy. See [Send a Sponsored Transfer](/evm/send-sponsored-transfer)
-for provider requirements and the tested SDK versions.
-
-## Reference and next steps
-
-The shared beacon selects the implementation used by every wallet in the fleet.
-It lets an operator upgrade that fleet without individual
-user upgrade transactions. [Bundler Compatibility](/evm/bundler-compatibility)
-covers account registration and handling operations queued during an upgrade.
-
-Building on Solana? Use the [Solana Protocol SDK](/solana).
+Start with [Environment setup](/evm/setup), then [create a wallet](/evm/create-wallet). The examples use Secp256k1 authorities; sponsored operations require an already deployed account, EntryPoint v0.9, and a compatible provider.

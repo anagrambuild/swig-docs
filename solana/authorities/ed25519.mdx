@@ -3,14 +3,23 @@ title: "Ed25519"
 description: "Authorize wallet operations with a Solana keypair or wallet adapter."
 ---
 
-Use Ed25519 when the user or application already has a Solana signer.
-The signer approves the outer Solana transaction; the role determines what
-it can do with the Swig wallet.
+## Introduction
 
-## Register the authority
+An Ed25519 authority uses a Solana signer to approve wallet operations.
 
-Pass the signer's public key to `createEd25519AuthorityInfo` when you
-[create a wallet](/solana/create-wallet) or [add a role](/solana/add-role).
+- **Use when:** your user already has a Solana wallet or your service owns an Ed25519 keypair.
+- **For:** wallet-adapter integrations and applications using local Solana signers.
+
+## How it works
+
+1. Register the signer public key when creating a wallet or adding a role.
+2. Fetch the wallet and select that signer's intended role ID.
+3. Prepare the wallet operation with the SDK.
+4. Have the authority and payer sign the same Solana transaction, then submit it.
+
+## SDK example
+
+Construct an authority from the public key and pass it to [Create a wallet](/solana/create-wallet) or [Add a role](/solana/add-role).
 
 ```typescript
 import { type PublicKey } from "@solana/web3.js";
@@ -21,15 +30,7 @@ function ed25519Authority(signerPublicKey: PublicKey) {
 }
 ```
 
-The constructor uses only the public key. Keep the private key with its signer.
-
-## Sign an operation
-
-1. Fetch the wallet by its config address.
-2. Find the signer's roles with `swig.findRolesByEd25519SignerPk(publicKey)` and select the intended role ID.
-3. Build the operation with `getSignInstructions`.
-4. Sign the transaction with the authority and fee payer, then submit it.
-
-See the complete [signing example](/solana/transactions/signing).
-For a browser wallet, use its wallet adapter to sign. For temporary application
-access, create an [Ed25519 session authority](/solana/authorities/sessions).
+- The authority contains the public key; the private key stays with the signer.
+- Find existing roles with `swig.findRolesByEd25519SignerPk(publicKey)`.
+- Follow [Signing](/solana/transactions/signing#ed25519-signer) for a complete transfer preparation example.
+- Use a [session](/solana/authorities/sessions) when an application needs temporary signing access.

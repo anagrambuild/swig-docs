@@ -4,79 +4,55 @@ sidebarTitle: "Counterfactual creation"
 description: "Derive a Solana wallet address from an owner key and activate it with an external payer."
 ---
 
-Counterfactual creation gives you a Swig wallet address before you send a transaction.
-The SDK represents it as a reservation.
-Supply the owner's public key, then let a funded payer activate the wallet
-when you need it.
+## Introduction
 
-Reservation runs locally: it needs no RPC, signature, or on-chain account.
-Activation requires a Swig deployment that supports `CreateReservedV1`.
-Verify support on your target cluster before funding a reserved address.
+Counterfactual creation derives a wallet address from its owner before the wallet is activated on-chain.
 
-## Set up the SDK
+- **Use when:** you need a deposit address before asking a payer to create the wallet.
+- **For:** onboarding flows and apps that activate wallets only when they are needed.
 
-Install the latest packages with reservation APIs from
-[`swig-protocol-sdk`](https://github.com/anagrambuild/swig-protocol-sdk).
-<Tabs>
-<Tab title="TypeScript">
+## How it works
 
-Install Classic for Web3.js applications:
+1. Create a reservation from the program ID, owner public key, and account index or salt.
+2. Derive the config and wallet addresses locally; this requires no RPC or signature.
+3. Build an activation instruction from the same reservation.
+4. Have a funded payer sign and submit activation. The committed owner becomes role `0` with `All` permission.
+5. After confirmation, fetch the config and use the wallet normally.
 
-```bash
-npm install @swig-wallet/classic @solana/web3.js
+## Reservation fields
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `programId` | Address | Swig deployment that will activate the wallet |
+| `authorityType` | Authority type | Direct Ed25519, Secp256r1, or Secp256k1 owner |
+| `publicKey` | Bytes | Owner's public key; an Ethereum address is insufficient |
+| `accountIndex` | Integer | Select another wallet for the owner; defaults to `0` |
+| Custom salt | 32 bytes | Alternative to an account index |
+
+The same reservation derives the same addresses across SDK languages. Confirm that the target deployment supports reserved creation before funding an address.
+
+## Flow
+
+```text
+Owner + index / salt
+   ↓
+Reserved addresses
+├─ Config: read roles
+└─ Wallet: receive funds
+   ↓
+Payer activates
+   ↓
+Owner uses wallet
 ```
 
-For Solana Kit applications, install Kit instead:
+## SDK example
 
-```bash
-npm install @swig-wallet/kit @solana/kit
-```
+### Reserve and prepare activation
 
-</Tab>
-<Tab title="Rust">
-
-For the Rust examples, add the published crates:
-
-```bash
-cargo add swig-sdk swig-interface
-cargo add solana-sdk@4 solana-compute-budget-interface@3
-```
-
-The Swig crates use their latest releases. The Solana companion crates use
-compatible major versions so Cargo can resolve the dependency graph required
-by Swig.
-
-</Tab>
-</Tabs>
-
-- **TypeScript:** `ReservationV1` is exported by `@swig-wallet/lib`,
-  `@swig-wallet/classic`, and `@swig-wallet/kit`.
-- **Rust:** use `swig_sdk::reservation::ReservationV1`. The underlying
-  `swig-interface` crate owns the package format and instruction builder.
-
-## Choose the owner and address
-
-Provide a direct **Ed25519**, **secp256k1**, or **secp256r1 (P-256)** public key.
-For secp256k1, provide the public key, not a 20-byte Ethereum address.
-
-Choose either an account index or your own 32-byte salt:
-
-- Omitting the option uses index `0`.
-- A different index gives the same owner another wallet. Indices range from
-  `0` to `4,294,967,295`.
-- A custom salt must be exactly 32 bytes. The SDK does not generate one.
-
-The same program ID, owner type, canonical public key, and salt produce the same
-addresses in TypeScript and Rust. Compressed and uncompressed SEC1 input keys
-normalize to the same reservation.
-
-## Reserve and activate
+Use the packages from [Overview](/solana#sdk-example). The Rust example also needs `solana-sdk@4` and `solana-compute-budget-interface@3` for compatible instruction types.
 
 <Tabs>
 <Tab title="TypeScript">
-
-This Classic example reserves an Ed25519 wallet and prepares its activation
-instructions using the same reservation object.
 
 ```typescript
 import { ComputeBudgetProgram, type PublicKey } from "@solana/web3.js";
@@ -112,34 +88,12 @@ export async function reserveAndPrepareActivation(
 }
 ```
 
-Use `walletAddress` as the SOL deposit address and as the owner when deriving
-token accounts. Use `configAddress` to fetch roles and build wallet operations.
-Classic returns Web3.js `PublicKey` values, so `configAddress` can be passed
-directly to `fetchSwig`.
-
-Add the returned `instructions` to a transaction, sign with the payer, submit
-through your Solana client, and confirm the transaction. The builder performs no RPC
-or submission. The 600,000-unit compute budget accommodates P-256 validation;
-the activation builder itself does not add a compute-budget instruction.
-
-For Solana Kit, import `ReservationV1` and `getCreateReservedSwigInstruction`
-from `@swig-wallet/kit`. Pass the payer as a Kit `Address`; the builder returns
-a Kit instruction. `await reservation.addresses()` returns Kit `Address` values
-for both `swigAddress` and `walletAddress`, ready to use with Kit helpers.
-Include a 600,000-unit compute limit for P-256 owners.
-
-Only the external payer signs activation. It pays the required account top-ups
-and transaction fee. The program fixes role `0` to the committed owner with
-`All` permissions; the payer cannot substitute an owner or permission set.
-Activation preserves SOL deposited before account creation.
+- `configAddress` is for fetching roles; `walletAddress` is for SOL deposits and token-account ownership.
+- Send the returned instructions with the payer using [Sending transactions](/solana/transactions/sending).
+- The compute limit accommodates P-256 owners. The payer pays account funding and fees; only the payer signs activation.
 
 </Tab>
 <Tab title="Rust">
-
-The Rust flow uses the same package bytes and addresses. Pass the reservation
-returned by `reserve_wallet` to `prepare_activation` to build instructions for
-the payer. This example uses `solana-sdk` 4.x and
-`solana-compute-budget-interface` 3.x alongside `swig-sdk` 3.0.0.
 
 ```rust
 use solana_compute_budget_interface::ComputeBudgetInstruction;
@@ -170,50 +124,19 @@ pub fn prepare_activation(
 }
 ```
 
-Use `swig-interface` 3.0.0 for `program_id()`, as shown above.
-Call `reservation.addresses()?` to get `swig_address` for the
-config and `wallet_address` for deposits.
-
-For a wallet API that handles RPC and activation, use
-[`SwigWallet::from_reservation`](https://github.com/anagrambuild/swig-protocol-sdk/blob/main/solana/rust/sdk/src/wallet.rs).
-It activates a missing or prefunded uninitialized config, then opens it. For an
-active config, it opens the wallet with the current authority without sending
-an activation transaction. RPC failures and invalid existing accounts remain
-errors.
+Call `reservation.addresses()?` for `swig_address` and `wallet_address`. Sign and submit the prepared instructions with the payer.
 
 </Tab>
 </Tabs>
 
-## Continue using the wallet
+### Restore a saved reservation
 
-- After confirmation, fetch the wallet by its **config address** and use the
-  current on-chain roles for signing and authority management.
-- Retrying activation for the same valid active reservation preserves its
-  authorities, counters, and permissions, including owner rotations.
-- If you saved the package, keep it after a rotation: it identifies the wallet's
-  creation address, while current on-chain roles determine who can act.
-- A closed config retains a tombstone. Activation cannot recreate it.
-- Reserved wallets use **address-bound V2 subaccounts**. The TypeScript legacy
-  V1 subaccount helpers are incompatible; use the Rust V2 subaccount APIs when
-  you need that flow.
-
-## Optional: load a saved reservation
-
-Use the existing reservation object while it is available. If you save a
-reservation for a later session, store its exact package bytes
-and keep the wallet address in a trusted record. The package contains public
-data, but changing it can change the destination. Encode the bytes as base64
-or hex if your storage requires text.
-
-When loading, check the expected program ID and compare the derived wallet
-address with your trusted record. The loaded reservation can be passed to
-the same activation builder used above.
+Save the reservation bytes together with a trusted wallet address. Check that restoring them still produces that address before requesting activation.
 
 <Tabs>
 <Tab title="TypeScript">
 
-Save `reservation.toBytes()` and `walletAddress.toBase58()` from the Classic
-example. Kit addresses are already base58 strings.
+Save `reservation.toBytes()` and `walletAddress.toBase58()` from the example above.
 
 ```typescript
 import {
@@ -240,8 +163,7 @@ export async function loadReservation(
 </Tab>
 <Tab title="Rust">
 
-Save `reservation.package_bytes` and
-`reservation.addresses()?.wallet_address`.
+Save `reservation.package_bytes` and `reservation.addresses()?.wallet_address`.
 
 ```rust
 use solana_sdk::pubkey::Pubkey;
@@ -262,3 +184,11 @@ pub fn load_reservation(
 
 </Tab>
 </Tabs>
+
+### After activation
+
+- SOL deposited before activation remains in the wallet.
+- Repeating activation does not reset an already active wallet's roles or permissions.
+- Keep the original reservation after owner rotation; current roles determine who can act.
+- A closed wallet cannot be recreated from its reservation.
+- Reserved wallets use V2 subaccounts. Use Rust's V2 APIs for that flow; Classic's legacy V1 helpers are incompatible.

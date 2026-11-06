@@ -3,9 +3,30 @@ title: "Remove a role"
 description: "Revoke a role's access without moving the wallet's assets."
 ---
 
-Fetch the wallet, select the exact role ID to revoke, and authorize removal
-with an administrator. Removing a role revokes that role's authority and
-permissions. Other roles for the same signer remain active.
+## Introduction
+
+Removing a role revokes its authority, permissions, and any session attached to that role.
+
+- **Use when:** a user disconnects an app, rotates service access, or withdraws a delegated permission set.
+- **For:** apps that let administrators manage wallet access.
+
+## How it works
+
+1. Fetch the wallet and choose the exact role ID to revoke.
+2. Authorize with an administrator that has `All` or `ManageAuthority`.
+3. Submit the removal and wait for confirmation.
+4. Refetch the wallet and verify that the role is absent.
+
+## Removal rules
+
+- Root role `0` cannot be removed; use [Recovery](/solana/use-cases/recovery) to replace a protected key.
+- Active authorization locks must be captured, released, or expired before removal.
+- Other roles belonging to the same signer remain active.
+- Assets stay at the wallet address.
+
+## SDK example
+
+Supply an Ed25519 administrator and the target role's on-chain ID. The administrator pays the fee in this example.
 
 ```typescript
 import {
@@ -46,10 +67,3 @@ async function removeRole(
   return signature;
 }
 ```
-
-- The administrator needs `all()` or `manageAuthority()` to remove another role.
-- Root role `0` cannot be removed. Use [Recovery](/solana/use-cases/recovery) to replace a key.
-- A role with active authorization locks cannot be removed until its holds are captured, released, or expired.
-- Removing a session role also removes that role's session access.
-
-Use role IDs from `swig.roles`; they are not array positions.

@@ -5,6 +5,8 @@ description: "Manage roles, recovery, wallet lifecycle, authorization holds, and
 
 ## Introduction
 
+Administrative permissions delegate specific changes to wallet access and lifecycle.
+
 - **Use when:** a signer needs to administer wallet access or perform a specific management operation.
 - **For:** owners, trusted administrators, guardians, and delegated payment operators.
 
@@ -47,7 +49,9 @@ use V2 subaccounts; Classic's legacy V1 subaccount helpers cannot operate them.
 The V2 permission constructors above do not turn those V1 operation helpers
 into V2 builders; use the Rust V2 APIs for that flow.
 
-## Example: a role administrator
+## SDK example
+
+A role administrator.
 
 ```typescript
 import { Actions } from "@swig-wallet/classic";

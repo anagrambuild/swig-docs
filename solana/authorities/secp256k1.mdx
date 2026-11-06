@@ -3,21 +3,32 @@ title: "Secp256k1"
 description: "Authorize Solana wallet operations with an Ethereum signer."
 ---
 
-Use k1 to connect an Ethereum signer to a Swig wallet on Solana. The Ethereum
-key authorizes the wallet operation; a Solana payer pays the transaction fee.
+## Introduction
 
-## Register the authority
+A Secp256k1 authority connects an Ethereum signer to a Swig wallet on Solana.
 
-Use `createSecp256k1AuthorityInfo(publicKey)` when you
-[create a wallet](/solana/create-wallet) or [add a role](/solana/add-role).
-Supply the full public key, not the 20-byte Ethereum address. The constructor
-accepts compressed SEC1, uncompressed SEC1, or raw 64-byte public keys as bytes
-or hex.
+- **Use when:** your user or service already signs Ethereum messages and needs to control Solana assets.
+- **For:** apps integrating Ethereum accounts with a separate Solana fee payer.
 
-## Connect an Ethereum signing callback
+## How it works
 
-This example accepts a Viem local account that your application already owns.
-Install `viem` alongside the Protocol SDK.
+1. Register the signer's full public key as the authority.
+2. Provide a callback that signs the SDK's raw message bytes.
+3. Prepare the operation against fresh wallet state and the current slot.
+4. Let the Solana payer sign and submit the resulting transaction.
+
+## Signing inputs
+
+| Input | Meaning |
+| --- | --- |
+| Public key | Compressed SEC1, uncompressed SEC1, or raw 64-byte key; not a 20-byte address |
+| `signingFn` | Application callback returning a signature and matching personal-sign prefix |
+| `payer` | Solana public key that will pay the outer transaction fee |
+| `currentSlot` | Current Solana slot used while preparing authorization |
+
+## SDK example
+
+Install `viem` alongside the [Protocol SDK](/solana#sdk-example). This example accepts a Viem account already owned by your application.
 
 ```typescript
 import { hexToBytes, type LocalAccount } from "viem";
@@ -40,16 +51,7 @@ function ethereumAuthority(account: LocalAccount) {
 }
 ```
 
-For a browser Ethereum wallet, implement the same `SigningFn` using its
-message-signing API and the selected account. Sign the **raw message bytes**
-and return the matching personal-sign prefix. Signing the text of a hex
-string would approve a different message.
-
-Pass `signingFn`, the current slot, and the Solana payer to
-[the signing builder](/solana/transactions/signing#r1-and-k1-signers).
-Refetch the wallet before preparing another operation so the builder uses
-the current signature counter.
-
-Use `findRolesBySecp256k1SignerAddress(ethereumAddress)` to locate existing
-roles, then select the intended role ID. For repeated application operations,
-consider a limited [session](/solana/authorities/sessions).
+- Register `authorityInfo` with [Add a role](/solana/add-role), then pass the callback to [Signing](/solana/transactions/signing#secp256r1-and-secp256k1-signers).
+- A browser wallet can implement the same callback through its message-signing API. Sign raw bytes, not the text of a hex string.
+- Locate roles with `findRolesBySecp256k1SignerAddress(ethereumAddress)` and select the intended role ID.
+- Refetch the wallet before the next operation so authorization uses the current state.

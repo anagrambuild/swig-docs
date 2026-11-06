@@ -3,17 +3,23 @@ title: "Sending transactions"
 description: "Assemble, sign, submit, and confirm the instructions returned by the SDK."
 ---
 
-After [authorizing an operation](/solana/transactions/signing), put every
-returned instruction into a Solana transaction. Use the same fee payer you
-passed to the Swig builder.
+## Introduction
 
-## Send with local signers
+Sending turns prepared SDK instructions into a signed, confirmed Solana transaction.
 
-This example accepts the prepared instructions, a funded payer, and the
-additional Solana signers required by the operation. For an Ed25519 role,
-include its authority keypair. For an r1 or k1 role, its callback has already
-authorized the operation; only the payer and any other required Ed25519
-signers sign here.
+- **Use when:** you have finished authorizing a wallet action and are ready to submit it.
+- **For:** apps using a local signer or browser wallet with their own RPC connection.
+
+## How it works
+
+1. Fetch a recent blockhash and assemble every prepared instruction in order.
+2. Use the same fee payer supplied during authorization.
+3. Collect signatures from the payer and every required Solana signer.
+4. Submit the serialized transaction and check confirmation for an execution error.
+
+## SDK example
+
+Pass the instructions from [Signing](/solana/transactions/signing), a funded payer, and any additional signers. An Ed25519 authority or session key belongs in `additionalSigners`; Secp256r1 and Secp256k1 approval already comes from their callbacks.
 
 ```typescript
 import {
@@ -53,22 +59,18 @@ async function sendWalletTransaction(
 }
 ```
 
-The returned signature is confirmed at the requested commitment. Refetch the
-wallet after a successful mutation before preparing another operation.
+- The result is a transaction signature confirmed at the requested commitment.
+- A browser wallet can sign the same message through its adapter's `signTransaction` or `sendTransaction` method.
+- Supply address lookup tables when the prepared operation needs them.
+- Refetch the wallet after a confirmed mutation before preparing another action.
 
-## Send with a browser wallet
+### Retry an uncertain submission
 
-Build the same transaction, then use the connected wallet adapter's
-`signTransaction` or `sendTransaction` API. Collect every required signature
-on the same message. An authority and fee payer can be different signers.
+| Situation | Handling |
+| --- | --- |
+| RPC response was lost | Check the existing signature before building another operation |
+| Blockhash remains valid | Resubmit the same signed bytes |
+| Blockhash or authorization expired | Check whether the original landed, then refetch and rebuild if needed |
+| Signer counter or approved operation changed | Obtain fresh Secp256r1 or Secp256k1 authorization |
 
-## Handle retries
-
-- A submission response is not confirmation; inspect the confirmation result.
-- If the RPC response is lost, check the transaction signature before rebuilding the operation.
-- While its blockhash remains valid, retry submission with the same signed transaction bytes.
-- After blockhash or authorization expiry, check whether the original landed, then refetch wallet state and build a fresh operation if needed.
-- For r1 and k1, obtain fresh authorization when rebuilding against a changed counter or expired authorization.
-
-Keep the SDK's verification instructions in order. Adding, removing, or
-reordering instructions after authorization can invalidate the approval.
+A successful submission response alone does not establish that the wallet action succeeded.

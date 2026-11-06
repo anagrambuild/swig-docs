@@ -5,6 +5,8 @@ description: "Give each role the program access and spending limits its task nee
 
 ## Introduction
 
+Permissions define the operations and asset budgets available to one wallet role.
+
 - **Use when:** you need to limit what a wallet role can do.
 - **For:** applications assigning access to owners, operators, guardians, or session keys.
 
@@ -21,7 +23,9 @@ description: "Give each role the program access and spending limits its task nee
 - [Program access](/solana/permissions/program-access): allowed programs and program scopes.
 - [Administrative](/solana/permissions/administrative): role management, key replacement, wallet closure, authorization locks, and subaccounts.
 
-## Example: a SOL transfer role
+## SDK example
+
+A SOL transfer role.
 
 ```typescript
 import { SystemProgram } from "@solana/web3.js";
