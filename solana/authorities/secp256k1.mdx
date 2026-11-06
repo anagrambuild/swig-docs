@@ -1,0 +1,57 @@
+---
+title: "Secp256k1"
+description: "Authorize Solana wallet operations with an Ethereum signer."
+---
+
+## Introduction
+
+A Secp256k1 authority connects an Ethereum signer to a Swig wallet on Solana.
+
+- **Use when:** your user or service already signs Ethereum messages and needs to control Solana assets.
+- **For:** apps integrating Ethereum accounts with a separate Solana fee payer.
+
+## How it works
+
+1. Register the signer's full public key as the authority.
+2. Provide a callback that signs the SDK's raw message bytes.
+3. Prepare the operation against fresh wallet state and the current slot.
+4. Let the Solana payer sign and submit the resulting transaction.
+
+## Signing inputs
+
+| Input | Meaning |
+| --- | --- |
+| Public key | Compressed SEC1, uncompressed SEC1, or raw 64-byte key; not a 20-byte address |
+| `signingFn` | Application callback returning a signature and matching personal-sign prefix |
+| `payer` | Solana public key that will pay the outer transaction fee |
+| `currentSlot` | Current Solana slot used while preparing authorization |
+
+## SDK example
+
+Install `viem` alongside the [Protocol SDK](/solana#sdk-example). This example accepts a Viem account already owned by your application.
+
+```typescript
+import { hexToBytes, type LocalAccount } from "viem";
+import {
+  createSecp256k1AuthorityInfo,
+  getEvmPersonalSignPrefix,
+  type SigningFn,
+} from "@swig-wallet/classic";
+
+function ethereumAuthority(account: LocalAccount) {
+  const authorityInfo = createSecp256k1AuthorityInfo(account.publicKey);
+  const signingFn: SigningFn = async (message) => {
+    const signature = await account.signMessage({ message: { raw: message } });
+    return {
+      signature: hexToBytes(signature),
+      prefix: getEvmPersonalSignPrefix(message.length),
+    };
+  };
+  return { authorityInfo, signingFn };
+}
+```
+
+- Register `authorityInfo` with [Add a role](/solana/add-role), then pass the callback to [Signing](/solana/transactions/signing#secp256r1-and-secp256k1-signers).
+- A browser wallet can implement the same callback through its message-signing API. Sign raw bytes, not the text of a hex string.
+- Locate roles with `findRolesBySecp256k1SignerAddress(ethereumAddress)` and select the intended role ID.
+- Refetch the wallet before the next operation so authorization uses the current state.

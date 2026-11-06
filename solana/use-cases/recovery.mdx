@@ -1,0 +1,117 @@
+---
+title: "Recovery"
+description: "Authorize a guardian to replace one role's lost key while preserving its permissions."
+---
+
+## Introduction
+
+Recovery lets a designated guardian replace one role's lost signer while preserving its permissions.
+
+- **Use when:** you want a backup authorization path before a user loses access to a key.
+- **For:** apps offering guardian-based recovery on a compatible Swig deployment.
+
+## How it works
+
+1. While an administrator is available, give an independent guardian `ReplaceAuthority` for the target role.
+2. Record the guardian role ID and the protected role ID separately.
+3. If the target key is lost, have the guardian approve its replacement public key.
+4. Confirm the replacement and verify that the role retains its original permissions.
+
+## Recovery scope
+
+| Item | Behavior |
+| --- | --- |
+| Supported target | Ed25519, Secp256r1, Secp256k1, or their session variants |
+| Target role | Keeps its ID, authority type, and permissions |
+| Replacement key | Must match the target authority type |
+| Guardian access | Can replace only the role named by its permission |
+| Session target | Replacement clears its temporary key and expiry |
+| Active authorization locks | Block guardian replacement until captured, released, or expired |
+
+ProgramExec authorities cannot be replacement targets. The guardian chooses the key that inherits the target's access. If the target's only key is lost while it has an active hold, recovery may need to wait for expiry.
+
+## SDK example
+
+### Assign the guardian
+
+Use an Ed25519 administrator with `All` or `ManageAuthority` to prepare this grant. Then [sign and submit](/solana/transactions/sending) with the administrator and payer.
+
+```typescript
+import { type Connection, type PublicKey } from "@solana/web3.js";
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  fetchSwig,
+  getAddAuthorityInstructions,
+} from "@swig-wallet/classic";
+
+async function prepareGuardianRole(
+  connection: Connection,
+  configAddress: PublicKey,
+  adminRoleId: number,
+  payer: PublicKey,
+  guardianPublicKey: PublicKey,
+  targetRoleId: number,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  return getAddAuthorityInstructions(
+    swig,
+    adminRoleId,
+    createEd25519AuthorityInfo(guardianPublicKey),
+    Actions.set().replaceAuthority({ roleId: targetRoleId }).get(),
+    { payer },
+  );
+}
+```
+
+Refetch the wallet after confirmation. Verify the guardian's public key and scoped permission, then store its assigned role ID.
+
+### Replace an Ed25519 key
+
+The replacement instruction is available in Rust's `swig-interface`. Classic exposes the permission builder above but does not expose the replacement instruction builder.
+
+```bash
+cargo add swig-interface solana-sdk@4 solana-client@4 anyhow
+```
+
+The Solana companion crates use compatible major versions. Supply the guardian's signer and an independently verified new public key. Here the guardian also pays the fee.
+
+```rust
+use solana_client::rpc_client::RpcClient;
+use solana_sdk::{
+    pubkey::Pubkey,
+    signature::{Keypair, Signature, Signer},
+    transaction::Transaction,
+};
+use swig_interface::ReplaceAuthorityInstruction;
+
+fn recover_ed25519_role(
+    rpc: &RpcClient,
+    config_address: Pubkey,
+    guardian: &Keypair,
+    guardian_role_id: u32,
+    target_role_id: u32,
+    new_public_key: Pubkey,
+) -> anyhow::Result<Signature> {
+    let instruction = ReplaceAuthorityInstruction::new_with_ed25519_authority(
+        config_address,
+        guardian.pubkey(),
+        guardian_role_id,
+        target_role_id,
+        new_public_key.as_ref(),
+    )?;
+    let blockhash = rpc.get_latest_blockhash()?;
+    let transaction = Transaction::new_signed_with_payer(
+        &[instruction],
+        Some(&guardian.pubkey()),
+        &[guardian],
+        blockhash,
+    );
+    Ok(rpc.send_and_confirm_transaction(&transaction)?)
+}
+```
+
+- Confirm the wallet, target role ID, and new public key before the guardian signs.
+- Refetch the wallet after confirmation and verify the replacement authority.
+- A Secp256r1 target needs a new compressed P-256 key; a Secp256k1 target needs a matching Secp256k1 key.
+- Reopen a session after replacing a session authority. Recovery adds no separate delay policy beyond the active-lock restriction.

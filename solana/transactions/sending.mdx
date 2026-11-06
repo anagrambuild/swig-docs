@@ -1,0 +1,76 @@
+---
+title: "Sending transactions"
+description: "Assemble, sign, submit, and confirm the instructions returned by the SDK."
+---
+
+## Introduction
+
+Sending turns prepared SDK instructions into a signed, confirmed Solana transaction.
+
+- **Use when:** you have finished authorizing a wallet action and are ready to submit it.
+- **For:** apps using a local signer or browser wallet with their own RPC connection.
+
+## How it works
+
+1. Fetch a recent blockhash and assemble every prepared instruction in order.
+2. Use the same fee payer supplied during authorization.
+3. Collect signatures from the payer and every required Solana signer.
+4. Submit the serialized transaction and check confirmation for an execution error.
+
+## SDK example
+
+Pass the instructions from [Signing](/solana/transactions/signing), a funded payer, and any additional signers. An Ed25519 authority or session key belongs in `additionalSigners`; Secp256r1 and Secp256k1 approval already comes from their callbacks.
+
+```typescript
+import {
+  type AddressLookupTableAccount,
+  type Connection,
+  type Keypair,
+  type TransactionInstruction,
+  TransactionMessage,
+  VersionedTransaction,
+} from "@solana/web3.js";
+
+async function sendWalletTransaction(
+  connection: Connection,
+  instructions: TransactionInstruction[],
+  payer: Keypair,
+  additionalSigners: Keypair[] = [],
+  lookupTables: AddressLookupTableAccount[] = [],
+) {
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  const message = new TransactionMessage({
+    payerKey: payer.publicKey,
+    recentBlockhash: latestBlockhash.blockhash,
+    instructions,
+  }).compileToV0Message(lookupTables);
+  const transaction = new VersionedTransaction(message);
+  transaction.sign([payer, ...additionalSigners]);
+
+  const signature = await connection.sendRawTransaction(transaction.serialize());
+  const confirmation = await connection.confirmTransaction(
+    { signature, ...latestBlockhash },
+    "confirmed",
+  );
+  if (confirmation.value.err) {
+    throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+  }
+  return signature;
+}
+```
+
+- The result is a transaction signature confirmed at the requested commitment.
+- A browser wallet can sign the same message through its adapter's `signTransaction` or `sendTransaction` method.
+- Supply address lookup tables when the prepared operation needs them.
+- Refetch the wallet after a confirmed mutation before preparing another action.
+
+### Retry an uncertain submission
+
+| Situation | Handling |
+| --- | --- |
+| RPC response was lost | Check the existing signature before building another operation |
+| Blockhash remains valid | Resubmit the same signed bytes |
+| Blockhash or authorization expired | Check whether the original landed, then refetch and rebuild if needed |
+| Signer counter or approved operation changed | Obtain fresh Secp256r1 or Secp256k1 authorization |
+
+A successful submission response alone does not establish that the wallet action succeeded.

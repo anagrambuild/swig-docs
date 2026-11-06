@@ -1,0 +1,88 @@
+---
+title: "Signing"
+description: "Authorize instructions with a wallet role before signing the Solana transaction."
+---
+
+## Introduction
+
+Signing authorizes an operation through a chosen wallet role and prepares the instructions for a Solana transaction.
+
+- **Use when:** you have instructions for a transfer, swap, or program call that the wallet should execute.
+- **For:** apps combining Swig authorization with Solana transaction construction.
+
+## How it works
+
+1. Build the inner operation with the wallet address as source or asset owner.
+2. Fetch current wallet state and choose a role with the required permissions.
+3. Call `getSignInstructions` with the role, inner instructions, and final fee payer.
+4. Collect the required transaction signatures, then send every returned instruction in order.
+
+## Who approves
+
+| Authority | Wallet approval | Outer transaction |
+| --- | --- | --- |
+| Ed25519 | Authority signature | Authority and payer sign |
+| Active session | Temporary key signature | Session key and payer sign |
+| Secp256r1 / Secp256k1 | Signing callback | Payer and other required Solana signers sign |
+| ProgramExec | Integration approval instruction | Payer and integration-required signers sign |
+
+The payer and authority may be different. Set the payer before requesting authorization and preserve the approved operation.
+
+## SDK example
+
+### Ed25519 signer
+
+Prepare a 0.001 SOL transfer. The selected role needs System Program access and sufficient SOL allowance, or `All` permission.
+
+```typescript
+import { type Connection, type PublicKey, SystemProgram } from "@solana/web3.js";
+import { fetchSwig, getSignInstructions, getSwigWalletAddress } from "@swig-wallet/classic";
+
+async function prepareSolTransfer(
+  connection: Connection,
+  configAddress: PublicKey,
+  roleId: number,
+  payer: PublicKey,
+  recipient: PublicKey,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  const walletAddress = await getSwigWalletAddress(swig);
+  const transfer = SystemProgram.transfer({
+    fromPubkey: walletAddress,
+    toPubkey: recipient,
+    lamports: 1_000_000n,
+  });
+  return getSignInstructions(swig, roleId, [transfer], false, { payer });
+}
+```
+
+The `false` argument selects the wallet rather than a subaccount. This returns instructions; [Sending transactions](/solana/transactions/sending) handles signing and submission.
+
+### Secp256r1 and Secp256k1 signers
+
+Use the callback from [Secp256r1](/solana/authorities/secp256r1) or [Secp256k1](/solana/authorities/secp256k1). Supply the instructions your wallet should execute:
+
+```typescript
+import { type Connection, type PublicKey, type TransactionInstruction } from "@solana/web3.js";
+import { fetchSwig, getSignInstructions, type SigningFn } from "@swig-wallet/classic";
+
+async function authorizeWithExternalSigner(
+  connection: Connection,
+  configAddress: PublicKey,
+  roleId: number,
+  payer: PublicKey,
+  walletInstructions: TransactionInstruction[],
+  signingFn: SigningFn,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  return getSignInstructions(swig, roleId, walletInstructions, false, {
+    payer,
+    currentSlot: BigInt(await connection.getSlot()),
+    signingFn,
+  });
+}
+```
+
+- Include all returned verification instructions in their original order.
+- If the operation or signer state changes, refetch and request fresh authorization.
+- Follow [ProgramExec](/solana/authorities/program-exec) for program-supplied approval.

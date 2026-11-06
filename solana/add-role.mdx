@@ -1,0 +1,74 @@
+---
+title: "Add a role"
+description: "Give another signer its own permissions on an existing wallet."
+---
+
+## Introduction
+
+Adding a role gives an authority a separate set of permissions on an existing wallet.
+
+- **Use when:** you need to grant access to another signer, application, session, or guardian.
+- **For:** apps managing user and service access to a shared wallet.
+
+## How it works
+
+1. Fetch the wallet and select an administrator role with `All` or `ManageAuthority`.
+2. Construct the new authority and its permission set.
+3. Build and submit the add-role instructions with the administrator and payer.
+4. Refetch confirmed state and identify the new role by its authority and permissions.
+
+## SDK example
+
+Give an Ed25519 signer a total 0.1 SOL budget and System Program access. The administrator also pays the fee; the new signer does not need to sign its addition.
+
+```typescript
+import {
+  type Connection,
+  type Keypair,
+  type PublicKey,
+  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  fetchSwig,
+  getAddAuthorityInstructions,
+} from "@swig-wallet/classic";
+
+async function addSpendingRole(
+  connection: Connection,
+  configAddress: PublicKey,
+  admin: Keypair,
+  adminRoleId: number,
+  signerPublicKey: PublicKey,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  const instructions = await getAddAuthorityInstructions(
+    swig,
+    adminRoleId,
+    createEd25519AuthorityInfo(signerPublicKey),
+    Actions.set()
+      .programLimit({ programId: SystemProgram.programId })
+      .solLimit({ amount: 100_000_000n })
+      .get(),
+    { payer: admin.publicKey },
+  );
+  await sendAndConfirmTransaction(
+    connection,
+    new Transaction().add(...instructions),
+    [admin],
+    { commitment: "confirmed" },
+  );
+  const updated = await fetchSwig(connection, configAddress, {
+    commitment: "confirmed",
+  });
+  return updated.findRolesByEd25519SignerPk(signerPublicKey);
+}
+```
+
+- Select the intended returned role by its permissions. One signer can have several roles.
+- Record its on-chain `id`; role IDs are not array positions.
+- Use the same builder with [Secp256r1](/solana/authorities/secp256r1), [Secp256k1](/solana/authorities/secp256k1), [ProgramExec](/solana/authorities/program-exec), or a [session authority](/solana/authorities/sessions).
+- An administrator using Secp256r1 or Secp256k1 supplies the signing callback and current slot described in [Signing](/solana/transactions/signing).
