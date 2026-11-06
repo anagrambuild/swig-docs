@@ -37,8 +37,12 @@ npm install @swig-wallet/kit @solana/kit
 For the Rust examples, add the published crates:
 
 ```bash
-cargo add swig-sdk swig-interface solana-sdk solana-compute-budget-interface
+cargo add swig-sdk swig-interface
+cargo add solana-sdk@4 solana-compute-budget-interface
 ```
+
+The Swig crates use their latest releases. These examples require the compatible
+Solana SDK 4.x dependency; Solana SDK 5.x currently conflicts with the Swig crates.
 
 </Tab>
 </Tabs>
