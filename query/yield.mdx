@@ -16,7 +16,7 @@ All routes start with `/api/yield/{swig_config_address}`.
 | Validators and rates | `GET …/options` | Allowlisted validators, deposit availability, estimated net APR, commission, and rate timestamp |
 | Reward estimate | `GET …/estimate` | Projected rewards for a validator, principal, and horizon |
 | Positions | `GET …/positions` | Indexed position state and balance, rent, earning, and withdrawable amounts |
-| Totals | `GET …/summary` | Position principal, indexed withdrawable amounts, and recorded reward totals |
+| Totals | `GET …/summary` | Position balance excluding rent (including compounded rewards), indexed withdrawable amounts, and recorded reward totals |
 | Reward history | `GET …/rewards` | Recorded reward credits by position and time |
 
 ## Filters and freshness
@@ -29,6 +29,8 @@ All routes start with `/api/yield/{swig_config_address}`.
   organization, network, and Swig.
 - Positions sort by address; rewards sort oldest first by credit time. Position
   reads expose `lastUpdatedAt` so you can identify the age of indexed data.
+- `totalPositionLamports` already includes compounded rewards. Do not add the
+  recorded reward total to it when calculating the current position value.
 - Indexed withdrawable amounts can include rent. The separate withdrawal
   preparation currently keeps the rent reserve; use its `withdrawalLamports`
   when displaying what a prepared withdrawal will return.
