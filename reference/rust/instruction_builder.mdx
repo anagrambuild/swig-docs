@@ -10,18 +10,10 @@ The instruction builder provides low-level functionality for creating various ty
 
 ## Core Components
 
-### AuthorityManager
+### Client roles
 
-```rust
-pub enum AuthorityManager {
-    Ed25519(Pubkey),
-    Secp256k1(Box<[u8]>, Box<dyn Fn(&[u8]) -> [u8; 65]>),
-    Ed25519Session(CreateEd25519SessionAuthority),
-    Secp256k1Session(CreateSecp256k1SessionAuthority, Box<dyn Fn(&[u8]) -> [u8; 65]>),
-}
-```
-
-The `AuthorityManager` enum represents different types of signing authorities supported by the Swig protocol.
+Pass a `Box<dyn ClientRole>` to select the authority implementation, such as
+`Ed25519ClientRole` for an Ed25519 public key.
 
 ### SwigInstructionBuilder
 
@@ -29,9 +21,10 @@ The `AuthorityManager` enum represents different types of signing authorities su
 pub struct SwigInstructionBuilder {
     swig_id: [u8; 32],
     swig_account: Pubkey,
-    authority_manager: AuthorityManager,
+    client_role: Box<dyn ClientRole>,
     payer: Pubkey,
     role_id: u32,
+    reserved_create: Option<Instruction>,
 }
 ```
 
@@ -42,7 +35,7 @@ pub struct SwigInstructionBuilder {
 ```rust
 pub fn new(
     swig_id: [u8; 32],
-    authority_manager: AuthorityManager,
+    client_role: Box<dyn ClientRole>,
     payer: Pubkey,
     role_id: u32,
 ) -> Self
@@ -96,7 +89,10 @@ pub fn remove_authority(
 ) -> Result<Instruction, SwigError>
 ```
 
-Creates an instruction to remove an existing authority.
+Creates an instruction to remove an existing authority. The program rejects it
+with `AuthorizationLockActive` while the role holds an active
+[authorization lock](/protocol/authorization-locks), and otherwise also prunes
+the role's inactive lock records.
 
 ### Replacing Authorities
 
@@ -128,6 +124,48 @@ pub fn create_session_instruction(
 
 Creates an instruction to create a new session for temporary authority delegation.
 
+## Authorization Locks
+
+These APIs target the Rust auth-lock draft, not the published 3.0.0 crates.
+Use the source revisions in the [recipe](/examples/authorization_locks).
+
+### Adding a Lock
+
+```rust
+pub fn add_authorization_lock(
+    &self,
+    asset_account: Pubkey,
+    mint: [u8; 32],
+    amount: u64,
+    expiry_slot: u64,
+    current_slot: Option<u64>,
+) -> Result<Vec<Instruction>, SwigError>
+```
+
+Creates instructions that reserve `amount` of `asset_account` until
+`expiry_slot`. Use the wallet address and an all-zero mint for native SOL, or a
+token account owned by the wallet address and its mint. Token locks also pass
+the mint account. With a `ProgramExecClientRole`, the returned instructions
+start with the role's preceding instruction, which must pass the Swig config and
+wallet address as its first two accounts.
+
+### Removing a Lock
+
+```rust
+pub fn remove_authorization_lock(
+    &self,
+    lock_id: u32,
+    rent_claimer: Option<Pubkey>,
+    current_slot: Option<u64>,
+) -> Result<Vec<Instruction>, SwigError>
+```
+
+Creates instructions that release a lock or prune an expired or fully captured
+one. The wallet address is derived from the Swig account and passed
+automatically. Pass the wallet's rent claimer when one is configured. To capture
+a hold, the holder doesn't remove it: it spends from the locked account with
+`sign_v2_instruction`, which lowers the lock by the amount spent.
+
 ## Utility Functions
 
 ### Getting the Swig Account
@@ -149,7 +187,11 @@ Returns the current role ID of the Swig account.
 ### Switching Authority
 
 ```rust
-pub fn switch_authority(&mut self, role_id: u32, authority: Pubkey) -> Result<(), SwigError>
+pub fn switch_authority(
+    &mut self,
+    role_id: u32,
+    client_role: Box<dyn ClientRole>,
+) -> Result<(), SwigError>
 ```
 
 Switches the current authority and role ID.
@@ -159,9 +201,11 @@ Switches the current authority and role ID.
 ### Creating a New Swig Account
 
 ```rust
-let instruction_builder = SwigInstructionBuilder::new(
+use swig_sdk::client_role::Ed25519ClientRole;
+
+let mut instruction_builder = SwigInstructionBuilder::new(
     swig_id,
-    AuthorityManager::Ed25519(authority_pubkey),
+    Box::new(Ed25519ClientRole::new(authority_pubkey)),
     payer_pubkey,
     0
 );

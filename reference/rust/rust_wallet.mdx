@@ -15,9 +15,10 @@ The Wallet SDK builds upon the instruction builder to provide comprehensive Swig
 ```rust
 pub struct SwigWallet<'a> {
     instruction_builder: SwigInstructionBuilder,
-    rpc_client: RpcClient,
+    pub rpc_client: RpcClient,
     fee_payer: &'a Keypair,
-    authority: &'a Keypair,
+    authority_keypair: Option<&'a Keypair>,
+    pub current_role: crate::types::CurrentRole,
 }
 ```
 
@@ -28,14 +29,15 @@ pub struct SwigWallet<'a> {
 ```rust
 pub fn new(
     swig_id: [u8; 32],
-    authority_manager: AuthorityManager,
+    client_role: Box<dyn ClientRole>,
     fee_payer: &'c Keypair,
-    authority: &'c Keypair,
     rpc_url: String,
+    authority_keypair: Option<&'c Keypair>,
 ) -> Result<Self, SwigError>
 ```
 
-Creates a new Swig wallet or initializes an existing one.
+Creates or opens a wallet in the legacy `["swig", swig_id]` address namespace.
+Use `from_reservation` for [reserved wallets](/solana/reservation-addresses).
 
 ## Authority Management
 
@@ -61,7 +63,10 @@ pub fn remove_authority(
 ) -> Result<Signature, SwigError>
 ```
 
-Removes an existing authority from the wallet.
+Removes an existing authority from the wallet. Fails with
+`AuthorizationLockActive` while the role holds an active
+[authorization lock](/protocol/authorization-locks). Once its locks are all
+expired or fully captured, the removal also deletes its lock records.
 
 ### Replacing Authorities
 
@@ -105,6 +110,82 @@ pub fn create_session(
 
 Creates a new session for temporary authority delegation.
 
+## Authorization Locks
+
+These APIs target the Rust auth-lock draft, not the published 3.0.0 crates.
+Use the source revisions in the [recipe](/examples/authorization_locks).
+
+Locks hold part of the wallet's SOL or token balance until an expiry slot,
+like a card authorization hold. Other roles, `All` included, can spend only the
+balance minus the locks they don't hold. The holder can spend its held funds
+with `sign_v2`: each spend lowers ("captures") its locks on that account,
+oldest first, and is charged to its limits.
+See [Authorization Locks](/protocol/authorization-locks) for the rules and
+[the recipe](/examples/authorization_locks) for a full flow.
+
+### Locking SOL
+
+```rust
+pub fn add_sol_authorization_lock(
+    &mut self,
+    amount: u64,
+    expiry_slot: u64,
+) -> Result<Signature, SwigError>
+```
+
+Reserves `amount` lamports of the wallet address's balance until `expiry_slot`.
+
+### Locking Tokens
+
+```rust
+pub fn add_token_authorization_lock(
+    &mut self,
+    mint: &Pubkey,
+    amount: u64,
+    expiry_slot: u64,
+) -> Result<Signature, SwigError>
+```
+
+Reserves `amount` of the wallet's associated token account for `mint`. The token
+program (SPL Token or Token-2022) is read from the mint account.
+
+### Locking Any Asset Account
+
+```rust
+pub fn add_authorization_lock(
+    &mut self,
+    asset_account: Pubkey,
+    mint: [u8; 32],
+    amount: u64,
+    expiry_slot: u64,
+) -> Result<Signature, SwigError>
+```
+
+Lower-level form. Pass the wallet address and an all-zero mint for SOL, or any
+token account owned by the wallet address and its mint.
+
+### Releasing or Pruning a Lock
+
+```rust
+pub fn remove_authorization_lock(&mut self, lock_id: u32) -> Result<Signature, SwigError>
+```
+
+Releases a lock created by the current role, voiding whatever it still
+reserves, or prunes an expired or fully captured (amount 0) lock. The wallet's
+rent claimer, if any, is resolved automatically.
+
+### Reading Locks
+
+```rust
+pub fn get_authorization_locks(&self) -> Result<Vec<AuthorizationLock>, SwigError>
+pub fn get_active_authorization_locks(&self) -> Result<Vec<AuthorizationLock>, SwigError>
+```
+
+`get_authorization_locks` returns every stored lock, including expired and
+fully captured (amount 0) locks that have not been pruned. `amount` is what is
+still reserved. `get_active_authorization_locks` returns only locks that still
+bind: unexpired, with a non-zero amount.
+
 ## Wallet Information
 
 ### Displaying Wallet Details
@@ -120,6 +201,7 @@ Displays detailed information about the wallet, including:
 - Balance
 - Authority details
 - Permissions
+- Authorization locks, if any
 
 ### Getting Wallet Balance
 
@@ -145,7 +227,8 @@ Retrieves the current authority's permissions from the Swig account.
 pub fn switch_authority(
     &mut self,
     role_id: u32,
-    authority: Pubkey
+    client_role: Box<dyn ClientRole>,
+    authority_kp: Option<&'c Keypair>,
 ) -> Result<(), SwigError>
 ```
 
@@ -167,12 +250,14 @@ Updates the fee payer for the wallet.
 ### Creating a New Wallet
 
 ```rust
-let wallet = SwigWallet::new(
+use swig_sdk::client_role::Ed25519ClientRole;
+
+let mut wallet = SwigWallet::new(
     swig_id,
-    AuthorityManager::Ed25519(authority_pubkey),
+    Box::new(Ed25519ClientRole::new(authority.pubkey())),
     &fee_payer,
-    &authority,
     "https://api.mainnet-beta.solana.com".to_string(),
+    Some(&authority),
 )?;
 ```
 
@@ -190,6 +275,32 @@ let signature = wallet.add_authority(
         },
     ],
 )?;
+```
+
+### Granting and Using an Authorization Lock Role
+
+```rust
+wallet.add_authority(
+    AuthorityType::Ed25519,
+    &card_authority_bytes,
+    vec![
+        Permission::ManageAuthorizationLocks {
+            max_duration_slots: 216_000,
+        },
+        Permission::Sol {
+            amount: 2_000_000_000, // caps the role's holds; charged on spend
+            recurring: None,
+        },
+    ],
+)?;
+
+// As the card role:
+let slot = wallet.get_current_slot()?;
+wallet.add_sol_authorization_lock(1_500_000_000, slot + 400)?;
+
+// Spending from the wallet captures the hold: the lock drops to 0.5 SOL.
+let wallet_address = wallet.get_swig_wallet_address()?;
+wallet.sign_v2(vec![transfer(&wallet_address, &merchant, 1_000_000_000)], None)?;
 ```
 
 ### Creating a Session

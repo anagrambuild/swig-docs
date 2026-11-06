@@ -48,7 +48,8 @@
                   "developer-sdk/create-wallets",
                   "developer-sdk/permissions",
                   "developer-sdk/add-roles-and-permissions",
-                  "developer-sdk/rent-claimers"
+                  "developer-sdk/rent-claimers",
+                  "developer-sdk/authorization-locks"
                 ]
               },
               {
@@ -177,6 +178,7 @@
                 "pages": [
                   "examples/sessions",
                   "examples/sub_accounts",
+                  "examples/authorization_locks",
                   "examples/v2_features",
                   "examples/multi_authority",
                   "examples/migrating-from-squads"
@@ -212,6 +214,7 @@
                   "protocol/program-walkthrough",
                   "protocol/signing-and-execution",
                   "protocol/sessions-and-subaccounts",
+                  "protocol/authorization-locks",
                   "protocol/recovery-model",
                   "protocol/security-and-audits"
                 ]
