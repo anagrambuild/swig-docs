@@ -36,9 +36,13 @@ wallet = swig.wallets.use(
 
 </CodeGroup>
 
-The authority shape may also be `secp256k1` or `secp256r1`. The SDK uses the
-public authority value to prepare the correct request; it never accesses the
-corresponding private key or authenticator.
+TypeScript and Python authority shapes may also be `secp256k1` or
+`secp256r1`. The SDK uses the public authority value to prepare the correct
+request; it never accesses the corresponding private key or authenticator.
+
+Rust supplies the config address and requester authority on each call. See
+[Rust integration](/developer-sdk/integration-paths#rust) for client setup.
+Supported requesters are Ed25519, secp256r1, and ParticipantSet.
 
 ## SOL transfer
 
@@ -60,7 +64,23 @@ prepared = await wallet.transfer.sol(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::PrepareTransferSolArgs;
+
+let prepared = wallet
+    .prepare_transfer_sol(PrepareTransferSolArgs {
+        swig_config_address,
+        fee_payer,
+        requester_authority: requester_authority.clone(),
+        destination,
+        amount: 1_000_000,
+    })
+    .await?;
+```
+
 </CodeGroup>
+
+Use a positive amount in lamports.
 
 ## Token transfer
 
@@ -88,7 +108,24 @@ prepared = await wallet.transfer.token(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::PrepareTransferTokenArgs;
+
+let prepared = wallet
+    .prepare_transfer_token(PrepareTransferTokenArgs {
+        swig_config_address,
+        fee_payer,
+        requester_authority: requester_authority.clone(),
+        mint,
+        destination_owner,
+        amount: 10_000,
+    })
+    .await?;
+```
+
 </CodeGroup>
+
+Use a positive amount in the mint's smallest units.
 
 ## Continue the flow
 
@@ -101,9 +138,13 @@ Use the requester authority and the serialized transaction's required signer
 set to coordinate signing in your application. For `secp256r1` and
 `secp256k1`, also process every `signatureRequests` / `signature_requests`
 record. The optional [signing helpers](/developer-sdk/signers)
-can adapt application-provided signatures. Return the signed base64 transaction
-to the server, then use
+can adapt application-provided signatures. With TypeScript and Python, return
+the signed base64 transaction to the server, then use
 [Sponsor & Submit](/developer-sdk/sponsor-and-submit) or your own RPC path.
+
+Keep Rust's preparation metadata until signing is complete. For a
+ParticipantSet requester, collect and compile the approvals in
+`participant_set_approval_plan` before submission.
 
 For Jupiter swaps and multi-operation preparation, continue to
 [Swaps and Batches](/developer-sdk/swaps-and-batches).

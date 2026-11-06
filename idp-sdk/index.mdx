@@ -1,38 +1,35 @@
 ---
-title: "IDP SDK Overview"
+title: "IdP"
 sidebarTitle: "Overview"
+description: "Authenticate users in web and mobile apps, then continue with a persisted Swig session."
 ---
 
-The Swig IDP SDK is the sign-in layer for Swig apps.
+Swig IdP handles user sign-in and returns a persisted session for your wallet
+integration. OAuth is available in browsers and Expo / React Native. The mobile
+provider also supports email and SMS OTP.
 
-Use it when your product needs to authenticate a user first, then continue with
-a persisted Swig session that another Swig product can use.
+## Choose your language
 
-It lives in `swig-idp-sdk` and currently ships as
-`@swig-wallet/expo-idp-sdk`.
+The published package is TypeScript. Choose your application platform in the
+getting-started steps below.
 
-## What this SDK is for
+<CodeGroup dropdown>
 
-- user sign-in with OAuth, email OTP, or SMS OTP
-- browser or Expo-native auth flows
-- isolated-host redirects that return a Swig session
-- handing that session off to wallet or policy flows afterward
+```bash TypeScript
+npm install @swig-wallet/expo-idp-sdk
+```
 
-## Continue into the Swig stack
+</CodeGroup>
 
-- Use [Developer SDK](/developer-sdk) for hosted wallet preparation and
-  paymaster operations after login.
-- Use the Developer Portal for policy management.
-- Use [Protocol SDK](/reference) for direct protocol instruction building.
+Use the `/web` entry point in browsers and the mobile provider in Expo / React
+Native. Follow the platform guide for its dependencies and setup.
 
-## Choose your path
+## Get started
 
-| If you are building... | Start here |
-| :--- | :--- |
-| an Expo or React Native app | [Expo and React Native Apps](/idp-sdk/expo-and-react-native) |
-| a browser app with redirect-based auth | [Browser Apps](/idp-sdk/web-apps) |
-| the sign-in entrypoint itself | [Choose an Auth Method](/idp-sdk/auth-methods) |
-| the session and security boundary | [Sessions and Security](/idp-sdk/sessions-and-security) |
+1. [Choose an authentication method](/idp-sdk/auth-methods).
+2. [Choose your platform](/idp-sdk/web-and-mobile): [browser](/idp-sdk/web-apps) or [Expo / React Native](/idp-sdk/expo-and-react-native).
+3. Complete sign-in and [persist the session](/idp-sdk/sessions-and-security).
+4. Use the session in your wallet integration and configure [authority and agents](/idp-sdk/authority-and-agents).
 
 ## What you get back
 
@@ -46,11 +43,9 @@ contains:
 
 That session is the bridge into the next layer of the stack.
 
-<CardGroup cols={2}>
-  <Card title="Developer SDK" icon="building" href="/developer-sdk">
-    Use the session to continue into hosted wallet creation and transaction flows
-  </Card>
-  <Card title="Protocol SDK" icon="terminal" href="/reference">
-    Use the session if your app will integrate with Swig wallets directly
-  </Card>
-</CardGroup>
+## Reference and next steps
+
+- Use the [Developer SDK](/developer-sdk) for hosted wallet preparation and paymaster operations after login.
+- Use the Developer Portal for policy management.
+- Use the [Solana Protocol SDK](/solana) or [EVM Protocol SDK](/evm) for direct protocol integration.
+- Review [sessions and security](/idp-sdk/sessions-and-security) for the authentication boundary.

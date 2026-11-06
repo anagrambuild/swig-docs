@@ -33,14 +33,16 @@ TypeScript, Python, and Rust APIs for preparing backend-built transactions.
 
 ### Grant the delegated role
 
-The delegate can lock any asset it has a spending limit for, up to that limit,
-and only for up to `max_duration_slots`. It cannot change its own
-`max_duration_slots`.
+The delegate can lock an asset up to its remaining spending allowance for that
+mint, minus its existing active holds. The new hold must also fit the asset
+account's unreserved, lockable balance; native SOL excludes the rent-exempt
+minimum. Each hold lasts at most `max_duration_slots`.
 
 A role with `All` or `AllButManageAuthority` also needs
-`ManageAuthorizationLocks` to lock. It can then lock up to the wallet's balance,
-still within its `max_duration_slots`. To let the root role lock, have it grant
-itself the permission:
+`ManageAuthorizationLocks` to lock. Its cap is the asset account's unreserved,
+lockable balance, still within `max_duration_slots`. A non-root role cannot set
+or change its own duration bound; the root role can. To let the root role lock,
+have it grant itself the permission:
 
 ```rust
 use swig_sdk::{types::UpdateAuthorityData, Permission};
@@ -145,6 +147,10 @@ fails with `AuthorizationLockViolated`.
 
 ### Release or prune a hold
 
+Set `lock_id` to the existing hold you selected from `get_authorization_locks()`
+or the active-hold output above. Creation returns a transaction signature, not
+the lock ID.
+
 ```rust
 wallet.remove_authorization_lock(lock_id)?;
 ```
@@ -247,10 +253,10 @@ let ix = RemoveAuthorizationLockV1Instruction::new_with_ed25519_authority(
 
 ## CLI
 
-These commands target the CLI changes in
-[wallet PR #240](https://github.com/anagrambuild/swig-wallet/pull/240).
-Those changes remain in `swig-wallet` after the Rust SDK moves to the Protocol
-SDK repository. Use the feature branch until the CLI is released.
+These commands require a CLI build containing
+[wallet PR #240](https://github.com/anagrambuild/swig-wallet/pull/240), which has
+merged. Build that revision or a later one until a CLI release includes it.
+The CLI remains in `swig-wallet`; the Rust SDK lives in the Protocol SDK repository.
 
 The `swig` CLI has the same operations. Each command also takes
 `--authority-type`, `--authority`, and `--authority-kp`, or falls back to the
@@ -262,8 +268,12 @@ Grant the delegated role. Repeat `--permissions` once per permission:
 swig add-authority --swig-id <ID> \
     --new-authority <CARD_PUBKEY> --new-authority-type Ed25519 \
     --permissions '{"type":"manageAuthorizationLocks","maxDurationSlots":216000}' \
-    --permissions '{"type":"sol","amount":2000000000}'
+    --permissions '{"type":"sol","amount":2000000000}' \
+    --permissions '{"type":"tokenDestination","mint":"<MINT>","destination":"<MERCHANT_TOKEN_ACCOUNT>","amount":600}'
 ```
+
+The token permission covers the mint used below and limits its spending to the
+merchant's token account. Replace both placeholders with that mint and destination.
 
 Place, list, and release holds as the delegate:
 

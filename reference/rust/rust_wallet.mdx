@@ -15,9 +15,10 @@ The Wallet SDK builds upon the instruction builder to provide comprehensive Swig
 ```rust
 pub struct SwigWallet<'a> {
     instruction_builder: SwigInstructionBuilder,
-    rpc_client: RpcClient,
+    pub rpc_client: RpcClient,
     fee_payer: &'a Keypair,
-    authority: &'a Keypair,
+    authority_keypair: Option<&'a Keypair>,
+    pub current_role: crate::types::CurrentRole,
 }
 ```
 
@@ -28,14 +29,15 @@ pub struct SwigWallet<'a> {
 ```rust
 pub fn new(
     swig_id: [u8; 32],
-    authority_manager: AuthorityManager,
+    client_role: Box<dyn ClientRole>,
     fee_payer: &'c Keypair,
-    authority: &'c Keypair,
     rpc_url: String,
+    authority_keypair: Option<&'c Keypair>,
 ) -> Result<Self, SwigError>
 ```
 
-Creates a new Swig wallet or initializes an existing one.
+Creates or opens a wallet in the legacy `["swig", swig_id]` address namespace.
+Use `from_reservation` for [reserved wallets](/solana/reservation-addresses).
 
 ## Authority Management
 
@@ -225,7 +227,8 @@ Retrieves the current authority's permissions from the Swig account.
 pub fn switch_authority(
     &mut self,
     role_id: u32,
-    authority: Pubkey
+    client_role: Box<dyn ClientRole>,
+    authority_kp: Option<&'c Keypair>,
 ) -> Result<(), SwigError>
 ```
 
@@ -247,12 +250,14 @@ Updates the fee payer for the wallet.
 ### Creating a New Wallet
 
 ```rust
-let wallet = SwigWallet::new(
+use swig_sdk::client_role::Ed25519ClientRole;
+
+let mut wallet = SwigWallet::new(
     swig_id,
-    AuthorityManager::Ed25519(authority_pubkey),
+    Box::new(Ed25519ClientRole::new(authority.pubkey())),
     &fee_payer,
-    &authority,
     "https://api.mainnet-beta.solana.com".to_string(),
+    Some(&authority),
 )?;
 ```
 

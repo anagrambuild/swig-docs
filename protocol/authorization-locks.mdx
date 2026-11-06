@@ -252,7 +252,10 @@ Because every lock is bounded by its creator's `max_duration_slots`, the
 longest a role can be pinned is the duration someone else granted it.
 
 <Note>
-An existing wallet's root role cannot lock until it grants itself
+Locks require a V2 wallet. For a legacy wallet, first use
+`MigrateToWalletAddressV1`, described in the
+[program walkthrough](/protocol/program-walkthrough#instruction-families).
+An existing V2 wallet's root role cannot lock until it grants itself
 `ManageAuthorizationLocks`, for example with `UpdateAuthorityV1` `AddActions`
 on role 0.
 </Note>

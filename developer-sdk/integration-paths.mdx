@@ -1,14 +1,16 @@
 ---
-title: "Choose an SDK Language"
-sidebarTitle: "Choose a Language"
+title: "Set Up Your Client"
+sidebarTitle: "Client setup"
 ---
 
-TypeScript and Python expose the same prepare-first server model. Choose the
+TypeScript, Python, and Rust expose a prepare-first server model. Choose the
 language that owns your trusted application runtime.
 
-## TypeScript
+## Choose your language
 
-```typescript
+<CodeGroup dropdown>
+
+```typescript TypeScript
 import { SwigClient } from '@swig-wallet/developer-sdk';
 
 const swig = new SwigClient({
@@ -17,13 +19,7 @@ const swig = new SwigClient({
 });
 ```
 
-Install from npm with `bun add @swig-wallet/developer-sdk`. Import the API-key
-client from the package root. Application-owned signing helpers are available
-from `@swig-wallet/developer-sdk/signers`.
-
-## Python
-
-```python
+```python Python
 import os
 
 from swig_developer_sdk import SwigClient
@@ -34,20 +30,60 @@ swig = SwigClient(
 )
 ```
 
+```rust Rust
+use std::env;
+use swig_developer_sdk::{ClientConfig, Network, PaymasterClient, WalletClient};
+
+let config = ClientConfig::new(env::var("SWIG_API_KEY")?, Network::Devnet);
+let wallet = WalletClient::new(config.clone())?;
+let paymaster = PaymasterClient::new(config.clone())?;
+```
+
+</CodeGroup>
+
+## Package entry points
+
+Install from npm with `bun add @swig-wallet/developer-sdk`. Import the API-key
+client from the package root. Application-owned signing helpers are available
+from `@swig-wallet/developer-sdk/signers`.
+
 Install from PyPI with `pip install swig-developer-sdk`. Python exposes signing
 helpers from the package root.
 
+## Rust
+
+Install from crates.io with `cargo add swig-developer-sdk@0.1.0`.
+Requires Rust 1.87 or later. In `Cargo.toml`, set `package.rust-version` to
+`"1.87"` and `workspace.resolver` to `"3"` for compatible dependency resolution.
+Commit `Cargo.lock` and add the crates imported by your chosen examples.
+
+Reuse the clients and run task snippets in an async, `Result`-returning
+function with a runtime such as Tokio. Rust uses native Solana `Pubkey`
+addresses and `VersionedTransaction` values.
+
+The network comes from `ClientConfig`. Use `Network::Mainnet` for mainnet
+operations and the same network for your confirmation RPC.
+Authorize operations before signing. See [Signers](/developer-sdk/signers)
+for local signing and [Ramp](/developer-sdk/ramp#required-configuration)
+for Ramp client configuration.
+
 ## Comparison
 
-| Capability | TypeScript | Python |
-| :--- | :--- | :--- |
-| Wallet preparation | yes | yes |
-| Wallet reads and ramp | yes | yes |
-| Custom transactions | yes | yes |
-| Sponsorship | yes | yes |
-| Application-owned signing helpers | `/signers` | package root |
+| Capability | TypeScript | Python | Rust |
+| :--- | :--- | :--- | :--- |
+| Wallet preparation | yes | yes | `WalletClient` |
+| Wallet reads | yes | yes | `WalletClient` |
+| Ramp | yes | yes | `RampClient` |
+| Custom transactions | yes | yes | native `Instruction` inputs |
+| Sponsorship | yes | yes | `PaymasterClient` |
+| Local signing | `/signers` callbacks | package-root callbacks | native keys and signing traits |
 
-Both SDKs expose the full server surface: preparation, custom transactions,
-wallet reads, ramp, paymaster balance, and sponsorship. Your application owns
-its HTTP routes, authentication, authorization, validation, and response
-format.
+The task pages describe supported operations and language-specific limits.
+Rust has no hosted guardian-recovery or rent-claimer methods.
+Your application owns its HTTP routes, authentication, authorization,
+validation, and response format.
+
+## Next steps
+
+Create an [API key](/examples/dev-portal/create-api-key), then
+[prepare your first wallet](/developer-sdk/create-wallets).

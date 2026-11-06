@@ -1,7 +1,6 @@
 ---
-title: "Swig on EVM"
-sidebarTitle: "EVM Overview"
-mode: "wide"
+title: "EVM Protocol SDK"
+sidebarTitle: "Overview"
 description: "Create a wallet, give each key a role, and send direct or sponsored transfers."
 ---
 
@@ -9,39 +8,41 @@ Use the **source-available TypeScript, Rust, and Python SDKs** with your own key
 and RPC connection. You need a compatible Swig deployment from your operator;
 [Environment Setup](/evm/setup) explains how to obtain its details.
 
-## Build a wallet flow
+## Choose your language
 
-<CardGroup cols={2}>
-  <Card title="Set up your environment" icon="terminal" href="/evm/setup">
-    Choose a language and connect to a compatible Swig deployment.
-  </Card>
-  <Card title="Create a wallet" icon="wallet" href="/evm/create-wallet">
-    Deploy a wallet with a root authority and fund its vault.
-  </Card>
-  <Card title="Add a spending role" icon="key" href="/evm/add-role">
-    Give another key a native-currency allowance.
-  </Card>
-  <Card title="Read a role" icon="magnifying-glass" href="/evm/read-role">
-    Inspect the authority and action count before using the role.
-  </Card>
-  <Card title="Send a transfer" icon="arrow-right-arrow-left" href="/evm/send-transfer">
-    Spend from the vault; the role's key pays transaction gas.
-  </Card>
-  <Card title="Send a sponsored transfer" icon="gas-pump" href="/evm/send-sponsored-transfer">
-    Use a compatible bundler and paymaster to sponsor gas.
-  </Card>
-</CardGroup>
+First [check out the pinned SDK source](/evm/setup#set-up-the-examples).
+Run the matching setup command from the repository root:
 
-## Choose your client
+<CodeGroup dropdown>
 
-The scenario pages put each language side by side. Swig supplies contract
-bindings, permission codecs, and a small smart-account adapter.
+```bash TypeScript
+cd evm/typescript
+bun install --frozen-lockfile
+```
 
-| Language and SDK source | Ethereum client | Sponsored-transfer examples |
-| --- | --- | --- |
-| [TypeScript](https://github.com/anagrambuild/swig-protocol-sdk/tree/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript) | Viem | Viem and permissionless.js |
-| [Rust](https://github.com/anagrambuild/swig-protocol-sdk/tree/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/rust) | Alloy | Local test fixture only |
-| [Python](https://github.com/anagrambuild/swig-protocol-sdk/tree/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/python) | Web3.py and eth-account | Local test fixture only |
+```bash Rust
+cd evm
+cargo build --locked -p swig-evm --examples
+```
+
+```bash Python
+cd evm/python
+uv sync --locked
+```
+
+</CodeGroup>
+
+TypeScript uses Viem, Rust uses Alloy, and Python uses Web3.py and eth-account.
+The guides keep the same language labels for each scenario. Swig supplies
+contract bindings, permission codecs, and a small smart-account adapter.
+
+## Get started
+
+1. [Set up your environment](/evm/setup) and connect to a compatible deployment.
+2. [Create a wallet](/evm/create-wallet) with a root authority and fund its vault.
+3. [Add a spending role](/evm/add-role) and [inspect its permissions](/evm/read-role).
+4. [Send a transfer](/evm/send-transfer) with the role's key paying gas.
+5. [Sponsor a transfer](/evm/send-sponsored-transfer) through a compatible bundler and paymaster.
 
 ## Sponsored transfers
 
@@ -50,11 +51,11 @@ v0.9**, with one call per operation. The shared beacon requires a compatible
 bundler policy. See [Send a Sponsored Transfer](/evm/send-sponsored-transfer)
 for provider requirements and the tested SDK versions.
 
-## Operate a fleet
+## Reference and next steps
 
 The shared beacon selects the implementation used by every wallet in the fleet.
 It lets an operator upgrade that fleet without individual
 user upgrade transactions. [Bundler Compatibility](/evm/bundler-compatibility)
 covers account registration and handling operations queued during an upgrade.
 
-Building on Solana? See [Swig on Solana](/solana).
+Building on Solana? Use the [Solana Protocol SDK](/solana).

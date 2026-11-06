@@ -10,6 +10,9 @@ present quotes, the launch URL, and order state to a user.
 `swig.ramp` covers both directions. Direction is carried by the buy or sell
 order you pass, so there is no separate on-ramp or off-ramp client.
 
+Rust uses `RampClient` for the same workflow. Configure it below before using
+the examples.
+
 ## Required configuration
 
 `getOptions` / `get_options`, `getQuotes` / `get_quotes`, and `createOrder` /
@@ -24,6 +27,24 @@ order you pass, so there is no separate on-ramp or off-ramp client.
 `submitTransfer` / `submit_transfer` identify the stored order in the route and
 require neither field.
 
+In Rust, reuse `config` from [Rust setup](/developer-sdk/integration-paths#rust)
+and supply the ramp configuration when constructing the client:
+
+```rust
+use swig_developer_sdk::{RampClient, RampConfig, RampEnvironment};
+
+let ramp = RampClient::new(
+    config,
+    Some(RampConfig {
+        configuration_id,
+        environment: RampEnvironment::Sandbox,
+    }),
+)?;
+```
+
+These fields apply to options, quotes, and order creation. Pass `None` instead
+of `Some(RampConfig { ... })` when working only with existing orders.
+
 The provider environment is not a Solana cluster. A sandbox order still settles
 on mainnet.
 
@@ -35,6 +56,8 @@ decimal strings so a value above 2^53 survives, and an amount finer than the
 currency's minor unit is refused rather than rounded. In TypeScript, use a
 `bigint` or decimal string above the safe-integer range; unsafe `number` values
 are rejected before the request is sent.
+
+Rust amounts use `u64`.
 
 Crypto is a two-case asset: native SOL, or an SPL mint.
 
@@ -78,12 +101,26 @@ options = await swig.ramp.get_options(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{GetRampOptionsArgs, RampDirection};
+
+let options = ramp
+    .get_options(GetRampOptionsArgs {
+        direction: RampDirection::Buy,
+        country_code: Some("US".into()),
+        fiat_currency_code: None,
+    })
+    .await?;
+```
+
 </CodeGroup>
 
 You get `countries` (each with `subdivisions`), `fiatCurrencies` /
 `fiat_currencies`, `paymentMethods` / `payment_methods`, and `assets`.
 
 ## Quote a route
+
+Use the customer's location and an asset returned by the options call.
 
 <CodeGroup dropdown>
 
@@ -112,10 +149,34 @@ quotes = await swig.ramp.get_quotes(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{
+    CryptoAsset, FiatAmount, GetRampQuotesArgs, RampLocation, RampOrderRequest,
+};
+
+let quotes = ramp
+    .get_quotes(GetRampQuotesArgs {
+        location: RampLocation {
+            country_code: "US".into(),
+            subdivision_code: None,
+        },
+        order: RampOrderRequest::Buy {
+            spend: FiatAmount {
+                currency_code: "USD".into(),
+                minor_units: 10_000,
+            },
+            receive: CryptoAsset::Token { mint: usdc_mint },
+        },
+    })
+    .await?;
+```
+
 </CodeGroup>
 
 Each quote carries a `route` and a `details` arm holding the priced amounts, the
 total fee, and the exchange rate.
+
+Handle an empty quote list before asking the customer to choose a route.
 
 <Warning>
   Quotes carry no identifier and must never be cached. Pass the chosen `route`
@@ -128,6 +189,8 @@ total fee, and the exchange rate.
 configuration. Repeating it returns the stored order; repeating it with
 different inputs is refused. Mint it before the first attempt and reuse it
 across retries — the SDK retries this call for you on a transient failure.
+
+Use the customer's chosen route as `selected_route` in Rust.
 
 <CodeGroup dropdown>
 
@@ -168,9 +231,41 @@ order = await swig.ramp.create_order(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{
+    CreateRampOrderArgs, CryptoAsset, FiatAmount, RampLocation, RampOrderContext,
+    RampOrderRequest,
+};
+
+let order = ramp
+    .create_order(CreateRampOrderArgs {
+        request_id,
+        context: RampOrderContext {
+            customer_id,
+            swig_config_address,
+            location: RampLocation {
+                country_code: "US".into(),
+                subdivision_code: None,
+            },
+        },
+        route: selected_route,
+        order: RampOrderRequest::Buy {
+            spend: FiatAmount {
+                currency_code: "USD".into(),
+                minor_units: 10_000,
+            },
+            receive: CryptoAsset::Token { mint: usdc_mint },
+        },
+    })
+    .await?;
+```
+
 </CodeGroup>
 
 A buy sends the customer to `order.launchUrl` / `order.launch_url`.
+
+Keep the same asset, amount, and location used to quote. Rust uses the network
+from `ClientConfig` and exposes the buy order through `RampOrder::Buy(order)`.
 
 <Warning>
   A launch URL is a user-specific session URL. Hand it to the customer who owns
@@ -192,23 +287,22 @@ const current = await swig.ramp.getOrder({ orderId: order.id });
 current = await swig.ramp.get_order(order_id=order.id)
 ```
 
+```rust Rust
+let current = ramp.get_order(&order_id).await?;
+```
+
 </CodeGroup>
 
-Statuses are `unspecified`, `creating`, `creation-uncertain`,
-`awaiting-customer`, `awaiting-transfer`, `processing`, `settling`, `settled`,
-`declined`, `cancelled`, `failed`, and `refunded`. `refunded` can follow
-`settled`, so a settled order is not necessarily the last word.
+A `settled` order can later become `refunded`. See the
+[Ramp API](/developer-api/ramp) for the full order lifecycle.
 
 ## Sell: create, check out, transfer
 
-A sell is its own order. The examples above create a buy, and a transfer
-prepared against one is refused with `only a sell needs a transfer`, so quote
-the sell direction and create a second order for it.
+Quote and create a separate sell order on mainnet, including for sandbox.
+TypeScript and Python use the order context's network ahead of the client
+default. In Rust, configure `RampClient` with `Network::Mainnet`.
 
-Create that order on `mainnet`. A transfer prepared on any other network is
-refused with `ramp transfers settle on mainnet only`, and the order context's
-network wins over the client's default. The provider environment is separate: a
-`sandbox` order still settles on mainnet.
+Use the customer's context, their chosen sell route, and a new saved request ID.
 
 <CodeGroup dropdown>
 
@@ -276,11 +370,48 @@ sell_order = await swig.ramp.create_order(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{
+    CreateRampOrderArgs, CryptoAmount, CryptoAsset, GetRampQuotesArgs,
+    RampOrderRequest,
+};
+
+let sell_quotes = ramp
+    .get_quotes(GetRampQuotesArgs {
+        location: context.location.clone(),
+        order: RampOrderRequest::Sell {
+            sell: CryptoAmount {
+                asset: CryptoAsset::Token { mint: usdc_mint },
+                base_units: 10_000_000,
+            },
+            receive_fiat_currency_code: "USD".into(),
+        },
+    })
+    .await?;
+
+let sell_order = ramp
+    .create_order(CreateRampOrderArgs {
+        request_id,
+        context,
+        route: selected_route,
+        order: RampOrderRequest::Sell {
+            sell: CryptoAmount {
+                asset: CryptoAsset::Token { mint: usdc_mint },
+                base_units: 10_000_000,
+            },
+            receive_fiat_currency_code: "USD".into(),
+        },
+    })
+    .await?;
+```
+
 </CodeGroup>
 
 Send the customer to the sell order's launch URL. The provider assigns the
 deposit while they are in that checkout, so the transfer cannot be prepared
 until they have engaged with it.
+
+In Rust, access the sell order through `RampOrder::Sell(order)`.
 
 <Warning>
   A launch URL is a user-specific session URL. Hand it to the customer who owns
@@ -318,8 +449,26 @@ while isinstance(current, RampSellOrder) and current.deposit is None:
 
 </CodeGroup>
 
-Now prepare, sign, and submit the transfer that moves the crypto out of the
-Swig. Your application owns the signing step; the SDK never holds a key.
+Review the deposit and transaction against the approved order, then collect
+the requester and required outer signatures, including the fee payer's.
+Rust supports Ed25519 and secp256r1 requesters in mainnet legacy transactions
+without participant approvals.
+
+The Rust `sign_transaction` callback follows [Signers](/developer-sdk/signers):
+it takes `&PreparedTransaction` and returns a signed `VersionedTransaction`.
+
+Keep the transfer recoverable:
+
+- Preparation returns transaction bytes once. Order reads cannot recover them
+  if the response is lost.
+- Before submission, durably save the order ID, transfer ID, and exact signed
+  transaction.
+- `Prepared` needs the saved signed transaction (`Some(transaction)` in Rust).
+- `Submitted` can be resolved without bytes (`None` in Rust), using the same
+  order and transfer IDs.
+- `Landed` means confirmed or better. Follow the order's settlement status.
+- Prepare a replacement only after a failed or expired attempt, while the order
+  remains eligible. A lost response alone does not qualify.
 
 <CodeGroup dropdown>
 
@@ -364,16 +513,37 @@ transfer = await swig.ramp.submit_transfer(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{
+    PrepareRampTransferArgs, SubmitRampTransferArgs, WalletAuthority,
+};
+
+let prepared = ramp
+    .prepare_transfer(PrepareRampTransferArgs {
+        order_id: order_id.clone(),
+        requester_authority: WalletAuthority::Ed25519 {
+            public_key: requester_public_key,
+        },
+        fee_payer,
+    })
+    .await?;
+
+let signed_transaction = sign_transaction(&prepared.prepared_transaction).await?;
+
+let transfer = ramp
+    .submit_transfer(SubmitRampTransferArgs {
+        order_id: order_id.clone(),
+        transfer_id: prepared.transfer.transfer_id.clone(),
+        signed_transaction: Some(signed_transaction),
+    })
+    .await?;
+```
+
 </CodeGroup>
 
-The transfer is built from the provider's canonical record rather than the
-quote, so a repriced amount funds the deposit correctly. Transfer states are
-`unspecified`, `prepared`, `submitted`, `landed`, `failed`, and `expired`; a
-transfer settles only at `confirmed` or better.
-
-The prepared transaction is handed over exactly once. If you broadcast it and
-then lose it, submit again without a signed transaction to resolve the attempt
-that is already live.
+The transfer uses the provider's current deposit details, including any
+repricing. After an uncertain submission, read the same order and transfer to
+check its state. Resolve an already submitted attempt with the same IDs:
 
 <CodeGroup dropdown>
 
@@ -391,14 +561,26 @@ await swig.ramp.submit_transfer(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::SubmitRampTransferArgs;
+
+let transfer = ramp
+    .submit_transfer(SubmitRampTransferArgs {
+        order_id,
+        transfer_id,
+        signed_transaction: None,
+    })
+    .await?;
+```
+
 </CodeGroup>
 
-Neither client retries submission. A submission that does not come back
-`landed` raises, and the error says which attempt you still own: keep the order
-and transfer ids, resolve the same attempt again while it is still confirming,
-and prepare a replacement only once one is reported as failed. See
-[Submit a transfer](/developer-api/ramp#submit-a-transfer) for the exact
-responses.
+Preparation and submission are not retried automatically. The API returns
+success after the transfer lands. Rust exposes the result as `RampTransfer`.
+Rust quote requests also send once.
+
+Keep signed transactions out of logs. See
+[Submit a transfer](/developer-api/ramp#submit-a-transfer) for detailed responses.
 
 ## Routes behind the clients
 

@@ -10,18 +10,10 @@ The instruction builder provides low-level functionality for creating various ty
 
 ## Core Components
 
-### AuthorityManager
+### Client roles
 
-```rust
-pub enum AuthorityManager {
-    Ed25519(Pubkey),
-    Secp256k1(Box<[u8]>, Box<dyn Fn(&[u8]) -> [u8; 65]>),
-    Ed25519Session(CreateEd25519SessionAuthority),
-    Secp256k1Session(CreateSecp256k1SessionAuthority, Box<dyn Fn(&[u8]) -> [u8; 65]>),
-}
-```
-
-The `AuthorityManager` enum represents different types of signing authorities supported by the Swig protocol.
+Pass a `Box<dyn ClientRole>` to select the authority implementation, such as
+`Ed25519ClientRole` for an Ed25519 public key.
 
 ### SwigInstructionBuilder
 
@@ -29,9 +21,10 @@ The `AuthorityManager` enum represents different types of signing authorities su
 pub struct SwigInstructionBuilder {
     swig_id: [u8; 32],
     swig_account: Pubkey,
-    authority_manager: AuthorityManager,
+    client_role: Box<dyn ClientRole>,
     payer: Pubkey,
     role_id: u32,
+    reserved_create: Option<Instruction>,
 }
 ```
 
@@ -42,7 +35,7 @@ pub struct SwigInstructionBuilder {
 ```rust
 pub fn new(
     swig_id: [u8; 32],
-    authority_manager: AuthorityManager,
+    client_role: Box<dyn ClientRole>,
     payer: Pubkey,
     role_id: u32,
 ) -> Self
@@ -194,7 +187,11 @@ Returns the current role ID of the Swig account.
 ### Switching Authority
 
 ```rust
-pub fn switch_authority(&mut self, role_id: u32, authority: Pubkey) -> Result<(), SwigError>
+pub fn switch_authority(
+    &mut self,
+    role_id: u32,
+    client_role: Box<dyn ClientRole>,
+) -> Result<(), SwigError>
 ```
 
 Switches the current authority and role ID.
@@ -204,9 +201,11 @@ Switches the current authority and role ID.
 ### Creating a New Swig Account
 
 ```rust
-let instruction_builder = SwigInstructionBuilder::new(
+use swig_sdk::client_role::Ed25519ClientRole;
+
+let mut instruction_builder = SwigInstructionBuilder::new(
     swig_id,
-    AuthorityManager::Ed25519(authority_pubkey),
+    Box::new(Ed25519ClientRole::new(authority_pubkey)),
     payer_pubkey,
     0
 );
