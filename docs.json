@@ -89,7 +89,7 @@
           {
             "group": "Workspace",
             "pages": [
-              "examples/dev-portal/index",
+              "examples/dev-portal/overview",
               "examples/dev-portal/projects",
               "examples/dev-portal/create-project",
               "examples/dev-portal/manage-members",
@@ -157,7 +157,7 @@
               {
                 "group": "Transfers and payments",
                 "pages": [
-                  "examples/index",
+                  "examples/overview",
                   "examples/transfer",
                   "examples/swap",
                   "examples/credit_card",
@@ -357,6 +357,22 @@
     {
       "source": "/developer-sdk",
       "destination": "/"
+    },
+    {
+      "source": "/examples",
+      "destination": "/examples/overview"
+    },
+    {
+      "source": "/examples/index",
+      "destination": "/examples/overview"
+    },
+    {
+      "source": "/examples/dev-portal",
+      "destination": "/examples/dev-portal/overview"
+    },
+    {
+      "source": "/examples/dev-portal/index",
+      "destination": "/examples/dev-portal/overview"
     }
   ],
   "logo": {
