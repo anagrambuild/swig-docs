@@ -4,7 +4,7 @@ document.addEventListener("click", (event) => {
   if (!(event.target instanceof Element)) return;
 
   const link = event.target.closest(
-    ':is(#sidebar-content, #mobile-nav-content) a:is([href="/solana"], [href="/evm"], [href="/idp-sdk"])',
+    ':is(#sidebar-content, #mobile-nav) a:is([href="/solana"], [href="/evm"], [href="/idp-sdk"])',
   );
   if (link instanceof HTMLAnchorElement) link.removeAttribute("target");
 }, true);
