@@ -48,10 +48,10 @@
                   "examples/dev-portal/create-policy",
                   "examples/dev-portal/fetch-policy",
                   "developer-sdk/permissions",
-                  "developer-sdk/authorization-locks",
                   "developer-sdk/use-cases/guardian-recovery"
                 ]
               },
+              "developer-sdk/authorization-locks",
               "developer-sdk/custom-execution"
             ]
           },
