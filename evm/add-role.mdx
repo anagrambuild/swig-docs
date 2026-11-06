@@ -1,53 +1,82 @@
 ---
-title: "Add a Spending Role"
-description: "Give another key a fixed native-currency allowance."
+title: "Add a role"
+description: "Grant a delegate a native-currency spending allowance."
 ---
 
-A role connects an authority to permissions on your wallet. This example gives
-a delegate a fixed native-currency allowance. The delegate gains spending
-permission without role-management permission.
+## Introduction
 
-Use the wallet from [Create a Wallet](/evm/create-wallet). Keep its root key in
-`SIGNER_PRIVATE_KEY`, and set `ACCOUNT_ADDRESS` to the returned config address.
-The manager role's key signs and pays gas. Root role `0` is the default; to use
-another authorized manager role, select both its key and `MANAGER_ROLE_ID`.
+Adding a role pairs a new authority with the permissions it may use on an existing wallet.
 
-## Define the allowance
+- **Use when:** another signer needs limited access to wallet assets.
+- **For:** apps delegating spending to a user, service, or automation.
 
-| Variable | Value |
-| --- | --- |
-| `DELEGATE_ADDRESS` | The new authority's EOA address |
-| `LIMIT_WEI` | Total native-currency allowance, as a uint64 base-unit amount |
-| `MANAGER_ROLE_ID` | Role authorizing the change; defaults to `0`. `SIGNER_PRIVATE_KEY` must belong to this role. |
+## How it works
 
-For example, `LIMIT_WEI=100` permits a total spend of 100 wei. The maximum value
-is `18446744073709551615` (uint64). This is a spending cap, not a deposit: fund
-the wallet's vault separately.
+1. Connect the signer for a role with authority-management permission.
+2. Encode the new authority and a permission set for its task.
+3. Submit `addRole` and wait for a successful receipt.
+4. Read the assigned role ID from `RoleAdded` and retain it for later operations.
 
-## Add the role
+## Role fields
 
-<CodeGroup>
-```bash TypeScript
-bun run examples/add-role.ts
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `managerRoleId` | Integer | Existing role approving the addition |
+| `delegate` | Address | EOA that will authorize the new role |
+| `amount` | Integer, wei | Total native-currency allowance |
+| `roleId` | Integer | New ID returned by the confirmed event |
+
+A fixed allowance decreases with successful spending; it is not a per-transaction limit or a deposit. Amounts fit `uint64`. Fund the wallet's vault separately.
+
+## SDK example
+
+This creates a native-currency spending role without role-management permission. The connected manager pays gas. Supply `100n` for a total allowance of 100 wei.
+
+```typescript
+import {
+  type Address,
+  type LocalAccount,
+  createPublicClient,
+  createWalletClient,
+  getAddress,
+  http,
+  parseEventLogs,
+} from "viem";
+import {
+  encodeAuthority,
+  encodePermission,
+  getSwigConfig,
+  swigConfigAbi,
+} from "../src/index.js";
+
+export async function addSpendingRole(
+  rpcUrl: string,
+  manager: LocalAccount,
+  accountAddress: Address,
+  managerRoleId: number,
+  delegate: Address,
+  amount: bigint,
+) {
+  const client = createPublicClient({ transport: http(rpcUrl) });
+  const wallet = createWalletClient({ account: manager, transport: http(rpcUrl) });
+  const config = getSwigConfig(accountAddress, { public: client, wallet });
+  const authority = encodeAuthority({ type: "secp256k1", address: delegate });
+  const hash = await config.write.addRole([
+    managerRoleId, authority.authorityType, authority.key, authority.keyExtra,
+    [encodePermission({ type: "nativeLimit", amount })],
+  ], { chain: null });
+  const receipt = await client.waitForTransactionReceipt({ hash });
+  if (receipt.status !== "success") throw new Error("Role creation failed");
+  const [event] = parseEventLogs({
+    abi: swigConfigAbi,
+    eventName: "RoleAdded",
+    logs: receipt.logs.filter((log) => getAddress(log.address) === getAddress(accountAddress)),
+  });
+  if (!event) throw new Error("RoleAdded event missing");
+  return { roleId: event.args.roleId, transactionHash: hash };
+}
 ```
 
-```bash Rust
-cargo run --locked -p swig-evm --example add_role
-```
+Use the confirmed ID, not a predicted counter. [Read the role](/evm/read-role) to verify its authority and permissions before using the delegate.
 
-```bash Python
-uv run --locked python examples/add_role.py
-```
-</CodeGroup>
-
-The example waits for a successful transaction and reads `roleId` from its
-`RoleAdded` event. Use this returned ID as `ROLE_ID`. Read the mined event rather
-than predicting the ID: another role may have been created while your transaction
-was pending.
-
-The output also includes `transactionHash`. Next, [read the role](/evm/read-role)
-to inspect the authority before using the delegate key.
-
-Full examples: [TypeScript](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript/examples/add-role.ts),
-[Rust](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/rust/examples/add_role.rs),
-[Python](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/python/examples/add_role.py).
+Complete examples: [TypeScript](https://github.com/anagrambuild/swig-protocol-sdk/blob/718f343/evm/typescript/examples/add-role.ts), [Rust](https://github.com/anagrambuild/swig-protocol-sdk/blob/718f343/evm/rust/examples/add_role.rs), [Python](https://github.com/anagrambuild/swig-protocol-sdk/blob/718f343/evm/python/examples/add_role.py).

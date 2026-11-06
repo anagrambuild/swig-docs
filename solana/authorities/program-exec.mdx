@@ -1,0 +1,67 @@
+---
+title: "ProgramExec"
+description: "Use an existing Solana program's approval to authorize a wallet operation."
+---
+
+## Introduction
+
+A ProgramExec authority accepts approval from a Solana program for a wallet operation.
+
+- **Use when:** an existing policy or approval integration decides whether an operation may proceed.
+- **For:** apps consuming an integration that supplies ProgramExec approval instructions.
+
+## How it works
+
+1. Obtain the integration's program ID and authorization instruction prefix.
+2. Create a role pairing that authority with the required wallet permissions.
+3. Ask the integration for an approval bound to the exact wallet operation.
+4. Pass the approval to the Swig builder, then submit the complete returned instruction list.
+
+## Approval contract
+
+- The authorization prefix fits within 40 bytes; use the integration's exact value.
+- For wallet execution, the approval instruction's first two accounts are the Swig config and wallet, in that order.
+- The builder accepts one approval instruction in `preInstructions` and includes it in its output.
+- Other management operations can have different approval account requirements; follow the integration's client.
+
+## SDK example
+
+### Register the integration
+
+```typescript
+import { type PublicKey } from "@solana/web3.js";
+import { createProgramExecAuthorityInfo } from "@swig-wallet/classic";
+
+function programAuthority(programId: PublicKey, authorizationPrefix: Uint8Array) {
+  if (authorizationPrefix.length === 0 || authorizationPrefix.length > 40) {
+    throw new Error("Use the integration's authorization prefix (1–40 bytes)");
+  }
+  return createProgramExecAuthorityInfo(programId.toBytes(), authorizationPrefix);
+}
+```
+
+Pass this authority to [Add a role](/solana/add-role) with the permissions the integration needs.
+
+### Authorize an operation
+
+Supply a freshly fetched `swig`, its ProgramExec role ID, and the integration's approval for `walletInstructions`.
+
+```typescript
+import { type PublicKey, type TransactionInstruction } from "@solana/web3.js";
+import { getSignInstructions, type Swig } from "@swig-wallet/classic";
+
+async function prepareApprovedOperation(
+  swig: Swig,
+  roleId: number,
+  payer: PublicKey,
+  approvalInstruction: TransactionInstruction,
+  walletInstructions: TransactionInstruction[],
+) {
+  return getSignInstructions(swig, roleId, walletInstructions, false, {
+    payer,
+    preInstructions: [approvalInstruction],
+  });
+}
+```
+
+[Send](/solana/transactions/sending) the returned list once, in order, with the payer and any signers required by the integration. The role's permissions still apply. Use [Sessions](/solana/authorities/sessions) if the integration should approve a temporary application key.

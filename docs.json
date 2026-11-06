@@ -122,130 +122,59 @@
         ]
       },
       {
-        "product": "Solana Protocol SDK",
+        "product": "Solana Protocol",
         "icon": "layer-group",
         "description": "Build Solana wallet transactions directly in TypeScript or Rust.",
-        "groups": [
+        "pages": [
+          "solana/index",
           {
-            "group": "Getting started",
+            "group": "Setup",
             "pages": [
-              "solana/index",
-              "tutorials/typescript/index"
+              "solana/create-wallet",
+              "solana/reservation-addresses"
             ]
           },
           {
-            "group": "Guides",
+            "group": "Authorities",
             "pages": [
-              {
-                "group": "First wallet",
-                "pages": [
-                  "tutorials/typescript/env",
-                  "tutorials/typescript/create",
-                  "solana/reservation-addresses",
-                  "tutorials/typescript/managing_authorities",
-                  "tutorials/typescript/sign"
-                ]
-              },
-              {
-                "group": "Transfers and payments",
-                "pages": [
-                  "examples/overview",
-                  "examples/transfer",
-                  "examples/swap",
-                  "examples/credit_card",
-                  "examples/subscription"
-                ]
-              },
-              {
-                "group": "Signers and integrations",
-                "pages": [
-                  "examples/ethereum_keys",
-                  "examples/passkeys",
-                  "examples/secp256r1_authority",
-                  "tutorials/embeded_wallet_para/index"
-                ]
-              },
-              {
-                "group": "Sessions and advanced flows",
-                "pages": [
-                  "examples/sessions",
-                  "examples/sub_accounts",
-                  "examples/authorization_locks",
-                  "examples/v2_features",
-                  "examples/multi_authority",
-                  "examples/migrating-from-squads"
-                ]
-              },
-              {
-                "group": "Fee sponsorship",
-                "pages": [
-                  "examples/paymaster/index",
-                  "examples/paymaster/sponsor-transactions",
-                  "examples/paymaster/advanced-usage"
-                ]
-              },
-              {
-                "group": "AI and MCP",
-                "pages": [
-                  "tutorials/mcp/index",
-                  "reference/mcp-server",
-                  "mcp-support"
-                ]
-              }
+              "solana/authorities/ed25519",
+              "solana/authorities/secp256r1",
+              "solana/authorities/secp256k1",
+              "solana/authorities/program-exec",
+              "solana/authorities/sessions"
             ]
           },
           {
-            "group": "Protocol concepts",
+            "group": "Permissions",
             "pages": [
-              {
-                "group": "Accounts and execution",
-                "pages": [
-                  "protocol/index",
-                  "protocol/account-model",
-                  "protocol/concepts-and-permissions",
-                  "protocol/program-walkthrough",
-                  "protocol/signing-and-execution",
-                  "protocol/sessions-and-subaccounts",
-                  "protocol/authorization-locks",
-                  "protocol/recovery-model",
-                  "protocol/security-and-audits"
-                ]
-              }
+              "solana/permissions/spending-limits",
+              "solana/permissions/program-access",
+              "solana/permissions/administrative"
+            ],
+            "root": "solana/permissions"
+          },
+          {
+            "group": "Transactions",
+            "pages": [
+              "solana/transactions/signing",
+              "solana/transactions/sending",
+              "solana/add-role",
+              "solana/remove-role"
             ]
           },
           {
-            "group": "Reference",
+            "group": "Use cases",
             "pages": [
-              {
-                "group": "TypeScript packages",
-                "pages": [
-                  "reference/typescript/index",
-                  "reference/typescript/kit",
-                  "reference/typescript/actions"
-                ]
-              },
-              {
-                "group": "Rust packages",
-                "pages": [
-                  "reference/rust/index",
-                  "reference/rust/instruction_builder",
-                  "reference/rust/rust_wallet"
-                ]
-              },
-              {
-                "group": "Errors and migrations",
-                "pages": [
-                  "reference/error-types/index",
-                  "tutorials/typescript/migration-v1",
-                  "v1-release-notes"
-                ]
-              }
+              "solana/use-cases/transfers",
+              "solana/use-cases/swaps",
+              "solana/use-cases/authorization-locks",
+              "solana/use-cases/recovery"
             ]
           }
         ]
       },
       {
-        "product": "EVM Protocol SDK",
+        "product": "EVM Protocol",
         "icon": "cube",
         "description": "Build EVM wallet transactions directly in TypeScript, Rust, or Python.",
         "groups": [
@@ -275,7 +204,7 @@
         ]
       },
       {
-        "product": "IdP SDK",
+        "product": "Identity",
         "icon": "fingerprint",
         "description": "Add user sign-in and persist a Swig session in web and mobile apps.",
         "groups": [
@@ -365,6 +294,26 @@
     {
       "source": "/examples/dev-portal/index",
       "destination": "/examples/dev-portal/overview"
+    },
+    {
+      "source": "/tutorials/typescript",
+      "destination": "/solana"
+    },
+    {
+      "source": "/tutorials/typescript/index",
+      "destination": "/solana"
+    },
+    {
+      "source": "/tutorials/typescript/create",
+      "destination": "/solana/create-wallet"
+    },
+    {
+      "source": "/tutorials/typescript/managing_authorities",
+      "destination": "/solana/add-role"
+    },
+    {
+      "source": "/tutorials/typescript/sign",
+      "destination": "/solana/transactions/signing"
     },
     {
       "source": "/query/paymasters",

@@ -1,0 +1,56 @@
+---
+title: "Swaps"
+description: "Execute swap instructions with the Swig wallet as the asset owner."
+---
+
+## Introduction
+
+A swap authorizes DEX instructions with the Swig wallet as the owner of the traded assets.
+
+- **Use when:** your app has a quote from a DEX or aggregator and wants to execute it from a wallet.
+- **For:** trading interfaces and automated strategies integrating a provider's SDK.
+
+## How it works
+
+1. Read the wallet address and request a quote for the input mint, output mint, amount, and slippage.
+2. Ask the provider for instructions using that wallet as asset owner and a separate payer where supported.
+3. Check the route, token accounts, maximum input, minimum output, and required signers.
+4. Authorize wallet-owned execution through a role covering the route's programs and asset budgets.
+5. Compile, sign, and confirm the transaction with the route's lookup tables.
+
+## Instruction placement
+
+| Instructions | Placement |
+| --- | --- |
+| Wallet-owned swap execution | Inside `getSignInstructions` |
+| Provider compute budget | Outer transaction, in the provider-required position |
+| Payer-owned setup | Outer transaction, with its required signer |
+| Swig verification and execution | Preserve the SDK's returned ordering |
+
+Plan the complete ordering before requesting Secp256r1 or Secp256k1 authorization. If a route cannot preserve the required verification indexes, choose a compatible route or an Ed25519/session flow.
+
+## SDK example
+
+The provider's typed client supplies `walletSwapInstructions`. This helper authorizes that prepared route; it does not request a quote. Pass a freshly fetched wallet and the payer that will submit it.
+
+```typescript
+import { type PublicKey, type TransactionInstruction } from "@solana/web3.js";
+import { getSignInstructions, type Swig, type SwigInstructionOptions } from "@swig-wallet/classic";
+
+async function authorizeSwap(
+  swig: Swig,
+  roleId: number,
+  walletSwapInstructions: TransactionInstruction[],
+  payer: PublicKey,
+  options: SwigInstructionOptions = {},
+) {
+  return getSignInstructions(swig, roleId, walletSwapInstructions, false, {
+    ...options,
+    payer,
+  });
+}
+```
+
+- Grant access to each required program and sufficient input-asset allowance. Include SOL allowance when the wallet funds account creation or wrapped SOL.
+- [Send the result](/solana/transactions/sending) with the route's lookup tables and any separate setup instructions.
+- Refresh an expired quote before approval. If submission is uncertain, check the previous signature before authorizing another swap.

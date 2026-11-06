@@ -1,0 +1,57 @@
+---
+title: "Secp256r1"
+description: "Use a passkey or P-256 signer to authorize a Solana wallet."
+---
+
+## Introduction
+
+A Secp256r1 authority lets a passkey or P-256 signer approve operations for a Solana wallet.
+
+- **Use when:** you want wallet authorization through a passkey or another P-256 signing service.
+- **For:** apps connecting an existing passkey registration and authentication flow to Swig.
+
+## How it works
+
+1. Obtain the compressed public key from your passkey registration flow.
+2. Register it as a wallet authority and retain the credential ID.
+3. Use the WebAuthn callback to approve the SDK's operation challenge.
+4. Submit the returned verification and execution instructions with a Solana fee payer.
+
+## Inputs
+
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `compressedPublicKey` | 33 bytes | P-256 public key from registration |
+| `credentialId` | Bytes | Credential to request during authentication |
+| `rpId` | String | Relying-party ID for your passkey flow |
+
+The credential ID and registration response are not substitutes for the public key.
+
+## SDK example
+
+```typescript
+import {
+  createSecp256r1AuthorityInfo,
+  getSecp256r1WebAuthnSigningFn,
+} from "@swig-wallet/classic";
+
+function passkeyAuthority(
+  compressedPublicKey: Uint8Array,
+  credentialId: ArrayBuffer,
+  rpId: string,
+) {
+  const authorityInfo = createSecp256r1AuthorityInfo(compressedPublicKey);
+  const signingFn = getSecp256r1WebAuthnSigningFn({
+    rpId,
+    allowCredentials: [{ id: credentialId, type: "public-key" }],
+    userVerification: "required",
+  });
+  return { authorityInfo, signingFn };
+}
+```
+
+- Pass `authorityInfo` to [Create a wallet](/solana/create-wallet) or [Add a role](/solana/add-role).
+- Pass `signingFn`, the payer, and the current slot to [Signing](/solana/transactions/signing#secp256r1-and-secp256k1-signers).
+- Request the passkey assertion from a user action and handle cancellation before sending.
+- Keep every returned instruction in order, including signature verification.
+- For repeated app operations after one approval, use a limited [session](/solana/authorities/sessions).

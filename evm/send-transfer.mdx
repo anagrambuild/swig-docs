@@ -1,55 +1,71 @@
 ---
-title: "Send a Transfer"
-description: "Spend from the wallet vault using a delegate's allowance."
+title: "Send a transfer"
+description: "Send native currency from the vault with the role signer paying gas."
 ---
 
-Use the role from [Add a Spending Role](/evm/add-role) to send native currency.
-The vault supplies the transfer amount, and the delegate's EOA pays transaction
-gas. This direct SignV2 path needs no bundler or paymaster.
-The amount comes from the vault, not the transaction's value field.
+## Introduction
 
-## Select the delegate
+A direct transfer spends from the wallet vault while the authorized EOA submits the transaction and pays gas.
 
-Replace `SIGNER_PRIVATE_KEY` with the delegate's key. Keep `RPC_URL`, the wallet's
-config `ACCOUNT_ADDRESS`, and the delegate's `ROLE_ID` selected.
+- **Use when:** you want a simple native-currency payment without a bundler or paymaster.
+- **For:** apps using a Secp256k1 role with a native spending allowance.
 
-Before sending:
+## How it works
 
-- Set `RECIPIENT` to an EOA with no deployed code. The example sends no calldata.
-- Set `VALUE_WEI` to a positive amount within the remaining role allowance.
-- Ensure `vaultAddress` holds at least `VALUE_WEI`.
-- Fund the delegate EOA separately so it can pay gas.
+1. Connect the EOA authorized by the selected role.
+2. Choose an EOA recipient with no deployed code and an amount within the remaining allowance.
+3. Call `signV2` on the config with no calldata and direct-caller authorization.
+4. Wait for a successful receipt before treating the payment as complete.
 
-For the 100-wei allowance from the previous guide, `VALUE_WEI=7` leaves 93 wei
-after a successful transfer.
+## Transfer fields
 
-## Send the transfer
+| Field | Type | Meaning |
+| --- | --- | --- |
+| `accountAddress` | Address | Wallet config receiving the execution request |
+| `roleId` | Integer | Role that authorizes the spend |
+| `recipient` | Address | Receiving EOA |
+| `amount` | Integer, wei | Native currency taken from the vault |
+| `transactionHash` | Hash | Submitted transaction |
 
-<CodeGroup>
-```bash TypeScript
-bun run examples/send-transfer.ts
+The vault needs the transfer amount. The signer needs gas separately. A 7-wei payment from a 100-wei fixed allowance leaves 93 wei.
+
+## SDK example
+
+Use the delegate from [Add a role](/evm/add-role). The two `"0x"` arguments mean empty call data and direct EOA authorization; the connected sender must be the role's authority.
+
+```typescript
+import {
+  type Address,
+  type LocalAccount,
+  createPublicClient,
+  createWalletClient,
+  http,
+} from "viem";
+import { getSwigConfig } from "../src/index.js";
+
+export async function sendTransfer(
+  rpcUrl: string,
+  signer: LocalAccount,
+  accountAddress: Address,
+  roleId: number,
+  recipient: Address,
+  amount: bigint,
+) {
+  const client = createPublicClient({ transport: http(rpcUrl) });
+  const wallet = createWalletClient({ account: signer, transport: http(rpcUrl) });
+  const config = getSwigConfig(accountAddress, { public: client, wallet });
+  const hash = await config.write.signV2(
+    [roleId, recipient, amount, "0x", "0x"],
+    { chain: null },
+  );
+  const receipt = await client.waitForTransactionReceipt({ hash });
+  if (receipt.status !== "success") throw new Error("Transfer failed");
+  return { transactionHash: hash };
+}
 ```
 
-```bash Rust
-cargo run --locked -p swig-evm --example send_transfer
-```
+- The outer transaction sends no value; the amount comes from the vault.
+- If an included transaction reverts, asset movement and allowance changes revert, while gas is still charged.
+- Use [Sponsored transfers](/evm/send-sponsored-transfer) when a paymaster should pay gas.
 
-```bash Python
-uv run --locked python examples/send_transfer.py
-```
-</CodeGroup>
-
-The example calls SignV2 with the selected role and empty authorization bytes.
-That selects the direct EOA-authority path: the transaction sender must be the
-role's authorized key.
-
-Each example waits for a successful receipt and prints `transactionHash`.
-If an included transaction reverts, its asset movement and allowance changes
-revert too, but the delegate still pays gas.
-
-For a paymaster-funded gas flow, continue to
-[Send a Sponsored Transfer](/evm/send-sponsored-transfer).
-
-Full examples: [TypeScript](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/typescript/examples/send-transfer.ts),
-[Rust](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/rust/examples/send_transfer.rs),
-[Python](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/python/examples/send_transfer.py).
+Complete examples: [TypeScript](https://github.com/anagrambuild/swig-protocol-sdk/blob/718f343/evm/typescript/examples/send-transfer.ts), [Rust](https://github.com/anagrambuild/swig-protocol-sdk/blob/718f343/evm/rust/examples/send_transfer.rs), [Python](https://github.com/anagrambuild/swig-protocol-sdk/blob/718f343/evm/python/examples/send_transfer.py).

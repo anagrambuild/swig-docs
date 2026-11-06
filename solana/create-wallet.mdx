@@ -1,0 +1,73 @@
+---
+title: "Create a wallet"
+description: "Create a Solana wallet with an initial authority and fetch its deposit address."
+---
+
+## Introduction
+
+Creating a wallet establishes its first authority and the permissions that authority can use.
+
+- **Use when:** your application needs an active wallet that can receive assets and execute transactions.
+- **For:** app developers onboarding a user or provisioning an application wallet.
+
+## How it works
+
+1. Choose the owner and a funded Solana fee payer.
+2. Generate a wallet ID and build the creation instruction.
+3. Submit the transaction and wait for confirmation.
+4. Fetch the wallet to obtain its asset address and current roles.
+
+## Addresses
+
+| Address | Use |
+| --- | --- |
+| `configAddress` | Read roles with `fetchSwig` and prepare operations |
+| `walletAddress` | Receive SOL and own token accounts |
+
+## SDK example
+
+This example uses one Ed25519 keypair as owner and payer. The owner receives `All` permission; the payer funds account creation and fees. Supply your RPC `Connection` and application-owned signer after [installing the SDK](/solana#sdk-example).
+
+```typescript
+import {
+  type Connection,
+  type Keypair,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  fetchSwig,
+  findSwigPda,
+  getCreateSwigInstruction,
+  getSwigWalletAddress,
+} from "@swig-wallet/classic";
+
+async function createWallet(connection: Connection, owner: Keypair) {
+  const id = crypto.getRandomValues(new Uint8Array(32));
+  const configAddress = findSwigPda(id);
+  const instruction = await getCreateSwigInstruction({
+    payer: owner.publicKey,
+    id,
+    authorityInfo: createEd25519AuthorityInfo(owner.publicKey),
+    actions: Actions.set().all().get(),
+  });
+  const signature = await sendAndConfirmTransaction(
+    connection,
+    new Transaction().add(instruction),
+    [owner],
+    { commitment: "confirmed" },
+  );
+  const swig = await fetchSwig(connection, configAddress, {
+    commitment: "confirmed",
+  });
+  const walletAddress = await getSwigWalletAddress(swig);
+  return { configAddress, walletAddress, signature };
+}
+```
+
+- Store both returned addresses; use the wallet address for deposits.
+- Use another [authority constructor](/solana#authorities) for passkey, Ethereum, or program approval.
+- For a browser signer, use its wallet adapter as described in [Sending transactions](/solana/transactions/sending).
+- Give application signers narrower access with [Add a role](/solana/add-role).

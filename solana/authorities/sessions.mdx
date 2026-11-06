@@ -1,0 +1,82 @@
+---
+title: "Sessions"
+description: "Let an application key sign temporarily with a role's existing permissions."
+---
+
+## Introduction
+
+A session gives a temporary Ed25519 key access to a role after its original authority approves it.
+
+- **Use when:** an app needs repeated operations without prompting the original signer each time.
+- **For:** interactive apps and services with time-limited delegated access.
+
+## How it works
+
+1. Add a session-capable authority with a maximum duration and scoped permissions.
+2. Have the original authority approve a temporary key and a duration within that maximum.
+3. Use the temporary key to sign operations through the same role.
+4. Let the session expire, replace it through the original authority, or remove its role to revoke access.
+
+## Session authorities
+
+| Original authority | Constructor |
+| --- | --- |
+| Ed25519 | `createEd25519SessionAuthorityInfo(publicKey, maxDurationSlots)` |
+| Secp256r1 | `createSecp256r1SessionAuthorityInfo(publicKey, maxDurationSlots)` |
+| Secp256k1 | `createSecp256k1SessionAuthorityInfo(publicKey, maxDurationSlots)` |
+| ProgramExec | `createProgramExecSessionAuthorityInfo(programIdBytes, prefix, maxDurationSlots)` |
+
+- Durations and expiry use **slots**. Choose a positive duration within the configured maximum.
+- A session shares the role's permissions and remaining budget. Opening a new session does not reset spending limits.
+- Adding a session-capable role alone does not activate a session.
+
+## SDK example
+
+### Open a session
+
+Use `createEd25519SessionAuthorityInfo(ownerPublicKey, 1_000n)` with [Add a role](/solana/add-role) first. This example opens a 500-slot session on that role; the owner approves it and pays the fee.
+
+```typescript
+import {
+  type Connection,
+  type Keypair,
+  type PublicKey,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
+import { fetchSwig, getCreateSessionInstructions } from "@swig-wallet/classic";
+
+async function openSession(
+  connection: Connection,
+  configAddress: PublicKey,
+  owner: Keypair,
+  roleId: number,
+  sessionKey: Keypair,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  const instructions = await getCreateSessionInstructions(
+    swig,
+    roleId,
+    sessionKey.publicKey,
+    500n,
+    { payer: owner.publicKey },
+  );
+  return sendAndConfirmTransaction(
+    connection,
+    new Transaction().add(...instructions),
+    [owner],
+    { commitment: "confirmed" },
+  );
+}
+```
+
+A Secp256r1 or Secp256k1 owner supplies a callback and current slot in the options. A ProgramExec owner supplies its integration's approval instruction.
+
+### Use the session
+
+1. Refetch the wallet after confirmation.
+2. Locate the role with `findRoleBySessionKey(sessionKey.publicKey)`.
+3. Pass that role ID to [Signing](/solana/transactions/signing#ed25519-signer).
+4. Sign with `sessionKey` and the payer, then [send the transaction](/solana/transactions/sending).
+
+Check `role.isSessionBased()` before reading `role.authority.expirySlot`. Replacing the session key invalidates the previous session. Deleting a key locally does not revoke it on-chain; [role removal](/solana/remove-role) revokes the role subject to its removal restrictions.

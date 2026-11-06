@@ -1,0 +1,116 @@
+---
+title: "Authorization locks"
+description: "Reserve funds for a payment, capture them by spending, or release the hold."
+---
+
+## Introduction
+
+An authorization lock reserves part of a wallet's balance for a payment role until it spends, releases, or lets the hold expire.
+
+- **Use when:** a payment needs authorization now and capture later.
+- **For:** checkout, deposit, and delayed-capture integrations on a deployment supporting authorization locks.
+
+## How it works
+
+1. Grant the payment role spending access and an explicit maximum lock duration.
+2. Place a hold within the role's available allowance and the wallet's free balance.
+3. Capture by spending through that same role; successful spending reduces the hold.
+4. Release the remainder or allow it to expire.
+
+## Flow
+
+```text
+Payment role
+   ↓
+Hold funds
+├─ Capture → pay
+├─ Release → free funds
+└─ Expire → free funds
+```
+
+## SDK example
+
+### Grant the payment role
+
+Use these actions with [Add a role](/solana/add-role). They permit a total 2 SOL spend and holds of at most 1,000 slots.
+
+```typescript
+import { SystemProgram } from "@solana/web3.js";
+import { Actions } from "@swig-wallet/classic";
+
+const actions = Actions.set()
+  .manageAuthorizationLocks({ maxDurationSlots: 1_000n })
+  .programLimit({ programId: SystemProgram.programId })
+  .solLimit({ amount: 2_000_000_000n })
+  .get();
+```
+
+- Even `All` requires explicit `ManageAuthorizationLocks` to place holds.
+- Existing holds reduce the amount available for another hold.
+- Other roles, including the owner, can spend only unreserved funds.
+
+### Hold 1.5 SOL
+
+This prepares a hold lasting 400 slots for an Ed25519 payment role. [Send and confirm](/solana/transactions/sending) it with that signer and the payer.
+
+```typescript
+import { type Connection, type PublicKey } from "@solana/web3.js";
+import { fetchSwig, getAddSolAuthorizationLockInstructions } from "@swig-wallet/classic";
+
+async function prepareHold(
+  connection: Connection,
+  configAddress: PublicKey,
+  paymentRoleId: number,
+  payer: PublicKey,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  const currentSlot = BigInt(await connection.getSlot());
+  return getAddSolAuthorizationLockInstructions(
+    swig,
+    paymentRoleId,
+    { amount: 1_500_000_000n, expirySlot: currentSlot + 400n },
+    { payer },
+  );
+}
+```
+
+Read the resulting lock IDs with `fetchSwigAuthorizationLocks(connection, configAddress)`. Use `fetchActiveSwigAuthorizationLocks(connection, configAddress, currentSlot)` to display active holds.
+
+### Capture 1 SOL
+
+Use the same role with the [SOL transfer example](/solana/transactions/signing#ed25519-signer), changing its amount to `1_000_000_000n`.
+
+- Successful execution reduces this 1.5 SOL hold to 0.5 SOL.
+- Spending consumes the role's allowance; placing a hold alone does not.
+- Use a destination-limited spending permission when payment must go to a particular recipient.
+- The role may spend additional free balance within its remaining permissions.
+
+### Release the remainder
+
+Pass the lock ID read from confirmed state and the role that placed it:
+
+```typescript
+import { type Connection, type PublicKey } from "@solana/web3.js";
+import { fetchSwig, getRemoveAuthorizationLockInstructions } from "@swig-wallet/classic";
+
+async function prepareRelease(
+  connection: Connection,
+  configAddress: PublicKey,
+  paymentRoleId: number,
+  payer: PublicKey,
+  lockId: number,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  return getRemoveAuthorizationLockInstructions(
+    swig,
+    paymentRoleId,
+    { lockId },
+    { payer },
+  );
+}
+```
+
+- Expiry also frees the balance. Expired or fully captured records can remain until pruned.
+- Administrators may prune inactive locks, but cannot cancel another role's active hold.
+- Capture, release, or expiry is required before removing a role with active holds.
+- For tokens, grant the matching mint allowance and use `getAddTokenAuthorizationLockInstructions` with `mint`, `amount`, and `expirySlot`.
