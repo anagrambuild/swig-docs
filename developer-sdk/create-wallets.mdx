@@ -4,6 +4,9 @@ sidebarTitle: "Create a wallet"
 description: "Prepare a Swig wallet with an initial authority or a saved policy."
 ---
 
+<span id="choose-an-interaction" />
+<span id="policies-roles-and-signing" />
+
 ## Introduction
 
 A Swig wallet holds assets and gives each authority a defined set of permissions.
@@ -106,6 +109,8 @@ let created = wallet.prepare_create_wallet(PrepareCreateWalletArgs {
 }).await?;
 ```
 </CodeGroup>
+
+<span id="follow-the-transaction-lifecycle" />
 
 ## Flow
 

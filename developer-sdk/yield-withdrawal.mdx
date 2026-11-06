@@ -36,6 +36,7 @@ const exit = await yieldClient.exit({
 
 ```python Python
 exit = await swig.yields.exit(
+    network="mainnet",
     swig_config_address=swig_config_address,
     fee_payer=fee_payer,
     requester_authority={"ed25519": {"public_key": agent_key}},
@@ -65,6 +66,7 @@ const partialExit = await yieldClient.exit({
 from swig_developer_sdk import PartialYieldExit
 
 partial_exit = await swig.yields.exit(
+    network="mainnet",
     swig_config_address=swig_config_address,
     fee_payer=fee_payer,
     requester_authority={"ed25519": {"public_key": agent_key}},
@@ -94,6 +96,7 @@ const withdrawal = await yieldClient.withdraw({
 
 ```python Python
 withdrawal = await swig.yields.withdraw(
+    network="mainnet",
     swig_config_address=swig_config_address,
     fee_payer=fee_payer,
     requester_authority={"ed25519": {"public_key": agent_key}},

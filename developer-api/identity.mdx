@@ -38,6 +38,8 @@ wallet = swig.wallets.from_idp_session(session)
 
 That handoff is the only place identity and the Developer SDK meet.
 
+<span id="what-you-can-query" />
+
 ## Public IdP routes
 
 These routes are public. They are listed here as the current backend contract.
@@ -57,6 +59,11 @@ These routes are public. They are listed here as the current backend contract.
 | `GET` | `/identity/public/oidc/jwks.json` |
 
 The JWKS routes are what you use to verify identity tokens server-side.
+For client wallet lookup and status, see the [public wallet boundary](/developer-api/wallets#public-client-boundary).
+
+<span id="quota" />
+
+Request accounting is covered in [Pricing & quotas](/query).
 
 ## Why this matters
 
@@ -72,6 +79,8 @@ The JWKS routes are what you use to verify identity tokens server-side.
 There is no `/identity/api/auth/passkey/start` route. If you have an
 integration pointed at that path, it is targeting an endpoint that does not
 exist in the current backend.
+
+<span id="reference-and-integration-guides" />
 
 ## Where to go instead
 

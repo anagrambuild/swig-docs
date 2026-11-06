@@ -15,6 +15,9 @@ from [Client setup](/developer-sdk/integration-paths).
 
 ## SDK examples
 
+<span id="start-from-a-wallet-handle" />
+<span id="balances" />
+
 ### List balances
 
 Use the `swig` client in TypeScript/Python or `wallet: WalletClient` in Rust. These queries need no wallet-authority signature.
@@ -198,7 +201,25 @@ Rust returns `WalletBalanceSummary`: native SOL is in `sol_balance`, and
 `token_balances` is a map keyed by mint. Its exact amounts are `u64` values.
 The returned structures below show the language differences.
 
-`getUsdBalance` / `get_usd_balance` returns config address, wallet address, and `usdValue` / `usd_value`. For recent movements, use [Token activity](/query/token-activity).
+`getUsdBalance` / `get_usd_balance` returns config address, wallet address, and `usdValue` / `usd_value`.
+
+<span id="token-activity" />
+<span id="what-you-can-query" />
+<span id="filters-and-results" />
+<span id="quota" />
+<span id="reference-and-sdk-examples" />
+
+For individual movements, see [Token activity](/query/token-activity).
+
+<span id="roles" />
+<span id="rent-claimer" />
+<span id="policy-metadata" />
+<span id="dex-activity" />
+<span id="underlying-routes" />
+
+Wallet configuration is covered by [Role](/developer-sdk/add-roles-and-permissions),
+[Rent claimer](/developer-sdk/rent-claimers), and [Fetch template](/examples/dev-portal/fetch-policy).
+Market activity is covered by [DEX transaction](/query/dex) and [DEX position](/query/dex-positions).
 
 ## Errors
 

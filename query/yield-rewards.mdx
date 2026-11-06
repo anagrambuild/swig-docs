@@ -25,7 +25,7 @@ const rewards = await yieldClient.listRewards({ pageSize: 50 });
 ```
 
 ```python Python
-rewards = await swig.yields.list_rewards(swig_config_address=swig_config_address, page_size=50)
+rewards = await swig.yields.list_rewards(network="mainnet", swig_config_address=swig_config_address, page_size=50)
 ```
 
 </CodeGroup>
@@ -72,6 +72,7 @@ if (rewards.nextPageToken) {
 ```python Python
 if rewards.next_page_token:
     next_page = await swig.yields.list_rewards(
+    network="mainnet",
         swig_config_address=swig_config_address,
         page_size=50, page_token=rewards.next_page_token,
     )

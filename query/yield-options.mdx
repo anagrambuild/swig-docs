@@ -25,7 +25,9 @@ const options = await yieldClient.listOptions();
 ```
 
 ```python Python
-options = await swig.yields.list_options(swig_config_address=swig_config_address)
+options = await swig.yields.list_options(
+    network="mainnet", swig_config_address=swig_config_address,
+)
 ```
 
 </CodeGroup>
@@ -76,6 +78,7 @@ const projection = await yieldClient.estimate({
 
 ```python Python
 projection = await swig.yields.estimate(
+    network="mainnet",
     swig_config_address=swig_config_address,
     validator_vote_address=validator_vote_address,
     principal=5_000_000_000,
@@ -130,7 +133,8 @@ Illustrative output; Python shows the dataclass as JSON.
 | Optional `rate` | Estimated APR, commission, and observation time; absent when no rate is available. |
 | `estimatedNetAprBps`, `commissionBps` | 600 APR basis points means 6% after commission. |
 | `principalLamports`, `horizonDays` | Estimate input echoed in the projection. |
-| `estimatedRewardsLamports`, `estimatedTotalLamports` | Principal × APR × days / 365, rounded down. Excludes compounding, rent, and fees. |
+| `estimatedRewardsLamports` | Principal × APR × days / 365, rounded down. Excludes compounding, rent, and fees. |
+| `estimatedTotalLamports` | Principal plus estimated rewards. |
 
 ## Errors
 

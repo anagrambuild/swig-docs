@@ -16,6 +16,8 @@ See [Pricing & quotas](/query#dex-queries).
 
 ## SDK examples
 
+<span id="list-dex-transactions" />
+
 ### List transactions
 
 Filter wallet activity by venue, action, vault, or slot range.
@@ -112,6 +114,8 @@ Python returns typed dataclasses, shown here as JSON after conversion with
 ```
 </CodeGroup>
 
+<span id="page-through-results" />
+
 ### Page through transactions
 
 Pass the returned cursor with the same wallet, network, and filters. Stop when the next cursor is absent.
@@ -152,6 +156,8 @@ while True:
 ```
 
 </CodeGroup>
+
+<span id="read-one-transaction" />
 
 ### Get one transaction
 
@@ -209,6 +215,8 @@ Pass the cursor unchanged with the same wallet, network, and filters.
 
 For a detail lookup, supply `transactionSignature` / `transaction_signature`.
 
+<span id="what-a-transaction-carries" />
+
 ## Returned result
 
 TypeScript field names are shown below. Python exposes the same structure with
@@ -234,6 +242,8 @@ snake_case attributes. The SDK normalizes protocol and action names.
 | `action.input`, `action.output` | object | Mint address, signed decimal-string `amountRaw`, and optional `decimals` |
 | `nextCursor` | object, optional | Last row's `slot` and `transactionSignature`; absent on the final page |
 
+<span id="read-the-amounts-as-the-venue-saw-them" />
+
 An action's negative amount left its protocol actor; a positive amount entered
 it. When an aggregator holds the assets, that actor can be the router rather
 than the Swig vault. Keep raw amounts as strings or arbitrary-precision integers.
@@ -247,6 +257,11 @@ the action table below.
 | `position-rebalance` | Pool, position, `deposits`, and `withdrawals`. |
 | `fee-claim`, `reward-claim` | Pool, position, and `claimed` assets. |
 | `position-close` | Position; pool is absent when the venue instruction does not identify one. |
+
+<span id="list-latest-positions" />
+<span id="underlying-routes" />
+
+For current liquidity and account state, see [DEX position](/query/dex-positions).
 
 ## Errors
 

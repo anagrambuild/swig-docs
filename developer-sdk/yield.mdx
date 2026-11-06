@@ -34,7 +34,9 @@ if (!validator) throw new Error('No validator currently accepts deposits');
 ```
 
 ```python Python
-options = await swig.yields.list_options(swig_config_address=swig_config_address)
+options = await swig.yields.list_options(
+    network="mainnet", swig_config_address=swig_config_address,
+)
 validator = next((option for option in options if option.accepts_deposits), None)
 if validator is None:
     raise ValueError("No validator currently accepts deposits")
@@ -70,6 +72,7 @@ if (role.type === 'create') {
 from swig_developer_sdk import PreparedYieldRoleCreation
 
 role = await swig.yields.prepare_role(
+    network="mainnet",
     swig_config_address=swig_config_address,
     fee_payer=fee_payer,
     yield_authority={"ed25519": {"public_key": agent_key}},
@@ -104,6 +107,7 @@ const deposit = await yieldClient.deposit({
 
 ```python Python
 deposit = await swig.yields.deposit(
+    network="mainnet",
     swig_config_address=swig_config_address,
     fee_payer=fee_payer,
     requester_authority={"ed25519": {"public_key": agent_key}},

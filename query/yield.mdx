@@ -95,7 +95,9 @@ const summary = await yieldClient.getSummary();
 ```
 
 ```python Python
-summary = await swig.yields.get_summary(swig_config_address=swig_config_address)
+summary = await swig.yields.get_summary(
+    network="mainnet", swig_config_address=swig_config_address,
+)
 ```
 
 </CodeGroup>
@@ -133,6 +135,7 @@ if (result.nextPageToken) {
 ```python Python
 if result.next_page_token:
     next_page = await swig.yields.list_positions(
+        network="mainnet",
         swig_config_address=swig_config_address,
         page_size=50, page_token=result.next_page_token,
     )

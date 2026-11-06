@@ -172,6 +172,8 @@ repeats a single method call.
 - Check navigation targets, internal links and anchors, example syntax, and
   source-backed input/output contracts. Preserve old URLs with redirects when
   consolidating pages and update internal links to the canonical destination.
+  When a redirect splits a former guide across pages, retain its incoming fragment IDs near concise
+  links to the new owning topics.
 - Run `mint validate`, then `mint broken-links --check-anchors` sequentially.
   Use a supported Node runtime. Stop the local preview before these checks so
   they do not race over Mintlify's generated cache.
