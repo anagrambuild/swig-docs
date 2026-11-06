@@ -38,11 +38,12 @@ For the Rust examples, add the published crates:
 
 ```bash
 cargo add swig-sdk swig-interface
-cargo add solana-sdk@4 solana-compute-budget-interface
+cargo add solana-sdk@4 solana-compute-budget-interface@3
 ```
 
-The Swig crates use their latest releases. These examples require the compatible
-Solana SDK 4.x dependency; Solana SDK 5.x currently conflicts with the Swig crates.
+The Swig crates use their latest releases. The Solana companion crates use
+compatible major versions so Cargo can resolve the dependency graph required
+by Swig.
 
 </Tab>
 </Tabs>
