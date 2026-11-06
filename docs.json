@@ -27,6 +27,30 @@
         ]
       },
       {
+        "product": "Swig Query",
+        "icon": "magnifying-glass",
+        "description": "Read hosted wallet data and understand pricing and quotas.",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": [
+              "query/index"
+            ]
+          },
+          {
+            "group": "What you can query",
+            "pages": [
+              "query/wallets",
+              "query/dex",
+              "query/yield",
+              "query/ramp",
+              "query/paymasters",
+              "query/public"
+            ]
+          }
+        ]
+      },
+      {
         "product": "Developer SDK",
         "icon": "building",
         "description": "Prepare, sign, and submit wallet operations through the hosted API.",

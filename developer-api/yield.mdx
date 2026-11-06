@@ -7,6 +7,9 @@ Use the Yield API to stake SOL from an existing Swig wallet.
 Native Solana staking uses validators on the Swig allowlist.
 Every route operates on one Swig wallet config.
 
+For the available reads and their API-request allowance, see
+[Swig Query: yield](/query/yield).
+
 Prepare routes return unsigned transactions. If role preparation reuses an
 existing role, it returns role metadata instead.
 Authorize each prepared transaction. Sign it with the required signers. Then submit it.

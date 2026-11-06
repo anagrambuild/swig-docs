@@ -1,0 +1,46 @@
+---
+title: "Query Ramp Data"
+sidebarTitle: "Ramp"
+description: "Discover supported ramp options, compare quotes, and read order status."
+---
+
+Use your server API key to discover fiat ramp options and follow buy or sell
+orders belonging to your organization.
+
+## What you can query
+
+| Data | Endpoint | Result |
+| :--- | :--- | :--- |
+| Available options | `GET /wallet/api/ramp/options` | Countries, subdivisions, fiat currencies, payment methods, and crypto assets |
+| Buy or sell quote | `POST /wallet/api/ramp/quotes` | Provider/payment routes, priced amounts, total fee, and display exchange rate |
+| Order status | `GET /wallet/api/ramp/orders/{order_id}` | Stored order and current provider state, including deposit or transfer details when available |
+
+## Inputs and freshness
+
+- Options require `configurationId` and `environment`. Choose `direction`, then
+  use `countryCode` and optional `fiatCurrencyCode` to narrow the result. Omitting
+  the country returns countries alone.
+- Quote requests also require configuration and environment, plus location and
+  exactly one `buy` or `sell` payload. Use fiat minor units and crypto base units.
+- Quotes are temporary prices, have no reusable quote ID, and must not be cached.
+  Creating an order obtains a fresh price.
+- Order reads need only the order ID. Reading a non-final order can refresh its
+  provider record and update stored status or deposit details. A read does not
+  submit a transfer or resolve a pending transfer attempt.
+- Provider `SANDBOX` and `PRODUCTION` are separate from Solana networks; sandbox
+  orders still settle on mainnet.
+
+## Quota
+
+Every admitted options, quote, or order-read call consumes **one API request**.
+Polling and retries each count again, including admitted errors. These calls
+share the API-request allowance with other metered operations and do not use
+DEX queries. See [pricing and quotas](/query#api-requests).
+
+## Reference and SDK examples
+
+- [Ramp REST options, quotes, and order fields](/developer-api/ramp)
+- [TypeScript, Python, and Rust Ramp examples](/developer-sdk/ramp)
+
+Order responses can contain a customer-specific `launchUrl`. Deliver it only to
+the intended customer and keep it out of logs and analytics.
