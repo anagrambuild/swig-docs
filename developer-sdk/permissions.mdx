@@ -1,39 +1,27 @@
 ---
-title: "Permissions"
-sidebarTitle: "Permissions"
-description: "Understand role permissions, supported actions, required fields, and limits."
+title: "Permission"
+sidebarTitle: "Permission"
+description: "Choose the actions and limits granted to a wallet role."
 ---
 
-Use permissions to define what an authority may do with a Swig wallet. A role
-combines one authority with an `actions` list, so the same permission model
-applies to a single signer or a ParticipantSet with several members.
+## Introduction
 
-This page lists the 18 actions supported by TypeScript `0.10.0`, Python
-`0.9.0`, and Rust `0.1.0`, with their required fields, units, and permission
-boundaries.
+A permission defines an action a wallet role may perform, such as invoking a
+program or spending a bounded amount. Use the smallest set of grants needed by
+a person, service, or participant set. The same model applies to each authority type.
 
-## Read the action reference
+Program access and asset spending are checked separately. A SOL transfer needs
+System Program access and a SOL allowance; program access alone grants no
+unlimited spending budget.
 
-In TypeScript, each action is an object with a `type` and the fields listed
-below. Python uses an exported constructor named after the action, such as
-`ManageAuthorityAction()` or `TokenRecurringDestinationLimitAction(...)`.
-Python field names use snake case: `program_id` and `recurring_amount`
-correspond to TypeScript's `programId` and `recurringAmount`.
+## Input
 
-Rust uses `WalletPermission` variants such as `TokenRecurringDestinationLimit`,
-with snake case fields. Amounts and slot windows are `u64` values.
+Pass an `actions` list when [adding a role](/developer-sdk/add-roles-and-permissions).
+The tables use TypeScript names. Python uses constructors such as
+`SolLimitAction(amount=...)`; Rust uses `WalletPermission` variants and snake_case
+fields. The Developer SDK exposes the following 18 actions.
 
-For a complete transaction example, see
-[Add a role](/developer-sdk/add-roles-and-permissions). To save permissions as
-reusable wallet-creation configuration, see
-[Policy Templates](/examples/dev-portal/create-policy).
-
-Program access and asset spending are checked separately. For example, a SOL
-transfer needs access to the System Program and an appropriate SOL allowance.
-Granting `program`, `programAll`, or `programCurated` alone does not grant an
-unlimited SOL or token allowance.
-
-## Amounts addresses and windows
+### Amounts, addresses, and windows
 
 - Express SOL and staking amounts in lamports, and token amounts in the mint's
   smallest units. For a token with six decimals, `1_000_000` represents one token.
@@ -47,7 +35,7 @@ unlimited SOL or token allowance.
   recipient account. A token `destination` is the recipient **token account**,
   such as its associated token account, rather than the owner's wallet address.
 
-## Management permissions
+### Management permissions
 
 | TypeScript action | Required fields | Permission |
 | :--- | :--- | :--- |
@@ -58,7 +46,7 @@ unlimited SOL or token allowance.
 An authority that can manage roles can grant powerful permissions to another
 key. Choose it when the signer should administer the wallet.
 
-## SOL permissions
+### SOL permissions
 
 | TypeScript action | Required fields | Permission |
 | :--- | :--- | :--- |
@@ -67,7 +55,7 @@ key. Choose it when the signer should administer the wallet.
 | `solDestinationLimit` | `amount`, `destination` | A total SOL allowance for one recipient account. |
 | `solRecurringDestinationLimit` | `recurringAmount`, `window`, `destination` | A recurring SOL allowance for one recipient account. |
 
-## Token permissions
+### Token permissions
 
 | TypeScript action | Required fields | Permission |
 | :--- | :--- | :--- |
@@ -81,7 +69,7 @@ permission with `tokenDestinationLimit` to restrict both the asset and its
 recipient. The destination account in the permission must match the account
 used by the transfer.
 
-## Program permissions
+### Program permissions
 
 | TypeScript action | Required fields | Permission |
 | :--- | :--- | :--- |
@@ -93,7 +81,7 @@ The curated list is defined by the protocol version. It is not a list supplied
 by the application, and it does not imply approval of every operation that a
 listed program exposes.
 
-## Staking and sub account permissions
+### Staking and sub account permissions
 
 | TypeScript action | Required fields | Permission |
 | :--- | :--- | :--- |
@@ -106,13 +94,45 @@ Adding an action grants permission; it does not create a stake account or a
 sub-account, or prepare its operations automatically. Use the appropriate
 protocol instructions for those operations.
 
-The action list above is the Developer SDK's `AddRoleAction` surface, not every
-permission in every protocol version. In particular, it does not expose
-`ReplaceAuthority`, `ProgramScope`, `CloseSwigAuthority`, or the scoped V2
-sub-account actions. Consult the
-[TypeScript action definitions](https://github.com/anagrambuild/swig-developer-sdk/blob/typescript-v0.10.0/typescript/src/types/wallet-actions.ts)
-and [Python action definitions](https://github.com/anagrambuild/swig-developer-sdk/blob/python-v0.9.0/python/src/swig_developer_sdk/wallets.py)
-when choosing SDK inputs.
 
-Rust role reads use `SwigRolePermission`, which includes current allowances
-and permissions outside the role-creation API.
+The hosted add-role surface does not expose `ReplaceAuthority`, `ProgramScope`,
+`CloseSwigAuthority`, or scoped V2 sub-account grants. Use a compatible Protocol
+SDK integration when those permissions are needed. Role reads may include
+permissions outside this creation surface.
+
+## SDK example
+
+These actions allow System Program invocation and a total spend of 1,000,000
+lamports. Pass them to the `actions` parameter in the [Role example](/developer-sdk/add-roles-and-permissions).
+
+<CodeGroup>
+```typescript TypeScript
+import { type AddRoleAction } from '@swig-wallet/developer-sdk';
+
+const actions = [
+  { type: 'program', programId: '11111111111111111111111111111111' },
+  { type: 'solLimit', amount: 1_000_000n },
+] satisfies AddRoleAction[];
+```
+
+```python Python
+from swig_developer_sdk import ProgramAction, SolLimitAction
+
+actions = (
+    ProgramAction(program_id="11111111111111111111111111111111"),
+    SolLimitAction(amount=1_000_000),
+)
+```
+
+```rust Rust
+use solana_pubkey::pubkey;
+use swig_developer_sdk::WalletPermission;
+
+let actions = vec![
+    WalletPermission::Program {
+        program_id: pubkey!("11111111111111111111111111111111"),
+    },
+    WalletPermission::SolLimit { amount: 1_000_000 },
+];
+```
+</CodeGroup>

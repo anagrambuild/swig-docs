@@ -1,46 +1,137 @@
 ---
-title: "Ramp Data"
+title: "Ramp data"
 sidebarTitle: "Ramp"
-description: "Discover supported ramp options, compare quotes, and read order status."
+description: "Discover available countries, currencies, payment methods, and crypto assets."
 ---
 
-Use your server API key to discover fiat ramp options and follow buy or sell
-orders belonging to your organization.
+## Introduction
 
-## What you can query
+Ramp options describe the countries, fiat currencies, payment methods, and crypto
+assets available for your configuration. Use this dataset to build a buy/sell
+form that shows supported choices before requesting a quote.
 
-| Data | Endpoint | Result |
+The example queries options. The same SDK also supports [quotes and order status](/developer-sdk/ramp).
+Quotes are temporary and have no reusable quote ID; creating an order obtains a
+fresh price. Reading a non-final order may refresh its provider state, but does
+not submit a transfer. Keep customer-specific launch URLs out of logs.
+
+Each admitted options, quote, or order query consumes **one API request**,
+including retries and admitted errors. See [Pricing & quotas](/query#api-requests).
+
+## Returned result
+
+TypeScript field names are shown below; Python and Rust use snake_case.
+
+| Field | Type | Meaning |
 | :--- | :--- | :--- |
-| Available options | `GET /wallet/api/ramp/options` | Countries, subdivisions, fiat currencies, payment methods, and crypto assets |
-| Buy or sell quote | `POST /wallet/api/ramp/quotes` | Provider/payment routes, priced amounts, total fee, and display exchange rate |
-| Order status | `GET /wallet/api/ramp/orders/{order_id}` | Stored order and current provider state, including deposit or transfer details when available |
+| `countries` | array | Supported countries |
+| `countries[].code`, `name` | string | Country code and display name |
+| `countries[].subdivisions` | array | Subdivision codes and names |
+| `fiatCurrencies` | array | Supported fiat currencies |
+| `fiatCurrencies[].currencyCode` | string | Currency code, such as `USD` |
+| `fiatCurrencies[].exponent` | number | Minor-unit decimal places; USD uses 2 |
+| `paymentMethods` | string array | Available payment-method identifiers |
+| `assets` | array | Supported crypto assets |
+| `assets[].asset` | object | Native SOL (`type: sol`) or a token (`type: token`, with `mint`) |
+| `assets[].name` | string | Asset display name |
+| `assets[].iconUrl` | string, optional | Asset image URL |
+| `assets[].decimals` | number | Base-unit decimal places |
 
-## Inputs and freshness
+Rust represents the asset as `CryptoAsset::Sol` or `CryptoAsset::Token { mint }`,
+where the mint is a `Pubkey`. Country and currency collections are typed vectors.
 
-- Options require `configurationId` and `environment`. Choose `direction`, then
-  use `countryCode` and optional `fiatCurrencyCode` to narrow the result. Omitting
-  the country returns countries alone.
-- Quote requests also require configuration and environment, plus location and
-  exactly one `buy` or `sell` payload. Use fiat minor units and crypto base units.
-- Quotes are temporary prices, have no reusable quote ID, and must not be cached.
-  Creating an order obtains a fresh price.
-- Order reads need only the order ID. Reading a non-final order can refresh its
-  provider record and update stored status or deposit details. A read does not
-  submit a transfer or resolve a pending transfer attempt.
-- Provider `SANDBOX` and `PRODUCTION` are separate from Solana networks; sandbox
-  orders still settle on mainnet.
+## Input parameters
 
-## Quota
+| TypeScript / Python | Required | Description |
+| :--- | :--- | :--- |
+| `configurationId` / `configuration_id` | Yes | Your Ramp configuration ID; set on `RampClient` in Rust |
+| `environment` | Yes | `sandbox` or `production`; set on `RampClient` in Rust |
+| `direction` | Yes | `buy` or `sell` |
+| `countryCode` / `country_code` | No | Filter by country; omitting it returns countries alone |
+| `fiatCurrencyCode` / `fiat_currency_code` | No | Further narrow the available options |
 
-Every admitted options, quote, or order-read call consumes **one API request**.
-Polling and retries each count again, including admitted errors. These calls
-share the API-request allowance with other metered operations and do not use
-DEX queries. See [pricing and quotas](/query#api-requests).
+Provider environment is separate from Solana network. Sandbox orders still settle
+on mainnet. Use the server client from [Client setup](/developer-sdk/integration-paths).
 
-## Reference and SDK examples
+## SDK example
 
-- [Ramp REST options, quotes, and order fields](/developer-api/ramp)
-- [TypeScript, Python, and Rust Ramp examples](/developer-sdk/ramp)
+<CodeGroup>
+```typescript TypeScript
+const result = await swig.ramp.getOptions({
+  configurationId,
+  environment: 'sandbox',
+  direction: 'buy',
+  countryCode: 'US',
+});
+```
 
-Order responses can contain a customer-specific `launchUrl`. Deliver it only to
-the intended customer and keep it out of logs and analytics.
+```python Python
+result = await swig.ramp.get_options(
+    configuration_id=configuration_id,
+    environment="sandbox",
+    direction="buy",
+    country_code="US",
+)
+```
+
+```rust Rust
+use swig_developer_sdk::{
+    GetRampOptionsArgs, RampClient, RampConfig, RampDirection, RampEnvironment,
+};
+
+let ramp = RampClient::new(config, Some(RampConfig {
+    configuration_id,
+    environment: RampEnvironment::Sandbox,
+}))?;
+let result = ramp.get_options(GetRampOptionsArgs {
+    direction: RampDirection::Buy,
+    country_code: Some("US".into()),
+    fiat_currency_code: None,
+}).await?;
+```
+</CodeGroup>
+
+## SDK returned structure
+
+Illustrative TypeScript output, not a live availability quote. Python returns
+`RampOptions` with snake_case fields; Rust returns the typed structure below.
+
+<CodeGroup>
+```json TypeScript
+{
+  "countries": [
+    { "code": "US", "name": "United States", "subdivisions": [
+      { "code": "CA", "name": "California" }
+    ] }
+  ],
+  "fiatCurrencies": [{ "currencyCode": "USD", "exponent": 2 }],
+  "paymentMethods": ["CREDIT_DEBIT_CARD"],
+  "assets": [{ "asset": { "type": "sol" }, "name": "Solana", "decimals": 9 }]
+}
+```
+
+```json Python
+{
+  "countries": [
+    { "code": "US", "name": "United States", "subdivisions": [
+      { "code": "CA", "name": "California" }
+    ] }
+  ],
+  "fiat_currencies": [{ "currency_code": "USD", "exponent": 2 }],
+  "payment_methods": ["CREDIT_DEBIT_CARD"],
+  "assets": [{ "asset": { "type": "sol" }, "name": "Solana", "icon_url": null, "decimals": 9 }]
+}
+```
+
+```rust Rust
+pub struct RampOptions {
+    pub countries: Vec<RampCountry>,
+    pub fiat_currencies: Vec<RampFiatCurrencyOption>,
+    pub payment_methods: Vec<String>,
+    pub assets: Vec<RampAssetOption>,
+}
+```
+</CodeGroup>
+
+The Python block is a JSON view of the returned dataclasses. For transport
+fields, see the [Ramp API reference](/developer-api/ramp).

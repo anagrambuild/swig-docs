@@ -1,27 +1,59 @@
 ---
-title: "Create a Swig Wallet"
+title: "Create a wallet"
 sidebarTitle: "Create a wallet"
+description: "Prepare a Swig wallet with an initial authority or a saved policy."
 ---
 
-Prepare a new Swig wallet from a saved policy template or an inline authority. Your
-application signs and submits the returned transactions to create it on-chain.
+## Introduction
 
-## Two create modes
+A Swig wallet holds assets and gives each authority a defined set of permissions.
+Use this flow when onboarding a user or creating an application-controlled wallet.
+You can supply an initial authority directly or reuse a saved policy template.
 
-You can create a wallet either:
+The SDK prepares transactions. Your application signs and submits them; the
+wallet exists on-chain after confirmation. Start with [Client setup](/developer-sdk/integration-paths).
 
-- from a policy template with `policyId` / `policy_id`
-- from an inline `initialUser` / `initial_user`
+## Flow
 
-If the policy ID is omitted, the backend creates the wallet from the inline
-authority you provide. Supported authority shapes are `ed25519`, `secp256k1`,
-and `secp256r1`.
+```text
++----------------------------+
+| Choose an authority or     |
+| policy                     |
++----------------------------+
+              |
+              v
++----------------------------+
+| Prepare wallet creation    |
++----------------------------+
+              |
+              v
++----------------------------+
+| Sign and submit in order   |
++----------------------------+
+              |
+              v
++----------------------------+
+| Confirm the wallet         |
++----------------------------+
+```
 
-In Rust, set `policy_id: Some(policy_id)` for a saved policy. Supply
-`initial_user` when the policy asks for an authority, or `None` when it provides
-one. The policy ID must be nonempty.
+## Input
 
-## Basic create flow
+| Parameter | Required | Description |
+| :--- | :--- | :--- |
+| `feePayer` / `fee_payer` | Yes | Public key paying transaction fees and account rent |
+| `initialUser` / `initial_user` | For inline creation | Initial authority: Ed25519, secp256k1, or secp256r1 public key; also required when a saved policy asks for it |
+| `policyId` / `policy_id` | No | Saved policy ID; omit for inline creation |
+| `network` | Yes, on the call or client | `mainnet` or `devnet`; Rust uses its configured `Network` |
+
+TypeScript/Python use address strings. Rust uses `Pubkey` for Ed25519 and
+compressed 33-byte SEC1 keys for secp256k1/secp256r1. An application supplies
+passkey or EVM public keys; credential creation remains in your signing layer.
+
+## SDK example
+
+The example creates an inline Ed25519 wallet. Use the configured `swig` client
+in TypeScript/Python and `wallet: WalletClient` in Rust.
 
 <CodeGroup>
 
@@ -63,147 +95,14 @@ let created = wallet
 
 </CodeGroup>
 
-An application may provide a `secp256r1` public key for a passkey-backed
-authority. Credential creation and signing stay outside the Developer SDK:
+For a saved template, supply `policyId` / `policy_id`; in Rust, use
+`policy_id: Some(policy_id)` and set `initial_user` only when the template needs it.
 
-<CodeGroup>
+TypeScript/Python return wallet addresses and an ordered `transactions` list.
+Sign and submit every transaction in that order. Rust returns `WalletCreation`
+with one `transaction` and rejects zero or multiple returned transactions.
 
-```typescript TypeScript
-const created = await swig.wallets.create({
-  feePayer,
-  initialUser: {
-    secp256r1: {
-      publicKey: passkeyPublicKey,
-    },
-  },
-});
-```
-
-```python Python
-created = await swig.wallets.create(
-    fee_payer=fee_payer,
-    initial_user={
-        "secp256r1": {
-            "publicKey": passkey_public_key,
-        },
-    },
-)
-```
-
-```rust Rust
-use swig_developer_sdk::{PrepareCreateWalletArgs, WalletAuthority};
-
-let created = wallet
-    .prepare_create_wallet(PrepareCreateWalletArgs {
-        fee_payer,
-        policy_id: None,
-        initial_user: Some(WalletAuthority::Secp256r1 {
-            public_key: passkey_public_key,
-        }),
-    })
-    .await?;
-```
-
-</CodeGroup>
-
-EVM-backed creation works the same way with `secp256k1`:
-
-<CodeGroup>
-
-```typescript TypeScript
-const created = await swig.wallets.create({
-  feePayer,
-  initialUser: {
-    secp256k1: {
-      publicKey: evmPublicKey,
-    },
-  },
-});
-```
-
-```python Python
-created = await swig.wallets.create(
-    fee_payer=fee_payer,
-    initial_user={
-        "secp256k1": {
-            "publicKey": evm_public_key,
-        },
-    },
-)
-```
-
-```rust Rust
-use swig_developer_sdk::{PrepareCreateWalletArgs, WalletAuthority};
-
-let created = wallet
-    .prepare_create_wallet(PrepareCreateWalletArgs {
-        fee_payer,
-        policy_id: None,
-        initial_user: Some(WalletAuthority::Secp256k1 {
-            public_key: evm_public_key,
-        }),
-    })
-    .await?;
-```
-
-</CodeGroup>
-
-Rust expects compressed 33-byte SEC1 public keys for secp256r1 and secp256k1.
-Preparation validates each key against its curve.
-
-## What you get back
-
-TypeScript and Python return a categorized create plan:
-
-| TypeScript / Python | Meaning |
-|-------|---------|
-| `wallet` | the config address, wallet address, and resolved network |
-| `transactions` | full ordered transaction list |
-| `clientAuthorityTransactions` / `client_authority_transactions` | transactions with explicit embedded `secp256r1` or `secp256k1` signature requests |
-| `feePayerOnlyTransactions` / `fee_payer_only_transactions` | transactions without explicit signature requests; verify the Solana required signer set before treating them as fee-payer-only |
-| `creationTransaction` / `creation_transaction` | the create transaction itself |
-
-For a plain create, this usually collapses to one creation transaction whose
-only required transaction signer is the fee payer. Policy-driven follow-up
-instructions can add other signer requirements.
-
-Rust returns `WalletCreation` with the wallet addresses and one prepared
-`transaction`. Responses containing zero or multiple transactions are rejected.
-
-## Networks
-
-TypeScript and Python resolve the network from the call and then the client
-default. Wallet creation requires one of those values to be set. Rust uses the
-`Network` configured on `WalletClient` for every request.
-
-## What to submit
-
-For TypeScript and Python, submit the prepared `transactions` exactly in the
-returned order. In Rust, sign and submit the returned `transaction`.
-
-If the client-authority collection is not empty, your application must obtain
-and patch each requested embedded signature outside the server SDK before
-submission. An empty collection does not prove that the transaction needs no
-application signature; inspect each serialized transaction's required signer
-set as well. The field name comes from the hosted API schema; it is not a
-browser SDK surface.
-
-## What to read next
-
-<CardGroup cols={1}>
-  <Card title="Signers" icon="signature" href="/developer-sdk/signers">
-    Basic signing support for application-owned wallets and passkeys
-  </Card>
-  <Card title="Add a role" icon="user-shield" href="/developer-sdk/add-roles-and-permissions">
-    Attach a scoped role to an existing wallet
-  </Card>
-  <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-and-swaps">
-    Wallet actions after create
-  </Card>
-  <Card title="Wallet state" icon="magnifying-glass" href="/developer-sdk/wallet-reads">
-    Balances, token activity, and roles
-  </Card>
-  <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">
-    Swig-backed fee sponsorship
-  </Card>
-</CardGroup>
+Complete embedded signature requests and inspect each transaction's required
+Solana signers, including its fee payer. An empty signature-request list can
+still require an Ed25519 signature. Continue with [Signing](/developer-sdk/signers)
+and [Paymaster](/developer-sdk/sponsor-and-submit) for sponsored submission.

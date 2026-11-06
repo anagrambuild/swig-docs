@@ -1,48 +1,131 @@
 ---
-title: "Yield Data"
+title: "Yield data"
 sidebarTitle: "Yield"
-description: "Read validator rates, reward estimates, staking positions, and rewards."
+description: "Query native SOL staking positions, balances, and recorded state."
 ---
 
-Query native SOL staking for a Swig config owned by your API key's organization.
-Every route below requires `network=NETWORK_MAINNET` or `network=NETWORK_DEVNET`.
+## Introduction
 
-## What you can query
+This dataset contains native SOL staking positions indexed for a Swig wallet:
+their validator, lifecycle state, principal, rent, and withdrawable balance.
+Use it for staking dashboards, tracking cooldown, and displaying earning or
+withdrawable SOL.
 
-All routes start with `/api/yield/{swig_config_address}`.
+The example lists positions. TypeScript exposes `swig.yield`; Python exposes
+`swig.yields`. The same clients also provide
+[validator rates, reward estimates, totals, and reward history](/developer-sdk/yield#read-positions-rewards-and-estimates).
+For deposits, exits, and withdrawals, use the [Finance yield guide](/developer-sdk/yield).
 
-| Data | Read route | Result |
+Position data can lag the chain. `lastUpdatedAt` identifies its latest recorded
+update. Each admitted call or page consumes **one API request**, including
+retries and admitted errors. See [pricing and quotas](/query#api-requests).
+
+## Returned result
+
+TypeScript field names are shown below; Python uses snake_case attributes.
+Lamport amounts are exact decimal strings in both SDKs.
+
+| Field | Type | Meaning |
 | :--- | :--- | :--- |
-| Validators and rates | `GET …/options` | Allowlisted validators, deposit availability, estimated net APR, commission, and rate timestamp |
-| Reward estimate | `GET …/estimate` | Projected rewards for a validator, principal, and horizon |
-| Positions | `GET …/positions` | Indexed position state and balance, rent, earning, and withdrawable amounts |
-| Totals | `GET …/summary` | Position balance excluding rent (including compounded rewards), indexed withdrawable amounts, and recorded reward totals |
-| Reward history | `GET …/rewards` | Recorded reward credits by position and time |
+| `positions` | array | Indexed positions, sorted by address |
+| `positions[].swigConfigAddress` | string | Wallet configuration account |
+| `positions[].walletAddress` | string | Wallet that controls the position |
+| `positions[].positionAddress` | string | Stake position account |
+| `positions[].validatorVoteAddress` | string, optional | Validator vote account, when known |
+| `positions[].state` | string | `activating`, `active`, `deactivating`, `inactive`, or `unspecified` |
+| `positions[].balanceLamports` | string | Full position balance, including rent |
+| `positions[].rentLamports` | string | Rent reserve |
+| `positions[].positionLamports` | string | Balance excluding rent; compounded rewards are already included |
+| `positions[].earningLamports` | string | Stake currently earning rewards |
+| `positions[].withdrawableLamports` | string | Indexed withdrawable amount; can include rent |
+| `nextPageToken` | string, optional | Continuation token; absent on the final page |
+| `lastUpdatedAt` | string, optional | Latest indexed update; absent before the first observation |
 
-## Filters and freshness
+The withdrawal preparation flow keeps the rent reserve. Use its
+`withdrawalLamports` to show the amount a prepared withdrawal will return.
 
-- Estimates take `validatorVoteAddress`, positive `principalLamports`, and
-  `horizonDays` from 1 to 365. The rate is an estimate, not a guaranteed return.
-- A validator's rate may be absent when current network data cannot produce it.
-- Positions and rewards accept `pageSize` and `pageToken`: 50 entries by default,
-  at most 200. Continue with `nextPageToken`; tokens remain scoped to the original
-  organization, network, and Swig.
-- Positions sort by address; rewards sort oldest first by credit time. Position
-  reads expose `lastUpdatedAt` so you can identify the age of indexed data.
-- `totalPositionLamports` already includes compounded rewards. Do not add the
-  recorded reward total to it when calculating the current position value.
-- Indexed withdrawable amounts can include rent. The separate withdrawal
-  preparation currently keeps the rent reserve; use its `withdrawalLamports`
-  when displaying what a prepared withdrawal will return.
+## Input parameters
 
-## Quota
+Start with [Client setup](/developer-sdk/integration-paths) and use your wallet's
+network. The API key's organization must own the Swig config.
 
-Each admitted call or page consumes **one API request**, including retries and
-admitted errors. Yield reads share the API-request allowance with wallet reads
-and other metered operations; they do not use DEX queries. See
-[pricing and quotas](/query#api-requests).
+| TypeScript / Python | Required | Description |
+| :--- | :--- | :--- |
+| `swigConfigAddress` / `swig_config_address` | Yes | Wallet config address; TypeScript binds it with `forWallet` |
+| `network` | No | `mainnet` or `devnet`; defaults to the client's setting |
+| `pageSize` / `page_size` | No | 50 by default; maximum 200 |
+| `pageToken` / `page_token` | No | Previous `nextPageToken` / `next_page_token` |
 
-## Reference and SDK examples
+Continuation tokens remain scoped to the original organization, network, and
+wallet. Stop paging when the response has no next token.
 
-- [Yield REST fields and pagination](/developer-api/yield#options-and-estimates)
-- [Yield SDK guide](/developer-sdk/yield)
+## SDK example
+
+<CodeGroup>
+```typescript TypeScript
+const yieldClient = swig.yield.forWallet({
+  swigConfigAddress,
+  network: 'mainnet',
+});
+const result = await yieldClient.listPositions({ pageSize: 50 });
+```
+
+```python Python
+result = await swig.yields.list_positions(
+    swig_config_address=swig_config_address,
+    network="mainnet",
+    page_size=50,
+)
+```
+</CodeGroup>
+
+## SDK returned structure
+
+Illustrative final-page output with placeholder addresses. Python returns
+`YieldPositionsPage` and `YieldPosition` dataclasses; its JSON view below uses
+`dataclasses.asdict`.
+
+<CodeGroup>
+```json TypeScript
+{
+  "positions": [
+    {
+      "swigConfigAddress": "SWIG_CONFIG_ADDRESS",
+      "walletAddress": "WALLET_ADDRESS",
+      "positionAddress": "STAKE_ACCOUNT_ADDRESS",
+      "validatorVoteAddress": "VALIDATOR_VOTE_ADDRESS",
+      "state": "active",
+      "balanceLamports": "5002282880",
+      "rentLamports": "2282880",
+      "positionLamports": "5000000000",
+      "withdrawableLamports": "0",
+      "earningLamports": "5000000000"
+    }
+  ],
+  "lastUpdatedAt": "2026-11-06T12:00:00Z"
+}
+```
+
+```json Python
+{
+  "positions": [
+    {
+      "swig_config_address": "SWIG_CONFIG_ADDRESS",
+      "wallet_address": "WALLET_ADDRESS",
+      "position_address": "STAKE_ACCOUNT_ADDRESS",
+      "validator_vote_address": "VALIDATOR_VOTE_ADDRESS",
+      "state": "active",
+      "balance_lamports": "5002282880",
+      "rent_lamports": "2282880",
+      "position_lamports": "5000000000",
+      "withdrawable_lamports": "0",
+      "earning_lamports": "5000000000"
+    }
+  ],
+  "last_updated_at": "2026-11-06T12:00:00Z",
+  "next_page_token": null
+}
+```
+</CodeGroup>
+
+See the [yield API reference](/developer-api/yield) for the underlying transport.

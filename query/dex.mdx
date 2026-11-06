@@ -1,54 +1,185 @@
 ---
-title: "DEX Activity"
+title: "DEX activity"
 sidebarTitle: "DEX activity"
-description: "Read indexed DEX transactions, typed actions, and liquidity positions."
+description: "Query indexed trades and liquidity activity for a Swig wallet."
 ---
 
-Read the DEX activity indexed for an active Swig owned by your API key's
-organization. These routes read the index; they do not query Solana on demand.
+## Introduction
 
-## What you can query
+This dataset records DEX transactions executed by a Swig wallet, including each
+trade, liquidity change, fee claim, and reward claim. Use it for activity feeds,
+trade history, or explaining which venues a wallet used.
 
-| Data | Endpoint | Result |
+The example lists transaction history with `swig.dex.transactions.list` in
+TypeScript or Python. The same client provides
+[one-transaction lookups and latest liquidity positions](/developer-sdk/dex-activity#read-one-transaction).
+Current transaction coverage includes PumpSwap, Meteora DLMM, Raydium AMM v4,
+Raydium CPMM, Raydium CLMM, and Orca Whirlpool. Latest position state covers
+Raydium CLMM.
+
+This is indexed data, so an unprocessed transaction can be absent. The API key's
+organization must own the active Swig. Each admitted call or page consumes
+**one DEX query**; retries and admitted errors count too. This is separate from
+API-request usage. See [pricing and quotas](/query#dex-queries).
+
+## Returned result
+
+TypeScript field names are shown below. Python exposes the same structure with
+snake_case attributes. The SDK normalizes protocol and action names.
+
+| Field | Type | Meaning |
 | :--- | :--- | :--- |
-| DEX history | `POST /wallet/api/swig/{swig_config_address}/dex/transactions` | Newest-first transactions with typed DEX actions |
-| One transaction | `GET /wallet/api/swig/{swig_config_address}/dex/transactions/{transaction_signature}` | Every indexed DEX action the Swig executed in that transaction |
-| Latest positions | `POST /wallet/api/swig/{swig_config_address}/dex/positions` | Open or closed positions, recorded state, and source slot/signature |
+| `transactions` | array | Matching transactions, newest first |
+| `transactions[].swigConfigAddress` | string | Wallet configuration account |
+| `transactions[].transactionSignature` | string | Solana transaction signature |
+| `transactions[].slot` | number | Transaction slot |
+| `transactions[].blockTime` | string, optional | RFC 3339 block time, when known |
+| `transactions[].actions` | array | Every indexed DEX action the Swig executed in that transaction |
+| `actions[].actionIndex` | number | Action's order within the transaction |
+| `actions[].swigVaultAddress` | string | Wallet vault or sub-account that executed the action |
+| `actions[].actingRoleId` | number | Role that authorized the action |
+| `actions[].protocol` | string | Normalized venue name, such as `raydium-clmm` |
+| `actions[].dexProgramAddress` | string | Venue program address |
+| `actions[].action` | discriminated object | Action data selected by its `type`; the example below is a swap |
+| `action.protocolInstruction` | string | Venue instruction name |
+| `action.protocolActorAddress` | string | Account whose asset changes the action describes |
+| `action.dexPoolAddress` | string | Pool address for a swap |
+| `action.input`, `action.output` | object | Mint address, signed decimal-string `amountRaw`, and optional `decimals` |
+| `nextCursor` | object, optional | Last row's `slot` and `transactionSignature`; absent on the final page |
 
-The list routes use `POST` to carry filters in a JSON body. Both are reads.
+An action's negative amount left its protocol actor; a positive amount entered
+it. When an aggregator holds the assets, that actor can be the router rather
+than the Swig vault. Keep raw amounts as strings or arbitrary-precision integers.
+Other action types carry deposits, withdrawals, or claims; see
+[DEX action fields](/developer-sdk/dex-activity#what-a-transaction-carries).
 
-## Coverage and filters
+## Input parameters
 
-- Transaction coverage includes PumpSwap, Meteora DLMM, Raydium AMM v4, Raydium
-  CPMM, Raydium CLMM, and Orca Whirlpool.
-- Filter history by slot range, protocol, action type, and vault or sub-account.
-  Filters combine with AND. Protocol, action type, and vault must match the same
-  action; the returned transaction still includes all its indexed DEX actions.
-- Filter positions by protocol, open/closed status, and vault or sub-account.
-  Latest position state currently covers **Raydium CLMM**.
-- A transaction that is unprocessed or could not be interpreted is absent from
-  history; its individual lookup returns `404`. Position `updatedSlot` and
-  `sourceTransactionSignature` identify the recorded state.
+Use the [server client](/developer-sdk/integration-paths) as `swig`.
 
-## Pagination
+| TypeScript / Python | Required | Description |
+| :--- | :--- | :--- |
+| `swigConfigAddress` / `swig_config_address` | Yes | Swig config address owned by your organization |
+| `network` | No | `mainnet` or `devnet`; otherwise use the client's setting |
+| `pageSize` / `page_size` | No | 25 by default; maximum 100 |
+| `cursor` | No | Previous response's `nextCursor` / `next_cursor` |
+| `startSlot`, `endSlot` / `start_slot`, `end_slot` | No | Inclusive slot range; start must not exceed end |
+| `protocol` | No | One of the supported normalized venue names |
+| `actionType` / `action_type` | No | `swap`, `position-open`, `liquidity-add`, `liquidity-remove`, `position-rebalance`, `fee-claim`, `reward-claim`, or `position-close` |
+| `swigVaultAddress` / `swig_vault_address` | No | Restrict to a vault or sub-account |
 
-Set `network` to `NETWORK_MAINNET` or `NETWORK_DEVNET`. Lists default to 25 rows
-and cap `pageSize` at 100. Send each response's `nextCursor` unchanged with the
-same Swig, network, and filters. Stop when it is absent.
+Filters combine with AND. Protocol, action type, and vault must match the same
+action; each returned transaction still includes all its indexed DEX actions.
+Pass the cursor unchanged with the same wallet, network, and filters.
 
-A transaction cursor contains `slot` and `transactionSignature`; a position
-cursor contains `protocol` and `dexPositionAddress`. A cursor is a sort position,
-not authorization or a saved filter set.
+## SDK example
 
-## Quota
+<CodeGroup>
+```typescript TypeScript
+const result = await swig.dex.transactions.list({
+  swigConfigAddress,
+  network: 'mainnet',
+  pageSize: 25,
+  protocol: 'raydium-clmm',
+  actionType: 'swap',
+});
+```
 
-Each admitted call or page consumes **one DEX query**, regardless of the number
-of rows returned. Retries and admitted errors also count. These calls use the
-separate monthly DEX quota and do not consume API requests. All plans return
-`429` at their DEX cap; see [pricing and quotas](/query#dex-queries).
+```python Python
+result = await swig.dex.transactions.list(
+    swig_config_address=swig_config_address,
+    network="mainnet",
+    page_size=25,
+    protocol="raydium-clmm",
+    action_type="swap",
+)
+```
+</CodeGroup>
 
-## Reference and SDK examples
+## SDK returned structure
 
-- [DEX REST filters, payloads, and errors](/developer-api/dex)
-- [TypeScript and Python DEX examples](/developer-sdk/dex-activity)
-- [Wallet token movements](/query/wallets) for wallet-relative inflows and outflows
+Example of a final page containing one swap. TypeScript returns an object;
+Python returns typed dataclasses, shown here as JSON after conversion with
+`dataclasses.asdict`. A page with more results also has `nextCursor` /
+`next_cursor`.
+
+<CodeGroup>
+```json TypeScript
+{
+  "transactions": [
+    {
+      "swigConfigAddress": "8NkNvqXK6BfLAeqHvcwHWK6b6wybcraj2J3vZHm3LarX",
+      "transactionSignature": "5ic74krw5dwJAHpdagUqheKqj7cRE1wSTPTGzFjRSLFTewpGjsXA1DVk8C2d5QEJSefbjqBr7QczLLVfK7kbF9ra",
+      "slot": 449761692,
+      "blockTime": "2026-09-23T16:47:01Z",
+      "actions": [
+        {
+          "actionIndex": 0,
+          "swigVaultAddress": "4k9xWkFvjifracRGbBUHeKg2z8qzJBPwjqjCySu28Mej",
+          "actingRoleId": 1,
+          "protocol": "raydium-clmm",
+          "dexProgramAddress": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+          "action": {
+            "type": "swap",
+            "protocolInstruction": "SwapV2",
+            "protocolActorAddress": "4k9xWkFvjifracRGbBUHeKg2z8qzJBPwjqjCySu28Mej",
+            "dexPoolAddress": "EYJkpMH4KJy8XDQyK59DM2xBUodvPkerDxKMCwyL1ber",
+            "input": {
+              "mintAddress": "USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk",
+              "amountRaw": "-85238320",
+              "decimals": 6
+            },
+            "output": {
+              "mintAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+              "amountRaw": "85263893",
+              "decimals": 6
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+```json Python
+{
+  "transactions": [
+    {
+      "swig_config_address": "8NkNvqXK6BfLAeqHvcwHWK6b6wybcraj2J3vZHm3LarX",
+      "transaction_signature": "5ic74krw5dwJAHpdagUqheKqj7cRE1wSTPTGzFjRSLFTewpGjsXA1DVk8C2d5QEJSefbjqBr7QczLLVfK7kbF9ra",
+      "slot": 449761692,
+      "block_time": "2026-09-23T16:47:01Z",
+      "actions": [
+        {
+          "action_index": 0,
+          "swig_vault_address": "4k9xWkFvjifracRGbBUHeKg2z8qzJBPwjqjCySu28Mej",
+          "acting_role_id": 1,
+          "protocol": "raydium-clmm",
+          "dex_program_address": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+          "action": {
+            "type": "swap",
+            "protocol_instruction": "SwapV2",
+            "protocol_actor_address": "4k9xWkFvjifracRGbBUHeKg2z8qzJBPwjqjCySu28Mej",
+            "dex_pool_address": "EYJkpMH4KJy8XDQyK59DM2xBUodvPkerDxKMCwyL1ber",
+            "input": {
+              "mint_address": "USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk",
+              "amount_raw": "-85238320",
+              "decimals": 6
+            },
+            "output": {
+              "mint_address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+              "amount_raw": "85263893",
+              "decimals": 6
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "next_cursor": null
+}
+```
+</CodeGroup>
+
+See the [DEX API reference](/developer-api/dex) for the underlying transport.

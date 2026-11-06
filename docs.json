@@ -25,7 +25,7 @@
             ]
           },
           {
-            "group": "Wallets",
+            "group": "Wallet",
             "pages": [
               {
                 "group": "Setup",
@@ -35,7 +35,7 @@
                 ]
               },
               {
-                "group": "Members",
+                "group": "Member",
                 "pages": [
                   "developer-sdk/add-roles-and-permissions",
                   "developer-sdk/signers",
@@ -43,7 +43,7 @@
                 ]
               },
               {
-                "group": "Policies",
+                "group": "Policy",
                 "pages": [
                   "examples/dev-portal/create-policy",
                   "examples/dev-portal/fetch-policy",
@@ -61,8 +61,7 @@
               "query/balances",
               "query/dex",
               "query/yield",
-              "query/ramp",
-              "query/paymasters"
+              "query/ramp"
             ]
           },
           {
@@ -73,16 +72,7 @@
               "developer-sdk/transfers-and-swaps",
               "developer-sdk/swaps-and-batches",
               "developer-sdk/yield",
-              {
-                "group": "Paymasters",
-                "pages": [
-                  "examples/dev-portal/paymaster-overview",
-                  "examples/dev-portal/create-paymaster",
-                  "examples/dev-portal/manage-paymaster",
-                  "developer-sdk/sponsor-and-submit",
-                  "examples/dev-portal/transaction-history"
-                ]
-              },
+              "developer-sdk/sponsor-and-submit",
               "developer-sdk/x402"
             ]
           },
@@ -347,6 +337,26 @@
     {
       "source": "/examples/dev-portal/index",
       "destination": "/examples/dev-portal/overview"
+    },
+    {
+      "source": "/query/paymasters",
+      "destination": "/developer-sdk/sponsor-and-submit"
+    },
+    {
+      "source": "/examples/dev-portal/paymaster-overview",
+      "destination": "/developer-sdk/sponsor-and-submit"
+    },
+    {
+      "source": "/examples/dev-portal/create-paymaster",
+      "destination": "/developer-sdk/sponsor-and-submit"
+    },
+    {
+      "source": "/examples/dev-portal/manage-paymaster",
+      "destination": "/developer-sdk/sponsor-and-submit"
+    },
+    {
+      "source": "/examples/dev-portal/transaction-history",
+      "destination": "/developer-sdk/sponsor-and-submit"
     }
   ],
   "logo": {

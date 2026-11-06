@@ -1,121 +1,60 @@
 ---
-title: "Fetch Policy Templates"
-sidebarTitle: "Fetch templates"
-description: "Read saved wallet-creation configuration with the TypeScript or Python Developer SDK."
+title: "Fetch template"
+sidebarTitle: "Fetch template"
+description: "Inspect saved wallet-creation policy metadata."
 ---
 
-Read a policy template to inspect the authority and actions saved for wallet
-creation. This metadata describes a template, not an existing wallet's
+## Introduction
+
+A policy lookup returns the authority and action configuration saved for wallet
+creation. Use it to inspect a template before creating a wallet or displaying its
+setup in your application. It describes saved metadata, not a wallet's current
 on-chain permissions.
-Use the same Developer SDK client that prepares your wallet operations.
-Reading a template requires an API key with access to it; it does not
-require a wallet signature.
 
-## Before you begin
+TypeScript and Python expose this lookup. Your API key must have access to the
+template; a wallet signature is not required.
 
-- Initialize the [TypeScript or Python client](/developer-sdk/integration-paths)
-  on your server with an [API key](/examples/dev-portal/create-api-key).
-- [Create a policy template](/examples/dev-portal/create-policy) in the Developer Portal
-  and copy its policy ID.
+## Input
 
-## Fetch a template
+| Parameter | Required | Description |
+| :--- | :--- | :--- |
+| `policyId` / `policy_id` | Yes | ID saved when [creating the template](/examples/dev-portal/create-policy) |
+| API key | Client setting | Server credential with access to the template |
 
-The following examples use your initialized `swig` client and policy ID.
+## Output
 
-<CodeGroup dropdown>
+TypeScript names are shown below. Python exposes a `Policy` object with
+snake_case top-level fields.
 
+| Field | Type | Meaning |
+| :--- | :--- | :--- |
+| `id`, `name` | string | Template identifier and display name |
+| `description` | string or null | Saved description |
+| `authority` | object, null, or absent | Stored initial authority; your application supplies one when the template requires it |
+| `actions` | array, optional | Saved action data for the initial user |
+| `initialKeySource` | string, optional | Whether the initial key is stored or supplied at creation |
+| `guardianEnabled`, `guardianAuthority`, `guardianKeySource`, `guardianDelaySeconds` | Optional compatibility fields | Retained recovery metadata; presence does not establish an available recovery flow |
+
+This lookup does not return additional users saved in the portal. Store the
+configuration needed to provision those roles in your application. Saved actions
+use stored names and shapes; map them to typed [permission](/developer-sdk/permissions)
+inputs when adding a role rather than forwarding them unchanged.
+
+## SDK example
+
+Use the server client from [Client setup](/developer-sdk/integration-paths).
+
+<CodeGroup>
 ```typescript TypeScript
 const policy = await swig.wallets.getPolicy(policyId);
-
-console.log(policy.id);
-console.log(policy.name);
-console.log(policy.description);
-console.log(policy.authority);
-console.log(policy.actions);
 ```
 
 ```python Python
 policy = await swig.wallets.get_policy(policy_id)
-
-print(policy.id)
-print(policy.name)
-print(policy.description)
-print(policy.authority)
-print(policy.actions)
 ```
-
 </CodeGroup>
 
-Both clients call `GET /wallet/policies/{policyId}` on the hosted API.
-TypeScript returns the policy metadata directly; Python exposes a `Policy`
-object and normalizes its top-level field names to snake case.
-
-This SDK lookup returns initial-user policy metadata and recovery fields;
-it does not return the additional users saved in the portal template. Keep
-the authorities and actions needed for your add-role requests in your
-application's configuration. See [Policy Templates](/examples/dev-portal/create-policy)
-for the wallet-creation and additional-user setup boundaries.
-
-## Understand the result
-
-The response describes stored configuration. For example, a template created
-in the portal gives its initial user full root access. The TypeScript client
-preserves the API's wallet-authority shape:
-
-```json
-{
-  "id": "clx1234567890abcdef",
-  "name": "user-wallet-policy",
-  "description": "Initial wallet user with root access",
-  "initialKeySource": "WALLET_POLICY_KEY_SOURCE_STORED",
-  "authority": {
-    "ed25519": {
-      "publicKey": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU"
-    }
-  },
-  "actions": [
-    { "type": "All" }
-  ]
-}
-```
-
-A template can omit the authority so that your application supplies the initial
-user at wallet creation. The `actions` list contains saved action data. See
-[Permissions](/developer-sdk/permissions) for the meaning of each grant, its
-units, and the Developer SDK inputs used when adding a role.
-
-Policy response actions use stored action names and fields. When adding a
-role, map them to the typed SDK inputs shown in the reference rather than
-forwarding stored action data unchanged.
-
-To inspect the authorities and permissions currently attached to a wallet,
-use [Wallet state](/developer-sdk/wallet-reads#roles).
-
-## Handle read errors
-
-The TypeScript client throws `SwigDeveloperSdkError` for failed API requests:
-
-```typescript
-import { SwigDeveloperSdkError } from '@swig-wallet/developer-sdk';
-
-try {
-  const policy = await swig.wallets.getPolicy(policyId);
-  console.log(policy.name);
-} catch (error) {
-  if (error instanceof SwigDeveloperSdkError) {
-    console.error('Status:', error.statusCode);
-    console.error('Code:', error.code);
-  }
-  throw error;
-}
-```
-
-Check the API key and its resource access for `401` or `403` responses. For a
-`404`, check that the policy ID exists and is visible to the caller. See
-[Developer API Errors](/developer-api/errors) for other response statuses.
-
-## Continue with the template
-
-Pass the policy ID when you [Create a wallet](/developer-sdk/create-wallets).
-The SDK reads the template as part of wallet preparation. Your application then
-signs and submits the returned transactions.
+For `401` or `403`, check the API key and its access. For `404`, check the policy
+ID and its visibility to the caller. Pass the ID into [Create a wallet](/developer-sdk/create-wallets)
+when ready. Use the [role list](/developer-sdk/add-roles-and-permissions#confirm-the-role)
+to inspect permissions already on-chain.

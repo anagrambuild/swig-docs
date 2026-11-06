@@ -1,34 +1,61 @@
 ---
-title: "Authorization Locks"
-sidebarTitle: "Authorization locks"
+title: "Authorization lock"
+sidebarTitle: "Authorization lock"
+description: "Reserve SOL or tokens for an authorized role, then inspect or release the hold."
 ---
 
-Prepare SOL or token holds through the Developer API, inspect them, and prepare
-release or pruning. The backend builds unsigned transactions; your application
-owns authority signing, ParticipantSet approvals, fee-payer signing, and submission.
-Keep the API key on the server.
+## Introduction
 
-These APIs are under review in [TypeScript/Python PR #66](https://github.com/anagrambuild/swig-developer-sdk/pull/66)
-and [Rust PR #79](https://github.com/anagrambuild/swig-developer-sdk/pull/79). They need
-the matching portal routes and on-chain authorization-lock program. Rust hosted
-support does not depend on publication of the Rust Protocol SDK. Use the
-[Protocol SDK recipe](/examples/authorization_locks) for direct on-chain builders.
+An authorization lock reserves an asset amount for a role until it is spent,
+released, or expires. Use it when an authorized operation needs a temporary hold
+on SOL or tokens while other roles continue using the wallet.
 
-## Grant permission
+The backend prepares unsigned transactions. Your application handles approval,
+signing, and submission. Hosted support remains under review in
+[TypeScript/Python PR #66](https://github.com/anagrambuild/swig-developer-sdk/pull/66)
+and [Rust PR #79](https://github.com/anagrambuild/swig-developer-sdk/pull/79), and
+requires matching backend routes and the authorization-lock program.
+
+## Input
+
+| Operation | Parameter | Description |
+| :--- | :--- | :--- |
+| All | Wallet config and network | Existing wallet on the configured client |
+| Read | `includeExpired` / `include_expired` | Include expired and fully captured records |
+| Add/remove | Requester and fee payer | Authority for the operation and public fee-payer key |
+| Add | `amount` | Lamports or token base units; use an exact integer value |
+| Add | `mint` | Omit for SOL; supply a mint to hold tokens in the wallet's associated token account |
+| Add | `durationSlots` / `duration_slots` or `expirySlot` / `expiry_slot` | Choose exactly one; the role's maximum duration still applies |
+| Remove | `lockId` / `lock_id` | ID of the hold to release or prune |
 
 The acting role needs `ManageAuthorizationLocks { max_duration_slots }`, even
-when it has `All`. Grant it through the Protocol SDK; the hosted add-role API
-does not yet accept this permission. A limited role also needs the relevant asset's spending
-permission. Grants and updates come from an eligible managing role; a delegated
-role cannot raise its own duration bound. See [the protocol rules](/protocol/authorization-locks).
+with `All`, and a limited role also needs the asset's spending permission.
+Grant this through the [Protocol SDK](/protocol/authorization-locks); the hosted
+add-role API does not expose it. A delegated role cannot raise its own duration bound.
 
-Amounts are lamports or token base units. Choose exactly one expiry: a duration
-in slots or an absolute expiry slot. The role's maximum duration still applies.
-Omit the mint for SOL; supply a token mint to use the wallet's associated token
-account. Reads include `currentSlot`/`current_slot`, `nextLockId`/`next_lock_id`,
-and the remaining amount and active status of each hold.
+Only the holder can release an active hold. The holder or an eligible managing
+role can prune expired or fully captured records. Normal spending by the holder
+captures the hold and reduces its remaining amount; zero is valid.
 
-## Prepare and inspect locks
+## Output
+
+| Read field | Meaning |
+| :--- | :--- |
+| `currentSlot` / `current_slot` | Slot used to evaluate the returned holds |
+| `nextLockId` / `next_lock_id` | Next lock identifier |
+| `locks[].lockId` / `lock_id` | Hold identifier |
+| `locks[].roleId` / `role_id` | Holder role |
+| `locks[].assetAccount` / `asset_account` | Account containing the reserved asset |
+| `locks[].mint` | Token mint; absent for native SOL |
+| `locks[].amount` | Remaining base-unit amount as an exact decimal string |
+| `locks[].expirySlot` / `expiry_slot` | Expiry slot as an exact decimal string |
+| `locks[].active` | True while unexpired with a nonzero remaining amount |
+
+## SDK example
+
+These examples target the SDK changes linked above. Use server-side clients
+from [Client setup](/developer-sdk/integration-paths). Preparation alone does
+not create or remove a hold; sign, submit, confirm, then query again.
 
 <Tabs>
 <Tab title="TypeScript">
@@ -144,17 +171,6 @@ flow before signing the compiled transaction.
 </Tab>
 </Tabs>
 
-## Sign, submit, and observe
-
-1. Complete the returned authority signature requests or
-   [ParticipantSet approvals](/developer-sdk/participant-sets).
-2. Add the required native transaction signatures and
-   [submit or sponsor](/developer-sdk/sponsor-and-submit).
-3. Wait for confirmation, then read holds again. Preparing a transaction alone
-   does not create or remove a hold.
-
-The holder captures a hold by spending from its asset account through the normal
-transfer or execution flow. The remaining amount falls; zero is a valid fully
-captured record. Expired and fully captured records can be pruned by the holder
-or a role with `All`, `AllButManageAuthority`, `ManageAuthority`, or
-`ManageAuthorizationLocks`. Another role cannot release an active hold.
+Complete [participant approval](/developer-sdk/participant-sets) when requested,
+then [sign](/developer-sdk/signers) and submit directly or through
+[Paymaster](/developer-sdk/sponsor-and-submit).

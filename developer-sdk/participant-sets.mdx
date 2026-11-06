@@ -1,35 +1,79 @@
 ---
-title: "Participant Sets"
-sidebarTitle: "Participant sets"
+title: "Participant set"
+sidebarTitle: "Participant set"
+description: "Require multiple members to approve one wallet operation."
 ---
 
-A ParticipantSet lets several independent members authorize one Swig role with
-an M-of-N threshold. The set belongs to one Swig config, and the role controls
-what the set may do through the same typed actions used by any other role.
+## Introduction
 
-Members can use Ed25519, secp256r1/passkeys, or secp256k1. Each member signs a
-challenge bound to the prepared operation, while every challenge in the plan
-commits to the same shared ParticipantSet nonce.
+A participant set lets independent members authorize one Swig role with an
+M-of-N threshold. Use it for shared control, such as requiring two members to
+approve a transfer. The set determines who approves; the role's permissions
+determine what they may do.
 
-ParticipantSet support is available in TypeScript `0.10.0`, Python `0.9.0`, and
-Rust `0.1.0`. See [Rust setup](/developer-sdk/integration-paths#rust) for
-client configuration.
+Each set belongs to one Swig config. Members can use Ed25519, secp256r1/passkeys,
+or secp256k1. Approvals bind the same operation and shared nonce.
 
-## Create the set and add its role
+## Flow
 
-This 2-of-2 example prepares a SOL-transfer role using two Ed25519 members. First
-prepare and submit the ParticipantSet creation transaction. After that
-transaction lands, use the general
-[Add a role](/developer-sdk/add-roles-and-permissions) flow to
-attach the set to a role and choose its permissions.
+```text
++----------------------------+
+| Create set and confirm     |
++----------------------------+
+              |
+              v
++----------------------------+
+| Add role and confirm       |
++----------------------------+
+              |
+              v
++----------------------------+
+| Prepare one operation      |
++----------------------------+
+              |
+              v
++----------------------------+
+| Collect member approvals   |
++----------------------------+
+              |
+              v
++----------------------------+
+| Compile, sign, and submit  |
++----------------------------+
+```
 
-Use an existing authority with permission to add roles. TypeScript and Python
-accept a config address or full wallet reference through `wallets.use`.
-Rust passes the config address and requester authority with each preparation.
+## Input
 
-`signAndSubmit` / `sign_and_submit` is your application's signing, RPC
-submission, and confirmation helper. In Rust, it accepts `PreparedTransaction`.
-It returns only after confirmation.
+| Step | Parameter | Description |
+| :--- | :--- | :--- |
+| Create | Wallet config, network, fee payer | Existing wallet and public fee-payer address |
+| Create | `members` | Public authorities of the selected members |
+| Create | `threshold` | Number of distinct approvals required; the example uses 2 of 2 |
+| Create | `setId` / `set_id` | Optional set identifier |
+| Add role | Set address and `actions` | Give the set a role using an existing Ed25519 or secp256r1 administrator |
+| Prepare | Set requester and operation inputs | Use the assigned role ID in Rust; retain the returned approval plan |
+| Approve | Member request and matching signer | Send each member its own challenge with the operation visible |
+| Compile | Original preparation and approvals | Supply distinct, valid approvals meeting the threshold |
+
+Serialize operations per set. Concurrent plans share the next nonce; once one
+lands, prepare and approve the others again. A stale nonce or expired plan needs
+fresh approval. Compilation rejects insufficient or duplicate approvals.
+
+Supported flows include SOL/token transfers, transfer batches, and custom
+instructions without lookup tables. Swaps and lookup-table transactions need a
+direct requester. Hosted recovery preparation is not supported.
+
+## SDK example
+
+Use [Client setup](/developer-sdk/integration-paths). The examples use two Ed25519
+members. `signAndSubmit` / `sign_and_submit` is your application's helper; it signs,
+submits, and waits for confirmation. Rust inputs use native `Pubkey` values.
+
+### Create the set and add its role
+
+Confirm set creation before adding its role. This role needs both System Program
+access and a one-time SOL budget; each successful transfer reduces that budget.
+After adding the role, read its assigned ID for the Rust operation below.
 
 <CodeGroup>
 
@@ -157,33 +201,7 @@ sign_and_submit(add_role).await?;
 
 </CodeGroup>
 
-Set creation and role creation are separate transactions. Confirm the set
-creation before preparing the role. In Rust, use `role_id: None` for the new
-role, then read its assigned ID with `list_roles` after confirmation. See
-[Add a role](/developer-sdk/add-roles-and-permissions).
-
-<Note>
-  Keep both actions on a scoped SOL-transfer role. The `program` action permits
-  the wallet to invoke Solana's System Program, while `solLimit` caps the
-  lamports that may leave the wallet. SignV2 checks these permissions
-  independently, so `solLimit` alone does not authorize the program invocation.
-  The Developer SDK calls this action `program`; the Protocol SDK builder calls
-  the same permission `programLimit`.
-</Note>
-
-`solLimit` is the role's remaining one-time SOL budget. Each successful transfer
-decrements it, so size the initial allowance for the operations the role should
-perform.
-
-The add-role requester must currently be an Ed25519 or secp256r1 authority. A
-ParticipantSet can be the new role authority, but cannot request the add-role
-operation itself.
-
-## Prepare an operation
-
-After both setup transactions land, select the ParticipantSet as the requester.
-Supported preparation routes return a normal prepared transaction with a
-`participantSetApprovalPlan` / `participant_set_approval_plan`.
+### Prepare an operation
 
 <CodeGroup>
 
@@ -246,33 +264,12 @@ let plan = prepared
 
 </CodeGroup>
 
-ParticipantSet preparation currently supports SOL transfers, token transfers,
-transfer batches, and custom instructions without address lookup tables. Swaps
-and custom transactions with address lookup tables require a direct
-non-ParticipantSet requester. Recovery preparation is not currently supported;
-see [Guardian recovery](/developer-sdk/use-cases/guardian-recovery) for the
-scoped permission model and a possible extension requiring multiple approvals.
+### Collect member approvals
 
-Serialize ParticipantSet operations per set. Concurrent plans use the same next
-nonce; after one transaction lands, prepare and approve the others again.
-
-## Collect member approvals
-
-Send each selected member only its own approval request. The detached signers
-verify that the signer type and public key match that request before signing.
-TypeScript and Python call application-owned signing callbacks; Rust's native
-implementations use shared local keys. Each approval remains separate from the
-prepared transaction until compilation.
-
-The Rust examples are alternatives for one member. Pass that member's request
-from `plan.members`, cloning it if you need to retain the plan. Use the member's
-local Ed25519, secp256k1, or P-256 key.
-
-| Member | Helper behavior |
-| :--- | :--- |
-| Ed25519 | Signs the decoded 32-byte challenge |
-| secp256r1 | TypeScript/Python use a WebAuthn assertion; Rust builds a software WebAuthn proof with a local P-256 key |
-| secp256k1 | Signs the lowercase 64-character ASCII hex challenge with EIP-191; TypeScript/Python callbacks apply the prefix, while Rust applies it internally |
+Distribute each request to its member and collect the returned approval. The
+TypeScript/Python examples keep both callbacks together to show the full flow.
+For Rust, run the signer for each selected member's request from `plan.members`
+and collect the results into `approvals`.
 
 <CodeGroup>
 
@@ -340,7 +337,7 @@ for request in plan.members:
     approvals.append(await sign_participant_set_approval(request, signer))
 ```
 
-```rust Rust Ed25519
+```rust Rust
 use std::sync::Arc;
 
 use swig_developer_sdk::{Ed25519ParticipantSigner, ParticipantSigner};
@@ -349,45 +346,17 @@ let signer = Ed25519ParticipantSigner::new(Arc::clone(&keypair));
 let approval = signer.approve(request).await?;
 ```
 
-```rust Rust secp256k1
-use std::sync::Arc;
-
-use swig_developer_sdk::{ParticipantSigner, Secp256k1ParticipantSigner};
-
-let signer = Secp256k1ParticipantSigner::new(Arc::clone(&signing_key));
-let approval = signer.approve(request).await?;
-```
-
-```rust Rust secp256r1
-use std::sync::Arc;
-
-use swig_developer_sdk::{ParticipantSigner, Secp256r1ParticipantSigner};
-
-let signer = Secp256r1ParticipantSigner::new(Arc::clone(&signing_key));
-let approval = signer.approve(request).await?;
-```
-
 </CodeGroup>
 
-Distribute each request to its member and collect the returned approvals out
-of band. The TypeScript/Python example keeps both callbacks together to show
-the full flow. Rust signers can be reused for requests from the same member.
+Ed25519 signs the decoded challenge. The secp256k1 participant helper signs its
+lowercase hexadecimal form with EIP-191. The Rust P-256 participant helper creates
+a software WebAuthn proof; it does not establish browser user presence.
+Use application-owned credential selection and RP ID/origin checks for passkeys.
 
-Rust's `Secp256r1ParticipantSigner` creates a software WebAuthn envelope; it
-does not run a browser passkey ceremony or establish human presence. For a
-browser passkey flow, your application owns credential selection and RP
-ID/origin policy. Ask each member to approve its own challenge with the
-operation's intent visible to that member. A detached approval is separate
-from an outer Solana transaction signature.
+### Compile and submit
 
-Native `approve` implementations validate the member type and public key.
-Your application must verify the intended operation before asking for an
-approval. The hosted compiler verifies the submitted proofs and plan freshness.
-
-## Compile and submit
-
-Return the detached approvals with the original prepared transaction. The API
-validates the plan and simulates the final transaction before returning it.
+Compilation validates the approvals and simulates the transaction. It does not
+sponsor, broadcast, or confirm it.
 
 <CodeGroup>
 
@@ -424,28 +393,7 @@ let compiled = wallet
 
 </CodeGroup>
 
-The compiled Rust result contains the transaction and its
-`authorization_expiration_slot`. Use the
-[outer Ed25519 signing example](/developer-sdk/signers#ed25519-and-application-defined-signers)
-to add remaining application-owned signatures while preserving existing ones.
-
-Compilation does not sponsor, broadcast, or confirm the transaction. Check the
-compiled transaction against the approved operation, add every remaining
-Solana transaction signature, then submit directly or use
-[Sponsor & Submit](/developer-sdk/sponsor-and-submit) before the authorization
-expiration slot. If the slot has passed, prepare a fresh operation and collect
-fresh approvals.
-
-Compilation also rejects insufficient or duplicate approvals and a plan whose
-shared nonce no longer matches the on-chain ParticipantSet. Prepare a fresh
-operation after another transaction consumes the nonce.
-
-## Approval and submission boundaries
-
-- Prepare a fresh plan and collect fresh approvals for each distinct
-  transaction.
-- Keep every approval with its original plan and shared nonce.
-- Keep the Swig API key in the server client; detached signer helpers accept no
-  API key and make no hosted API calls.
-- Add transaction-level signatures such as the fee payer or another required
-  Ed25519 signer after compilation.
+Add remaining [Solana signatures](/developer-sdk/signers#ed25519-and-application-defined-signers)
+after compilation, then submit before `authorizationExpirationSlot` /
+`authorization_expiration_slot`. Use [Paymaster](/developer-sdk/sponsor-and-submit)
+for sponsorship. Keep approvals with their original plan and nonce.

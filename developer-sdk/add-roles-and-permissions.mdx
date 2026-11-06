@@ -1,43 +1,59 @@
 ---
-title: "Add a Role"
-sidebarTitle: "Roles"
-description: "Prepare, sign, and submit the transaction that adds an authority to an existing wallet."
+title: "Role"
+sidebarTitle: "Role"
+description: "Give an authority scoped access to a wallet and inspect its assigned role."
 ---
 
-Use `wallet.roles.add()` to prepare a transaction that attaches a new authority
-and its permitted actions to an existing Swig wallet. Your application signs
-and submits the transaction.
+## Introduction
 
-Choose the actions from the [Permissions](/developer-sdk/permissions)
-reference, then follow this guide to add the role.
+A role combines an authority with the actions it may perform. Use a separate
+role for each person, service, or participant set that needs wallet access.
+This lets an administrator grant a spending budget without sharing root access.
 
-General role creation is available in TypeScript `0.10.0`, Python `0.9.0`, and
-Rust `0.1.0`.
+Adding a role prepares a transaction. The existing administrator signs it;
+the new authority becomes usable after confirmation.
 
-## Before you begin
+## Input
 
-You need:
+| Operation | Parameter | Description |
+| :--- | :--- | :--- |
+| Both | Wallet config address and network | Existing wallet, selected through the configured client |
+| Add | `requesterAuthority` / `requester_authority` | Existing Ed25519 or secp256r1 authority with `manageAuthority` or `all` |
+| Add | `feePayer` / `fee_payer` | Public key paying the fee |
+| Add | `authority` | New Ed25519, secp256k1, secp256r1, or ParticipantSet authority |
+| Add | `actions` | At least one typed [permission](/developer-sdk/permissions) |
 
-- an existing Swig config address
-- the fee payer public key
-- an existing Ed25519 or secp256r1 requester authority whose role includes
-  `manageAuthority` or `all`
-- the public authority value for the new role
-- one or more actions for the new role
+TypeScript/Python use public-key strings. Rust uses `Pubkey` for Ed25519 and
+compressed 33-byte SEC1 keys for secp256k1/secp256r1. A new ParticipantSet
+role takes the set address without a role ID (`role_id: None` in Rust).
+Swig assigns the new role ID.
 
-The TypeScript and Python address variables are base58 strings. `signAndSubmit` /
-`sign_and_submit` represents your application-owned signing, RPC submission,
-and confirmation helper.
+## Output
 
-Rust examples use `wallet`, the configured `WalletClient` from
-[Rust integration](/developer-sdk/integration-paths#rust). Supply
-`swig_config_address`, `fee_payer`, `admin_public_key`, and
-`new_role_public_key` as `Pubkey` values.
+TypeScript fields are shown below; Python uses snake_case names. Use the read
+after confirmation to verify the grant. Saved policy metadata is separate.
 
-## Add a scoped SOL-transfer role
+| Field | Meaning |
+| :--- | :--- |
+| `swigConfigAddress`, `walletAddress` | Wallet configuration and asset-holding address |
+| `roles[].roleId` | Assigned role identifier |
+| `roles[].authorityType`, `authorityValue` | Encoded authority type and value |
+| `roles[].actions` | Action index, action code, and stored action data for each grant |
 
-This example gives a new Ed25519 authority permission to transfer up to
-1,000,000 lamports through Solana's System Program.
+Rust returns native typed authority and permission values through its role-list
+result. Use the returned role ID when preparing an operation for a participant set.
+
+## SDK example
+
+### Add a scoped SOL-transfer role
+
+This role can invoke the System Program and spend a total of 1,000,000 lamports.
+Both actions are required: program access and asset spending are checked
+separately. Each successful transfer reduces the remaining one-time budget.
+
+Use the clients from [Client setup](/developer-sdk/integration-paths).
+`signAndSubmit` / `sign_and_submit` is your application's signing, submission,
+and confirmation helper, not an SDK method. Rust address inputs are `Pubkey` values.
 
 <CodeGroup>
 
@@ -118,43 +134,9 @@ let prepared = wallet
 
 </CodeGroup>
 
-Both actions belong to the same new role. `program` permits the System Program
-invocation, while `solLimit` provides the role's remaining one-time SOL budget.
-Each successful transfer decrements that budget. SignV2 checks program access
-and SOL spending independently, so the transfer needs both permissions.
+### Confirm the role
 
-For other operations, choose the required actions and fields from
-[Permissions](/developer-sdk/permissions).
-
-## Choose the new authority
-
-The new role may use any of these authority shapes:
-
-| Authority | New-role shape | Typical use |
-| :--- | :--- | :--- |
-| Ed25519 | `{ ed25519: { publicKey } }` | Solana keypair or custody signer |
-| secp256r1 | `{ secp256r1: { publicKey } }` | Passkey-backed signer |
-| secp256k1 | `{ secp256k1: { publicKey } }` | EVM-compatible signer |
-| ParticipantSet | `{ participantSet: { address } }` | M-of-N threshold authorization |
-
-For a ParticipantSet role, create the set first and pass its address without a
-role ID. Adding the authority creates a new role whose ID is assigned by Swig.
-Continue to [Participant Sets](/developer-sdk/participant-sets) for member
-approval collection and compilation.
-
-In Rust's `WalletAuthority`, the secp256 variants take compressed SEC1 public
-keys as `[u8; 33]`. Set `role_id: None` for a new ParticipantSet authority.
-
-<Note>
-  The authority being added may use any supported shape above. The existing
-  authority requesting the add-role operation must use Ed25519 or secp256r1.
-</Note>
-
-## Confirm the role
-
-The add-role call returns a prepared transaction; it does not broadcast or
-confirm it. After your signing helper submits the transaction and it lands,
-read the wallet roles to confirm the new authority and actions.
+After the add-role transaction confirms, inspect the assigned authority and actions.
 
 <CodeGroup>
 
@@ -174,35 +156,6 @@ let roles_result = wallet.list_roles(&swig_config_address).await?;
 
 </CodeGroup>
 
-Wait for the add-role transaction to confirm before using the new authority.
-Keep every private key, passkey assertion, and authorization decision in your
-application-owned signing layer.
-
-## Request boundaries
-
-- Supply at least one action.
-- Use an existing Ed25519 or secp256r1 authority as the requester.
-- Pass a ParticipantSet address without a role ID when adding it as the new
-  authority.
-- Add the transaction-level signatures required by the serialized transaction
-  before submission.
-
-Preserve the prepared transaction's signature requests through your
-[signing flow](/developer-sdk/signers).
-
-## What to read next
-
-<CardGroup cols={1}>
-  <Card title="Participant Sets" icon="users" href="/developer-sdk/participant-sets">
-    Add M-of-N threshold authorization to a role
-  </Card>
-  <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-and-swaps">
-    Use a configured role for wallet transfers
-  </Card>
-  <Card title="Permissions" icon="sliders" href="/developer-sdk/permissions">
-    Look up available actions, fields, and units
-  </Card>
-  <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">
-    Submit application-signed transactions
-  </Card>
-</CardGroup>
+Complete embedded signature requests and all required Solana transaction
+signatures before submission. See [Signing](/developer-sdk/signers) or
+[Participant set](/developer-sdk/participant-sets) for threshold approval.
