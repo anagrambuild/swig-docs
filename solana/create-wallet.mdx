@@ -1,0 +1,65 @@
+---
+title: "Create a wallet"
+description: "Create a Solana wallet with an initial authority and fetch its deposit address."
+---
+
+Start with a funded Solana payer and the public key of the wallet's owner.
+This example uses the same Ed25519 keypair for both and grants the owner
+`all()` so it can spend funds and manage roles.
+
+Install the packages from [Setup](/solana). Pass a `Connection` for your
+chosen cluster and your application's signer to this function:
+
+```typescript
+import {
+  type Connection,
+  type Keypair,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  fetchSwig,
+  findSwigPda,
+  getCreateSwigInstruction,
+  getSwigWalletAddress,
+} from "@swig-wallet/classic";
+
+async function createWallet(connection: Connection, owner: Keypair) {
+  const id = crypto.getRandomValues(new Uint8Array(32));
+  const configAddress = findSwigPda(id);
+  const instruction = await getCreateSwigInstruction({
+    payer: owner.publicKey,
+    id,
+    authorityInfo: createEd25519AuthorityInfo(owner.publicKey),
+    actions: Actions.set().all().get(),
+  });
+  const signature = await sendAndConfirmTransaction(
+    connection,
+    new Transaction().add(instruction),
+    [owner],
+    { commitment: "confirmed" },
+  );
+  const swig = await fetchSwig(connection, configAddress, {
+    commitment: "confirmed",
+  });
+  const walletAddress = await getSwigWalletAddress(swig);
+  return { configAddress, walletAddress, signature };
+}
+```
+
+Keep both addresses:
+
+- **Config address:** pass it to `fetchSwig` to read roles and prepare operations.
+- **Wallet address:** receive SOL here and use it as the owner of token accounts.
+
+The payer funds account creation and the transaction fee. A browser wallet can
+sign the transaction through its wallet adapter instead of using a local
+`Keypair`; see [Sending transactions](/solana/transactions/sending).
+
+For another owner type, use the matching [authority constructor](/solana#authorities).
+For an address you can derive from the owner before activation, use
+[counterfactual creation](/solana/reservation-addresses).
+
+Next, [add a role](/solana/add-role) with limited access for your application.

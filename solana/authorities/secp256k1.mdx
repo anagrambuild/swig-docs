@@ -1,0 +1,55 @@
+---
+title: "Secp256k1 (k1)"
+description: "Authorize Solana wallet operations with an Ethereum signer."
+---
+
+Use k1 to connect an Ethereum signer to a Swig wallet on Solana. The Ethereum
+key authorizes the wallet operation; a Solana payer pays the transaction fee.
+
+## Register the authority
+
+Use `createSecp256k1AuthorityInfo(publicKey)` when you
+[create a wallet](/solana/create-wallet) or [add a role](/solana/add-role).
+Supply the full public key, not the 20-byte Ethereum address. The constructor
+accepts compressed SEC1, uncompressed SEC1, or raw 64-byte public keys as bytes
+or hex.
+
+## Connect an Ethereum signing callback
+
+This example accepts a Viem local account that your application already owns.
+Install `viem` alongside the Protocol SDK.
+
+```typescript
+import { hexToBytes, type LocalAccount } from "viem";
+import {
+  createSecp256k1AuthorityInfo,
+  getEvmPersonalSignPrefix,
+  type SigningFn,
+} from "@swig-wallet/classic";
+
+function ethereumAuthority(account: LocalAccount) {
+  const authorityInfo = createSecp256k1AuthorityInfo(account.publicKey);
+  const signingFn: SigningFn = async (message) => {
+    const signature = await account.signMessage({ message: { raw: message } });
+    return {
+      signature: hexToBytes(signature),
+      prefix: getEvmPersonalSignPrefix(message.length),
+    };
+  };
+  return { authorityInfo, signingFn };
+}
+```
+
+For a browser Ethereum wallet, implement the same `SigningFn` using its
+message-signing API and the selected account. Sign the **raw message bytes**
+and return the matching personal-sign prefix. Signing the text of a hex
+string would approve a different message.
+
+Pass `signingFn`, the current slot, and the Solana payer to
+[the signing builder](/solana/transactions/signing#r1-and-k1-signers).
+Refetch the wallet before preparing another operation so the builder uses
+the current signature counter.
+
+Use `findRolesBySecp256k1SignerAddress(ethereumAddress)` to locate existing
+roles, then select the intended role ID. For repeated application operations,
+consider a limited [session](/solana/authorities/sessions).

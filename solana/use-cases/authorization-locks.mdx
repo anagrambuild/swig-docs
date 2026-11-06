@@ -1,0 +1,109 @@
+---
+title: "Authorization locks"
+description: "Reserve funds for a payment, capture them by spending, or release the hold."
+---
+
+An authorization lock holds part of the wallet's balance for one role. Other
+roles, including the owner, can spend only the unreserved balance. The holder
+captures a payment by spending through the wallet, or releases the hold.
+
+This example uses Classic 3.0.0 and an Ed25519 payment role on a Swig
+deployment that supports authorization locks.
+
+## Grant permission to hold and spend
+
+Add a role for the payment signer's public key with these actions, using
+[Add a role](/solana/add-role):
+
+```typescript
+import { SystemProgram } from "@solana/web3.js";
+import { Actions } from "@swig-wallet/classic";
+
+const actions = Actions.set()
+  .manageAuthorizationLocks({ maxDurationSlots: 1_000n })
+  .programLimit({ programId: SystemProgram.programId })
+  .solLimit({ amount: 2_000_000_000n })
+  .get();
+```
+
+The role can spend up to 2 SOL and place holds lasting at most 1,000 slots.
+Holds must fit both its remaining allowance, after existing holds, and the
+wallet's unreserved balance above rent. Even an `all()` role needs the explicit
+lock permission.
+
+## Place a hold
+
+Reserve 1.5 SOL for 400 slots. This function prepares the instructions; send
+them with the payment role's signer and payer using
+[Sending transactions](/solana/transactions/sending).
+
+```typescript
+import { type Connection, type PublicKey } from "@solana/web3.js";
+import { fetchSwig, getAddSolAuthorizationLockInstructions } from "@swig-wallet/classic";
+
+async function prepareHold(
+  connection: Connection,
+  configAddress: PublicKey,
+  paymentRoleId: number,
+  payer: PublicKey,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  const currentSlot = BigInt(await connection.getSlot());
+  return getAddSolAuthorizationLockInstructions(
+    swig,
+    paymentRoleId,
+    { amount: 1_500_000_000n, expirySlot: currentSlot + 400n },
+    { payer },
+  );
+}
+```
+
+After confirmation, read the assigned lock IDs with
+`fetchSwigAuthorizationLocks(connection, configAddress)`. Use
+`fetchActiveSwigAuthorizationLocks(connection, configAddress, currentSlot)`
+when displaying only active holds.
+
+## Capture a payment
+
+Use the same payment role to [transfer](/solana/use-cases/transfers) 1 SOL
+from the wallet. `getSignInstructions` uses wallet execution to capture the
+spend: the role's 1.5 SOL hold becomes 0.5 SOL. Its spending allowance is charged
+when it spends, not when it places the hold.
+
+A hold is not a transfer destination restriction. Use a destination-limited
+permission if the role should pay only one recipient. Spending beyond the
+hold can use free balance within the role's remaining permissions.
+
+## Release the remaining hold
+
+Use the lock ID read from confirmed state, with the same role that placed it:
+
+```typescript
+import { type Connection, type PublicKey } from "@solana/web3.js";
+import { fetchSwig, getRemoveAuthorizationLockInstructions } from "@swig-wallet/classic";
+
+async function prepareRelease(
+  connection: Connection,
+  configAddress: PublicKey,
+  paymentRoleId: number,
+  payer: PublicKey,
+  lockId: number,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  return getRemoveAuthorizationLockInstructions(
+    swig,
+    paymentRoleId,
+    { lockId },
+    { payer },
+  );
+}
+```
+
+Submit and confirm the returned instructions. Expiry also releases the balance,
+but expired or fully captured records can remain until pruned. An administrator
+can prune inactive locks; it cannot cancel another role's active hold. Release,
+capture, or wait for expiry before removing the payment role.
+
+For tokens, grant the matching mint allowance and use
+`getAddTokenAuthorizationLockInstructions` with `mint`, `amount`, and
+`expirySlot`. Amounts are token base units.

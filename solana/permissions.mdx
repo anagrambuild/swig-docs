@@ -1,0 +1,58 @@
+---
+title: "Choose permissions"
+description: "Give each role the program access and spending limits its task needs."
+---
+
+Permissions are attached to a role alongside its authority. The authority
+determines who signs; the permissions determine which operations that role
+can perform. Build a permission set with `Actions.set()` and finish with `.get()`.
+
+## Limit a role to SOL transfers
+
+```typescript
+import { SystemProgram } from "@solana/web3.js";
+import { Actions } from "@swig-wallet/classic";
+
+const actions = Actions.set()
+  .programLimit({ programId: SystemProgram.programId })
+  .solLimit({ amount: 100_000_000n })
+  .get();
+```
+
+This allows calls to the System Program and a total spend of 0.1 SOL.
+Both permissions matter: program access allows the call, while the SOL limit
+bounds the funds that can leave the wallet. `solLimit` is a remaining budget,
+not a fresh allowance for every transaction.
+
+Pass `actions` to [add a role](/solana/add-role).
+
+## Choose the permission for the task
+
+| Task | Builder |
+| --- | --- |
+| Manage roles | `manageAuthority()` |
+| Owner access to spending and role management | `all()` |
+| Call a specific program | `programLimit({ programId })` |
+| Spend SOL within a total budget | `solLimit({ amount })` |
+| Spend a specific token within a total budget | `tokenLimit({ mint, amount })` |
+| Renew a SOL budget after a slot window | `solRecurringLimit({ recurringAmount, window })` |
+| Renew a token budget after a slot window | `tokenRecurringLimit({ mint, recurringAmount, window })` |
+| Restrict SOL to a recipient | `solDestinationLimit({ amount, destination })` |
+| Restrict tokens to a recipient token account | `tokenDestinationLimit({ mint, amount, destination })` |
+| Place authorization holds | `manageAuthorizationLocks({ maxDurationSlots })` |
+| Replace the signer of one role | `replaceAuthority({ roleId })` |
+
+SOL amounts are lamports; token amounts are base units for the mint.
+Recurring windows and authorization-lock durations are **slots**, not seconds.
+Choose a slot budget deliberately; it does not guarantee a fixed wall-clock interval.
+
+## Keep delegation scoped
+
+- Give application roles the programs and asset budgets they need.
+- Keep `manageAuthority()` on trusted administrators: it allows them to grant access to others.
+- A role needs `manageAuthorizationLocks()` explicitly to place holds, including an `all()` role.
+- A session uses its role's existing permissions; a shorter session does not reduce its spending budget.
+
+See [Transfers](/solana/use-cases/transfers),
+[Authorization locks](/solana/use-cases/authorization-locks), and
+[Recovery](/solana/use-cases/recovery) for complete flows.

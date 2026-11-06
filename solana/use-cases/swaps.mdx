@@ -1,0 +1,57 @@
+---
+title: "Swaps"
+description: "Execute swap instructions with the Swig wallet as the asset owner."
+---
+
+Request swap instructions from your DEX or aggregator for the **Swig wallet
+address**. Let the Swig SDK authorize those instructions using the role you
+selected. Your application controls the quote, slippage, and submission.
+
+## Prepare the swap
+
+1. Fetch the wallet with `fetchSwig` and obtain its wallet address with `getSwigWalletAddress`.
+2. Request a quote for the input mint, output mint, amount, and maximum slippage.
+3. Ask the provider for instructions with the Swig wallet as the user/asset owner. Use a separate funded fee payer where the provider supports it.
+4. Check the source and destination accounts, input amount, minimum output, and required signers before authorizing.
+
+Use the provider's typed client to obtain `TransactionInstruction[]`. The
+following function accepts the wallet-owned execution instructions from that
+client; it does not fetch or decode a provider response.
+
+```typescript
+import { type PublicKey, type TransactionInstruction } from "@solana/web3.js";
+import { getSignInstructions, type Swig, type SwigInstructionOptions } from "@swig-wallet/classic";
+
+async function authorizeSwap(
+  swig: Swig,
+  roleId: number,
+  walletSwapInstructions: TransactionInstruction[],
+  payer: PublicKey,
+  options: SwigInstructionOptions = {},
+) {
+  return getSignInstructions(swig, roleId, walletSwapInstructions, false, {
+    ...options,
+    payer,
+  });
+}
+```
+
+The selected role needs access to the invoked programs and sufficient input
+asset allowance. Include SOL allowance if the wallet funds account creation
+or wrapped SOL. A routed swap can invoke more than one program; use a role
+configured for that route rather than broadening it automatically after a failure.
+
+## Submit and confirm
+
+Pass the returned instructions to [Sending transactions](/solana/transactions/sending).
+Load any address lookup tables required by the route and supply them when
+compiling the final transaction. Keep provider compute-budget and payer-owned
+setup instructions at their required outer-transaction positions; only
+wallet-owned execution belongs inside `getSignInstructions`.
+
+Plan those positions before requesting r1 or k1 authorization. If the selected
+SDK flow cannot preserve the required verification indexes and instruction
+order for a route, use a supported route or an Ed25519/session signing flow.
+
+Fetch a new quote when the route expires. If submission is uncertain, check
+the original signature before authorizing a replacement swap.

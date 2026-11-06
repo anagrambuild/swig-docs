@@ -1,0 +1,69 @@
+---
+title: "Add a role"
+description: "Give another signer its own permissions on an existing wallet."
+---
+
+Use an existing role with `all()` or `manageAuthority()` to add an authority
+and its permissions. The SDK calls this operation `getAddAuthorityInstructions`.
+The new authority does not need to sign its addition.
+
+This example uses an Ed25519 administrator and grants a new Ed25519 signer a
+0.1 SOL spending budget. Pass the administrator's on-chain role ID, the wallet's
+config address, and the new signer's public key.
+
+```typescript
+import {
+  type Connection,
+  type Keypair,
+  type PublicKey,
+  SystemProgram,
+  Transaction,
+  sendAndConfirmTransaction,
+} from "@solana/web3.js";
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  fetchSwig,
+  getAddAuthorityInstructions,
+} from "@swig-wallet/classic";
+
+async function addSpendingRole(
+  connection: Connection,
+  configAddress: PublicKey,
+  admin: Keypair,
+  adminRoleId: number,
+  signerPublicKey: PublicKey,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  const instructions = await getAddAuthorityInstructions(
+    swig,
+    adminRoleId,
+    createEd25519AuthorityInfo(signerPublicKey),
+    Actions.set()
+      .programLimit({ programId: SystemProgram.programId })
+      .solLimit({ amount: 100_000_000n })
+      .get(),
+    { payer: admin.publicKey },
+  );
+  await sendAndConfirmTransaction(
+    connection,
+    new Transaction().add(...instructions),
+    [admin],
+    { commitment: "confirmed" },
+  );
+  const updated = await fetchSwig(connection, configAddress, {
+    commitment: "confirmed",
+  });
+  return updated.findRolesByEd25519SignerPk(signerPublicKey);
+}
+```
+
+Read the assigned role ID from the confirmed wallet state. A signer can have
+more than one role; select the role with the intended permissions rather than
+assuming the first match is the right one.
+
+Use the same add-role builder with an [r1](/solana/authorities/secp256r1),
+[k1](/solana/authorities/secp256k1), [ProgramExec](/solana/authorities/program-exec),
+or [session](/solana/authorities/sessions) authority. If the administrator itself
+uses r1 or k1, supply its signing callback and current slot as described in
+[Signing](/solana/transactions/signing).

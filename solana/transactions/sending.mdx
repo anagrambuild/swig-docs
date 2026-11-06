@@ -1,0 +1,74 @@
+---
+title: "Sending transactions"
+description: "Assemble, sign, submit, and confirm the instructions returned by the SDK."
+---
+
+After [authorizing an operation](/solana/transactions/signing), put every
+returned instruction into a Solana transaction. Use the same fee payer you
+passed to the Swig builder.
+
+## Send with local signers
+
+This example accepts the prepared instructions, a funded payer, and the
+additional Solana signers required by the operation. For an Ed25519 role,
+include its authority keypair. For an r1 or k1 role, its callback has already
+authorized the operation; only the payer and any other required Ed25519
+signers sign here.
+
+```typescript
+import {
+  type AddressLookupTableAccount,
+  type Connection,
+  type Keypair,
+  type TransactionInstruction,
+  TransactionMessage,
+  VersionedTransaction,
+} from "@solana/web3.js";
+
+async function sendWalletTransaction(
+  connection: Connection,
+  instructions: TransactionInstruction[],
+  payer: Keypair,
+  additionalSigners: Keypair[] = [],
+  lookupTables: AddressLookupTableAccount[] = [],
+) {
+  const latestBlockhash = await connection.getLatestBlockhash("confirmed");
+  const message = new TransactionMessage({
+    payerKey: payer.publicKey,
+    recentBlockhash: latestBlockhash.blockhash,
+    instructions,
+  }).compileToV0Message(lookupTables);
+  const transaction = new VersionedTransaction(message);
+  transaction.sign([payer, ...additionalSigners]);
+
+  const signature = await connection.sendRawTransaction(transaction.serialize());
+  const confirmation = await connection.confirmTransaction(
+    { signature, ...latestBlockhash },
+    "confirmed",
+  );
+  if (confirmation.value.err) {
+    throw new Error(`Transaction failed: ${JSON.stringify(confirmation.value.err)}`);
+  }
+  return signature;
+}
+```
+
+The returned signature is confirmed at the requested commitment. Refetch the
+wallet after a successful mutation before preparing another operation.
+
+## Send with a browser wallet
+
+Build the same transaction, then use the connected wallet adapter's
+`signTransaction` or `sendTransaction` API. Collect every required signature
+on the same message. An authority and fee payer can be different signers.
+
+## Handle retries
+
+- A submission response is not confirmation; inspect the confirmation result.
+- If the RPC response is lost, check the transaction signature before rebuilding the operation.
+- While its blockhash remains valid, retry submission with the same signed transaction bytes.
+- After blockhash or authorization expiry, check whether the original landed, then refetch wallet state and build a fresh operation if needed.
+- For r1 and k1, obtain fresh authorization when rebuilding against a changed counter or expired authorization.
+
+Keep the SDK's verification instructions in order. Adding, removing, or
+reordering instructions after authorization can invalidate the approval.

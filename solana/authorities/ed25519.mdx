@@ -1,0 +1,35 @@
+---
+title: "Ed25519"
+description: "Authorize wallet operations with a Solana keypair or wallet adapter."
+---
+
+Use Ed25519 when the user or application already has a Solana signer.
+The signer approves the outer Solana transaction; the role determines what
+it can do with the Swig wallet.
+
+## Register the authority
+
+Pass the signer's public key to `createEd25519AuthorityInfo` when you
+[create a wallet](/solana/create-wallet) or [add a role](/solana/add-role).
+
+```typescript
+import { type PublicKey } from "@solana/web3.js";
+import { createEd25519AuthorityInfo } from "@swig-wallet/classic";
+
+function ed25519Authority(signerPublicKey: PublicKey) {
+  return createEd25519AuthorityInfo(signerPublicKey);
+}
+```
+
+The constructor uses only the public key. Keep the private key with its signer.
+
+## Sign an operation
+
+1. Fetch the wallet by its config address.
+2. Find the signer's roles with `swig.findRolesByEd25519SignerPk(publicKey)` and select the intended role ID.
+3. Build the operation with `getSignInstructions`.
+4. Sign the transaction with the authority and fee payer, then submit it.
+
+See the complete [signing example](/solana/transactions/signing).
+For a browser wallet, use its wallet adapter to sign. For temporary application
+access, create an [Ed25519 session authority](/solana/authorities/sessions).

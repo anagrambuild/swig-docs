@@ -1,0 +1,71 @@
+---
+title: "Transfers"
+description: "Send SOL and SPL tokens from a Swig wallet."
+---
+
+Use the wallet address as the source of SOL and as the owner of its token
+accounts. The config address is for reading roles and preparing operations.
+
+## Transfer SOL
+
+Follow the [SOL signing example](/solana/transactions/signing#ed25519-signer),
+then [send the returned instructions](/solana/transactions/sending). A scoped
+role needs both `programLimit({ programId: SystemProgram.programId })` and a
+SOL spending permission such as `solLimit({ amount })`.
+
+## Transfer tokens
+
+Install the SPL Token client:
+
+```bash
+npm install @solana/spl-token
+```
+
+This example uses an existing wallet token account and an existing recipient
+token account for the same mint. Fetch the mint's decimals and use integer
+base units for the amount. The example targets the original SPL Token program.
+
+```typescript
+import { type Connection, type PublicKey } from "@solana/web3.js";
+import {
+  createTransferCheckedInstruction,
+  getAssociatedTokenAddressSync,
+  getMint,
+} from "@solana/spl-token";
+import { fetchSwig, getSignInstructions, getSwigWalletAddress } from "@swig-wallet/classic";
+
+async function prepareTokenTransfer(
+  connection: Connection,
+  configAddress: PublicKey,
+  roleId: number,
+  payer: PublicKey,
+  mint: PublicKey,
+  recipientTokenAccount: PublicKey,
+  amount: bigint,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  const walletAddress = await getSwigWalletAddress(swig);
+  const source = getAssociatedTokenAddressSync(mint, walletAddress, true);
+  const mintInfo = await getMint(connection, mint);
+  const transfer = createTransferCheckedInstruction(
+    source,
+    mint,
+    recipientTokenAccount,
+    walletAddress,
+    amount,
+    mintInfo.decimals,
+  );
+  return getSignInstructions(swig, roleId, [transfer], false, { payer });
+}
+```
+
+The `true` argument allows the wallet's PDA to own the associated token account.
+The recipient parameter is a **token account**, not the recipient's wallet
+address. Create it first if it does not exist.
+
+A scoped role needs access to the Token Program and
+`tokenLimit({ mint, amount })` or a matching recurring/destination limit.
+This example uses an Ed25519 role; supply signing options for r1 or k1 as
+shown in [Signing](/solana/transactions/signing).
+
+Next, [send and confirm](/solana/transactions/sending) the returned instructions.

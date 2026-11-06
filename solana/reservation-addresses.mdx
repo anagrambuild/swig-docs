@@ -1,10 +1,11 @@
 ---
-title: "Reserve a wallet address"
-sidebarTitle: "Reservation Addresses"
+title: "Counterfactual creation"
+sidebarTitle: "Counterfactual creation"
 description: "Derive a Solana wallet address from an owner key and activate it with an external payer."
 ---
 
-A reservation gives you a Swig wallet address before you send a transaction.
+Counterfactual creation gives you a Swig wallet address before you send a transaction.
+The SDK represents it as a reservation.
 Supply the owner's public key, then let a funded payer activate the wallet
 when you need it.
 
@@ -261,20 +262,3 @@ pub fn load_reservation(
 
 </Tab>
 </Tabs>
-
-## Package compatibility
-
-Imports accept exactly one canonical V1 package: 99 bytes for Ed25519 or
-100 bytes for secp256k1/P-256. They reject unsupported owner types, malformed
-keys, wrong program IDs, unsupported versions, and trailing bytes.
-
-Ed25519 owners must be canonical, non-small-order curve points. Constructors
-accept compressed (33-byte) or uncompressed (65-byte) SEC1 keys for both secp
-curves, and raw 64-byte keys for secp256k1. Serialized packages always contain
-the compressed form.
-
-The config uses `["rsv", SHA256("rsv" || package)]` as PDA seeds. The wallet
-uses `["swig-wallet-address", config_address]`. An account index is encoded
-little-endian in the last four bytes of an otherwise zero 32-byte salt.
-Use the returned config address directly: passing its commitment to legacy
-`findSwigPda` derives a different wallet.

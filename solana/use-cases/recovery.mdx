@@ -1,0 +1,112 @@
+---
+title: "Recovery"
+description: "Authorize a guardian to replace one role's lost key while preserving its permissions."
+---
+
+Set up recovery while the current owner can still authorize changes. Give a
+separate guardian the `ReplaceAuthority` permission for one target role. The
+guardian can then replace that role's signer without the lost key.
+
+The target keeps its role ID, authority type, and permissions. Choose a guardian
+whose key remains available independently of the protected signer. The guardian
+can choose the key that inherits the target role's access, so protect it accordingly.
+
+## Elect a guardian
+
+This example protects an existing role with a new Ed25519 guardian. Use an
+administrator with `all()` or `manageAuthority()` to submit the grant.
+
+```typescript
+import { type Connection, type PublicKey } from "@solana/web3.js";
+import {
+  Actions,
+  createEd25519AuthorityInfo,
+  fetchSwig,
+  getAddAuthorityInstructions,
+} from "@swig-wallet/classic";
+
+async function prepareGuardianRole(
+  connection: Connection,
+  configAddress: PublicKey,
+  adminRoleId: number,
+  payer: PublicKey,
+  guardianPublicKey: PublicKey,
+  targetRoleId: number,
+) {
+  const swig = await fetchSwig(connection, configAddress);
+  return getAddAuthorityInstructions(
+    swig,
+    adminRoleId,
+    createEd25519AuthorityInfo(guardianPublicKey),
+    Actions.set().replaceAuthority({ roleId: targetRoleId }).get(),
+    { payer },
+  );
+}
+```
+
+This preparation example uses an Ed25519 administrator. Sign with that
+administrator and the payer, then [submit and confirm](/solana/transactions/sending).
+Refetch the wallet and record the new guardian role ID separately from the
+protected target role ID. Verify the guardian's public key and scoped permission.
+
+## Replace the lost key
+
+Classic 3.0.0 exposes the permission builder above. The replacement instruction
+is available through Rust's `swig-interface` 3.0.0; Classic does not yet expose
+a high-level replacement instruction builder.
+
+Install the Rust dependencies for this example:
+
+```bash
+cargo add swig-interface@3 solana-sdk@4 solana-client@4 anyhow
+```
+
+The example replaces an **Ed25519 target** with a new Ed25519 public key.
+The guardian signs and also pays the transaction fee here.
+
+```rust
+use solana_client::rpc_client::RpcClient;
+use solana_sdk::{
+    pubkey::Pubkey,
+    signature::{Keypair, Signature, Signer},
+    transaction::Transaction,
+};
+use swig_interface::ReplaceAuthorityInstruction;
+
+fn recover_ed25519_role(
+    rpc: &RpcClient,
+    config_address: Pubkey,
+    guardian: &Keypair,
+    guardian_role_id: u32,
+    target_role_id: u32,
+    new_public_key: Pubkey,
+) -> anyhow::Result<Signature> {
+    let instruction = ReplaceAuthorityInstruction::new_with_ed25519_authority(
+        config_address,
+        guardian.pubkey(),
+        guardian_role_id,
+        target_role_id,
+        new_public_key.as_ref(),
+    )?;
+    let blockhash = rpc.get_latest_blockhash()?;
+    let transaction = Transaction::new_signed_with_payer(
+        &[instruction],
+        Some(&guardian.pubkey()),
+        &[guardian],
+        blockhash,
+    );
+    Ok(rpc.send_and_confirm_transaction(&transaction)?)
+}
+```
+
+Before signing, have the guardian verify the wallet, target role, and exact
+replacement public key. After confirmation, refetch the wallet and verify the
+target role uses the new key with its original permissions.
+
+An r1 target requires a new compressed P-256 key; a k1 target requires a new
+k1 key. Replacement preserves the authority type. For a session target,
+replacement clears its session key and expiration, so open a fresh session.
+
+This permission grants replacement for the selected role only. It does not
+grant role management, change spending permissions, or impose a waiting period.
+Use a compatible Swig deployment before offering the flow to users.
