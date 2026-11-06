@@ -11,7 +11,9 @@ Members can use Ed25519, secp256r1/passkeys, or secp256k1. Each member signs a
 challenge bound to the prepared operation, while every challenge in the plan
 commits to the same shared ParticipantSet nonce.
 
-ParticipantSet support is available in TypeScript `0.10.0` and Python `0.9.0`.
+ParticipantSet support is available in TypeScript `0.10.0`, Python `0.9.0`, and
+Rust `0.1.0`. See [Rust setup](/developer-sdk/integration-paths#rust) for
+client configuration.
 
 ## Create the set and add its role
 
@@ -21,14 +23,13 @@ transaction lands, use the general
 [Add Roles](/developer-sdk/add-roles-and-permissions) flow to
 attach the set to a role and choose its permissions.
 
-The address variables below are base58 strings. `adminPublicKey` /
-`admin_public_key` identifies the existing role allowed to add the new role.
-`signAndSubmit` / `sign_and_submit` represents your application-owned signing,
-RPC submission, and confirmation helper.
+Use an existing authority with permission to add roles. TypeScript and Python
+accept a config address or full wallet reference through `wallets.use`.
+Rust passes the config address and requester authority with each preparation.
 
-`wallets.use` accepts the bare Swig config address used below. Pass a full
-wallet reference instead when your application already has both the config and
-wallet addresses.
+`signAndSubmit` / `sign_and_submit` is your application's signing, RPC
+submission, and confirmation helper. In Rust, it accepts `PreparedTransaction`.
+It returns only after confirmation.
 
 <CodeGroup dropdown>
 
@@ -105,11 +106,61 @@ add_role = await wallet.roles.add(
 await sign_and_submit(add_role)
 ```
 
+```rust Rust
+use solana_pubkey::Pubkey;
+use swig_developer_sdk::{
+    PrepareAddRoleArgs, PrepareCreateParticipantSetArgs, WalletAuthority,
+    WalletPermission,
+};
+
+let created_set = wallet
+    .prepare_create_participant_set(PrepareCreateParticipantSetArgs {
+        swig_config_address,
+        fee_payer,
+        threshold: 2,
+        members: vec![
+            WalletAuthority::Ed25519 {
+                public_key: participant_a_public_key,
+            },
+            WalletAuthority::Ed25519 {
+                public_key: participant_b_public_key,
+            },
+        ],
+        set_id: None,
+    })
+    .await?;
+
+sign_and_submit(created_set.transaction).await?;
+
+let add_role = wallet
+    .prepare_add_role(PrepareAddRoleArgs {
+        swig_config_address,
+        fee_payer,
+        authority: WalletAuthority::ParticipantSet {
+            address: created_set.participant_set_address,
+            role_id: None,
+        },
+        requester_authority: WalletAuthority::Ed25519 {
+            public_key: admin_public_key,
+        },
+        actions: vec![
+            WalletPermission::Program {
+                program_id: Pubkey::from_str_const("11111111111111111111111111111111"),
+            },
+            WalletPermission::SolLimit { amount: 1_000_000 },
+        ],
+    })
+    .await?;
+
+sign_and_submit(add_role).await?;
+```
+
 </CodeGroup>
 
-Both SDK calls return prepared transactions. Wait for the ParticipantSet
-creation transaction to confirm before preparing the add-role transaction.
-Creating the set does not add a Swig role automatically.
+Set creation and role creation are separate transactions. Confirm the set
+creation before preparing the role. In Rust, use `role_id: None` for the new
+role, then read its assigned ID with `list_roles` after confirmation. See
+[Add Roles](/developer-sdk/add-roles-and-permissions).
 
 <Note>
   Keep both actions on a scoped SOL-transfer role. The `program` action permits
@@ -172,6 +223,27 @@ if plan is None:
     raise RuntimeError("ParticipantSet approval plan is missing")
 ```
 
+```rust Rust
+use swig_developer_sdk::{PrepareTransferSolArgs, WalletAuthority};
+
+let prepared = wallet
+    .prepare_transfer_sol(PrepareTransferSolArgs {
+        swig_config_address,
+        fee_payer,
+        destination,
+        amount: 1_000,
+        requester_authority: WalletAuthority::ParticipantSet {
+            address: created_set.participant_set_address,
+            role_id: Some(role_id),
+        },
+    })
+    .await?;
+let plan = prepared
+    .participant_set_approval_plan
+    .as_ref()
+    .ok_or("ParticipantSet approval plan is missing")?;
+```
+
 </CodeGroup>
 
 ParticipantSet preparation currently supports SOL transfers, token transfers,
@@ -186,15 +258,21 @@ nonce; after one transaction lands, prepare and approve the others again.
 
 ## Collect member approvals
 
-Send each selected member only its own approval request. The detached signer
-helpers verify that the signer type and public key match that request before
-asking the application-owned signer to approve it.
+Send each selected member only its own approval request. The detached signers
+verify that the signer type and public key match that request before signing.
+TypeScript and Python call application-owned signing callbacks; Rust's native
+implementations use shared local keys. Each approval remains separate from the
+prepared transaction until compilation.
+
+The Rust examples are alternatives for one member. Pass that member's request
+from `plan.members`, cloning it if you need to retain the plan. Use the member's
+local Ed25519, secp256k1, or P-256 key.
 
 | Member | Helper behavior |
 | :--- | :--- |
 | Ed25519 | Signs the decoded 32-byte challenge |
-| secp256r1 | Uses the decoded challenge in a WebAuthn assertion and preserves its exact assertion data |
-| secp256k1 | Passes the lowercase 64-character ASCII hex challenge to your `personal_sign` callback; the callback must apply EIP-191 |
+| secp256r1 | TypeScript/Python use a WebAuthn assertion; Rust builds a software WebAuthn proof with a local P-256 key |
+| secp256k1 | Signs the lowercase 64-character ASCII hex challenge with EIP-191; TypeScript/Python callbacks apply the prefix, while Rust applies it internally |
 
 <CodeGroup dropdown>
 
@@ -262,15 +340,49 @@ for request in plan.members:
     approvals.append(await sign_participant_set_approval(request, signer))
 ```
 
+```rust Rust Ed25519
+use std::sync::Arc;
+
+use swig_developer_sdk::{Ed25519ParticipantSigner, ParticipantSigner};
+
+let signer = Ed25519ParticipantSigner::new(Arc::clone(&keypair));
+let approval = signer.approve(request).await?;
+```
+
+```rust Rust secp256k1
+use std::sync::Arc;
+
+use swig_developer_sdk::{ParticipantSigner, Secp256k1ParticipantSigner};
+
+let signer = Secp256k1ParticipantSigner::new(Arc::clone(&signing_key));
+let approval = signer.approve(request).await?;
+```
+
+```rust Rust secp256r1
+use std::sync::Arc;
+
+use swig_developer_sdk::{ParticipantSigner, Secp256r1ParticipantSigner};
+
+let signer = Secp256r1ParticipantSigner::new(Arc::clone(&signing_key));
+let approval = signer.approve(request).await?;
+```
+
 </CodeGroup>
 
-Production applications normally distribute each request to its owning member
-and collect the resulting approvals out of band. The in-process 2-of-2 example
-keeps both Ed25519 callbacks together only to show the complete data flow.
+Distribute each request to its member and collect the returned approvals out
+of band. The TypeScript/Python example keeps both callbacks together to show
+the full flow. Rust signers can be reused for requests from the same member.
 
-Your application remains responsible for passkey credential selection and its
-RP ID/origin policy. Do not ask a member to sign the raw serialized transaction
-or another member's challenge.
+Rust's `Secp256r1ParticipantSigner` creates a software WebAuthn envelope; it
+does not run a browser passkey ceremony or establish human presence. For a
+browser passkey flow, your application owns credential selection and RP
+ID/origin policy. Ask each member to approve its own challenge with the
+operation's intent visible to that member. A detached approval is separate
+from an outer Solana transaction signature.
+
+Native `approve` implementations validate the member type and public key.
+Your application must verify the intended operation before asking for an
+approval. The hosted compiler verifies the submitted proofs and plan freshness.
 
 ## Compile and submit
 
@@ -299,10 +411,27 @@ print(compiled.authorization_expiration_slot)
 await sign_and_submit(compiled.transaction)
 ```
 
+```rust Rust
+use swig_developer_sdk::CompileParticipantSetApprovalsArgs;
+
+let compiled = wallet
+    .compile_participant_set_approvals(CompileParticipantSetApprovalsArgs {
+        prepared_transaction: prepared,
+        approvals,
+    })
+    .await?;
+```
+
 </CodeGroup>
 
-Compilation does not sponsor, broadcast, or confirm the transaction. Add every
-remaining Solana transaction signature, then submit directly or use
+The compiled Rust result contains the transaction and its
+`authorization_expiration_slot`. Use the
+[outer Ed25519 signing example](/developer-sdk/signers#ed25519-and-application-defined-signers)
+to add remaining application-owned signatures while preserving existing ones.
+
+Compilation does not sponsor, broadcast, or confirm the transaction. Check the
+compiled transaction against the approved operation, add every remaining
+Solana transaction signature, then submit directly or use
 [Sponsor & Submit](/developer-sdk/sponsor-and-submit) before the authorization
 expiration slot. If the slot has passed, prepare a fresh operation and collect
 fresh approvals.
