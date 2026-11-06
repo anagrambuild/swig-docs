@@ -1,6 +1,6 @@
 ---
 title: "Transfer SOL and Tokens"
-sidebarTitle: "Transfer SOL and Tokens"
+sidebarTitle: "Transfers"
 ---
 
 Prepare wallet movements from a trusted server. The SDK returns unsigned
@@ -8,7 +8,7 @@ transactions; signing stays in application-owned wallet or custody code.
 
 ## Start from a wallet handle
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const wallet = swig.wallets.use({
@@ -46,7 +46,7 @@ Supported requesters are Ed25519, secp256r1, and ParticipantSet.
 
 ## SOL transfer
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const prepared = await wallet.transfer.sol({
@@ -88,7 +88,7 @@ Token transfers are owner-based. The backend derives the token program,
 source associated token account, destination associated token account, and any
 destination account creation it needs.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const prepared = await wallet.transfer.token({
@@ -146,5 +146,5 @@ Keep Rust's preparation metadata until signing is complete. For a
 ParticipantSet requester, collect and compile the approvals in
 `participant_set_approval_plan` before submission.
 
-For Jupiter swaps and multi-operation preparation, continue to
+For swaps and multi-operation preparation, continue to
 [Swaps and Batches](/developer-sdk/swaps-and-batches).

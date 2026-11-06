@@ -11,14 +11,12 @@ deployment. Obtain the factory address and deployment details from your operator
 or [contact Swig](/links-and-contact). The public SDK source does not deploy the
 contracts for you.
 
-The EVM packages are available from source. These guides use the tested examples
-in [swig-protocol-sdk](https://github.com/anagrambuild/swig-protocol-sdk/tree/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm),
-rather than a published package release.
+The EVM packages are available from source. Clone the latest SDK and examples
+from [swig-protocol-sdk](https://github.com/anagrambuild/swig-protocol-sdk/tree/main/evm).
 
 ```bash
 git clone https://github.com/anagrambuild/swig-protocol-sdk.git
 cd swig-protocol-sdk
-git checkout 5eec58c3eca4b79c483d245df2f2885313fd03dc
 ```
 
 Choose a language and keep its working directory for the commands in these guides.
@@ -45,7 +43,7 @@ into your environment from your application's key storage. Keep private keys
 outside source files and logs. The examples use secp256k1 authorities.
 
 For your own deployment, obtain a factory matching the SDK's
-[pinned contract revision](https://github.com/anagrambuild/swig-protocol-sdk/blob/5eec58c3eca4b79c483d245df2f2885313fd03dc/evm/abi/source.json).
+[contract revision](https://github.com/anagrambuild/swig-protocol-sdk/blob/main/evm/abi/source.json).
 The guides do not assume a public-chain deployment address. A direct transaction
 requires gas in the signing key's EOA.
 

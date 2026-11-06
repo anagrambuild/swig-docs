@@ -9,24 +9,21 @@ connection and authority keys.
 
 ## Choose your language
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```bash TypeScript
-npm install @swig-wallet/classic@3.0.0 @solana/web3.js@^1.98.0
+npm install @swig-wallet/classic @solana/web3.js
 ```
 
-```toml Rust
-[dependencies]
-swig-sdk = "3.0.0"
-swig-interface = "3.0.0"
-solana-sdk = "4"
+```bash Rust
+cargo add swig-sdk swig-interface
 ```
 
 </CodeGroup>
 
 The TypeScript command installs Classic for Web3.js 1.x. For Solana Kit, use
-`@swig-wallet/kit@3.0.0` with `@solana/kit@^2.1.0` instead. Add the Rust
-dependencies to `Cargo.toml`.
+`@swig-wallet/kit` with `@solana/kit` instead. Cargo adds the latest
+compatible releases to `Cargo.toml`.
 
 ## Get started
 

@@ -1,14 +1,14 @@
 ---
-title: "Prepare Swaps and Batches"
-sidebarTitle: "Swaps and Batches"
+title: "Swaps and Batches"
+sidebarTitle: "Swaps and batches"
 ---
 
-Prepare Jupiter swaps or group SOL and token transfers in one request.
+Prepare swaps or group SOL and token transfers in one request.
 Amounts use lamports or the token mint's smallest units.
 
-## Jupiter swaps
+## Swaps
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const preparedSwap = await wallet.swap.jupiter({
@@ -69,7 +69,7 @@ settings include tips, maximum accounts, and blockhash expiry slots.
 Prepare several SOL and token transfers in one request. All three SDKs send
 this request to `POST /transaction/prepare/batch`.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const prepared = await wallet.prepare({
@@ -145,7 +145,7 @@ Continue to [Signers](/developer-sdk/signers) and
 
 ## When to use this page
 
-Use swaps when the action is explicitly a Jupiter route.
+Use swaps to exchange one asset for another.
 
 Use grouped operations when:
 

@@ -1,6 +1,6 @@
 ---
-title: "Add Roles"
-sidebarTitle: "Add Roles"
+title: "Add a Role"
+sidebarTitle: "Roles"
 description: "Prepare, sign, and submit the transaction that adds an authority to an existing wallet."
 ---
 
@@ -39,7 +39,7 @@ Rust examples use `wallet`, the configured `WalletClient` from
 This example gives a new Ed25519 authority permission to transfer up to
 1,000,000 lamports through Solana's System Program.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 import { SystemProgram } from '@solana/web3.js';
@@ -156,7 +156,7 @@ The add-role call returns a prepared transaction; it does not broadcast or
 confirm it. After your signing helper submits the transaction and it lands,
 read the wallet roles to confirm the new authority and actions.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const { roles } = await wallet.roles.list();

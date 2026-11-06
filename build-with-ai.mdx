@@ -1,48 +1,79 @@
 ---
-title: "Build with AI"
+title: "Install MCP"
+description: "Connect your AI assistant to Swig documentation or wallet tools."
 ---
 
-Swig supports two complementary AI workflows:
+Choose the server for your task:
 
-1. **Give AI agents wallet capabilities** with the Swig MCP server
-2. **Make the docs AI-friendly** by exposing the docs themselves as an MCP server
+| Server | Use it to | Connection |
+| :--- | :--- | :--- |
+| Swig Docs MCP | Search documentation and find SDK examples | Hosted HTTP endpoint; no API key required |
+| Swig Wallet MCP | Configure Solana RPC, inspect wallets, and prepare wallet operations | Run the server locally from `swig-ts` |
 
-## Path 1: AI agents that can use Swig
+## Connect to Swig Docs MCP
 
-Use this path when you want an agent to create wallets, manage authorities, configure RPC, or execute transactions.
+Add a remote HTTP MCP server in your assistant's settings with this URL:
 
-- Start with [Getting Started with Swig MCP](/tutorials/mcp)
-- Use [Swig MCP Server](/reference/mcp-server) for tool, transport, and deployment details
-- Treat the MCP server as part of the Swig Protocol SDK surface in `swig-ts`
+```text
+https://build.onswig.com/mcp
+```
 
-## Path 2: AI apps that need Swig docs as context
+For [Claude Code](https://code.claude.com/docs/en/mcp), run:
 
-Use this path when you want your assistant, IDE, or internal tooling to ingest the Swig docs directly.
+```bash
+claude mcp add --transport http swig-docs https://build.onswig.com/mcp
+```
 
-- Start with [Swig Docs MCP Support](/mcp-support)
-- Use the generated MCP server to expose the docs to your AI tooling
+Open your assistant's MCP tools list and confirm that the Swig documentation
+search tools are available. Then try:
 
-## Good AI use cases for Swig
+```text
+Find the Swig Developer SDK guide for creating a wallet and explain the required steps.
+```
 
-- agent-driven wallet creation and account setup
-- chat-to-action experiences for users
-- role-scoped agent permissions
-- multi-agent workflows with limited authorities
-- AI copilots that answer product questions using your docs
+The docs server supplies documentation context. Wallet operations use the
+separate wallet server below.
 
-## Where to go next
+## Connect to Swig Wallet MCP
 
-<CardGroup cols={1}>
-  <Card title="Wallet Agents" icon="terminal" href="/tutorials/mcp">
-    Connect AI agents to Swig wallet operations
-  </Card>
-  <Card title="MCP Server Reference" icon="book" href="/reference/mcp-server">
-    Review tools, permissions, and deployment details
-  </Card>
-  <Card title="Docs MCP" icon="book" href="/mcp-support">
-    Expose the Swig docs themselves to LLM tooling
-  </Card>
-  <Card title="Products & SDKs" icon="globe" href="/products-and-sdks">
-    Understand where AI fits across the product surface
-  </Card>
-</CardGroup>
+Use this server when your agent needs Solana wallet tools. Install
+[Bun](https://bun.sh/docs/installation) and Node.js, then build the
+[Swig TypeScript repository](https://github.com/anagrambuild/swig-ts):
+
+```bash
+git clone https://github.com/anagrambuild/swig-ts.git
+cd swig-ts
+bun install
+bun run build
+```
+
+Add the local server to your MCP client. Replace the path with the absolute
+path to your checkout:
+
+```json
+{
+  "mcpServers": {
+    "swig-wallet": {
+      "command": "node",
+      "args": ["/absolute/path/to/swig-ts/packages/mcp-server/dist/index.js"]
+    }
+  }
+}
+```
+
+Restart or reconnect the MCP client, then confirm that `configure_rpc` and
+`fetch_swig_wallet` appear in its tools list. Configure the intended network
+before using wallet tools.
+
+- Follow [Wallet MCP setup](/tutorials/mcp) for RPC configuration, agent keys,
+  and your first wallet.
+- Use [MCP server reference](/reference/mcp-server) for the tool list and
+  authenticated HTTP hosting.
+- Give an agent only the [role permissions](/developer-sdk/permissions)
+  required for its task, and review transaction actions before signing.
+
+## Documentation files
+
+For tools that consume text directly, use
+[llms.txt](https://build.onswig.com/llms.txt) to discover pages or
+[llms-full.txt](https://build.onswig.com/llms-full.txt) for the combined docs.

@@ -1,6 +1,6 @@
 ---
 title: "Policy Templates"
-sidebarTitle: "Policy Templates"
+sidebarTitle: "Policy templates"
 description: "Save wallet-creation templates in the Developer Portal."
 ---
 
@@ -10,7 +10,7 @@ Portal lists these under **Wallet templates**.
 
 Each template defines an initial wallet user and can store additional users
 with their own allowed actions. Pass its policy ID when you
-[Create Wallets](/developer-sdk/create-wallets).
+[Create a wallet](/developer-sdk/create-wallets).
 
 An [API key](/examples/dev-portal/create-api-key) authenticates your server's
 requests. The template supplies wallet configuration; your application still
@@ -30,7 +30,7 @@ provides a smaller set of controls for common configurations.
 <Note>
   The Developer SDK's template-based wallet creation prepares the initial user.
   Additional users saved in the template are not automatically added by this
-  flow. After wallet creation confirms, use [Add Roles](/developer-sdk/add-roles-and-permissions)
+  flow. After wallet creation confirms, use [Add a role](/developer-sdk/add-roles-and-permissions)
   for each additional authority and verify its on-chain actions.
 </Note>
 
@@ -79,7 +79,7 @@ Open **Wallet templates** in your project in the
 ## Add a role with a spending limit
 
 For a concrete limited-transfer example, create the wallet, then follow
-[Add Roles](/developer-sdk/add-roles-and-permissions#add-a-scoped-sol-transfer-role).
+[Add a role](/developer-sdk/add-roles-and-permissions#add-a-scoped-sol-transfer-role).
 That example gives a separate authority access to the System Program and a
 total allowance of 1,000,000 lamports. It grants only `program` and `solLimit`
 to the new role; the wallet's initial root authority keeps its existing power.
@@ -91,9 +91,9 @@ and a wallet's confirmed on-chain roles are separate records.
 ## Read and use a template
 
 Use [Read Policy Templates](/examples/dev-portal/fetch-policy) to inspect saved template
-metadata. Use [Create Wallets](/developer-sdk/create-wallets) to prepare a wallet
+metadata. Use [Create a wallet](/developer-sdk/create-wallets) to prepare a wallet
 from the policy ID, then sign and submit its transactions.
 
 To change access on an existing wallet, use the wallet's authority-management
-operations, such as [Add Roles](/developer-sdk/add-roles-and-permissions).
+operations, such as [Add a role](/developer-sdk/add-roles-and-permissions).
 Editing or deleting a saved template does not rewrite roles already on-chain.

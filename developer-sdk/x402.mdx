@@ -1,6 +1,6 @@
 ---
 title: "Pay for x402 Resources"
-sidebarTitle: "x402 Payments"
+sidebarTitle: "x402 payments"
 ---
 
 Use a Swig wallet to pay for APIs and other HTTP resources that return
@@ -79,7 +79,7 @@ The paid retry uses the original URL, method, body, and headers plus
 `PAYMENT-SIGNATURE`. The Rust resource client has no Swig API key and disables
 redirects.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 import {
@@ -244,7 +244,7 @@ offers.
 
 Pass an index when your application has already chosen an offer:
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const prepared = await wallet.x402.prepareFromResponse(challenge, {
@@ -325,7 +325,7 @@ settles the payment when the paid request reaches the resource provider.
   <Card title="Signers" icon="signature" href="/developer-sdk/signers">
     Connect application-owned Ed25519 keys or passkeys.
   </Card>
-  <Card title="Add Roles" icon="user-shield" href="/developer-sdk/add-roles-and-permissions">
+  <Card title="Add a role" icon="user-shield" href="/developer-sdk/add-roles-and-permissions">
     Assign a requester authority to an existing Swig wallet.
   </Card>
   <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-and-swaps">

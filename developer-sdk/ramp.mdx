@@ -1,6 +1,6 @@
 ---
 title: "Add and Withdraw Funds"
-sidebarTitle: "Ramping (on/off)"
+sidebarTitle: "Ramping"
 ---
 
 The ramp client builds a headless fiat on-ramp and off-ramp around a Swig
@@ -61,7 +61,7 @@ Rust amounts use `u64`.
 
 Crypto is a two-case asset: native SOL, or an SPL mint.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const sol = { type: 'sol' } as const;
@@ -81,7 +81,7 @@ Read the options first, so currency, payment-method, and asset values come from
 the API rather than a hardcoded list. `decimals` and `exponent` are the scales
 you need to build a valid amount.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const options = await swig.ramp.getOptions({
@@ -122,7 +122,7 @@ You get `countries` (each with `subdivisions`), `fiatCurrencies` /
 
 Use the customer's location and an asset returned by the options call.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const quotes = await swig.ramp.getQuotes({
@@ -192,7 +192,7 @@ across retries — the SDK retries this call for you on a transient failure.
 
 Use the customer's chosen route as `selected_route` in Rust.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const order = await swig.ramp.createOrder({
@@ -277,7 +277,7 @@ from `ClientConfig` and exposes the buy order through `RampOrder::Buy(order)`.
 Poll the order until its status is final. A read of a non-final order also
 reconciles it against the provider, so polling is what advances it.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const current = await swig.ramp.getOrder({ orderId: order.id });
@@ -304,7 +304,7 @@ default. In Rust, configure `RampClient` with `Network::Mainnet`.
 
 Use the customer's context, their chosen sell route, and a new saved request ID.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const sellQuotes = await swig.ramp.getQuotes({
@@ -421,7 +421,7 @@ In Rust, access the sell order through `RampOrder::Sell(order)`.
 Poll the order until it reaches `awaiting-transfer` and carries a deposit.
 Preparing earlier is refused with `the deposit address is not ready`.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const finished = ['settled', 'declined', 'cancelled', 'failed', 'refunded'];
@@ -470,7 +470,7 @@ Keep the transfer recoverable:
 - Prepare a replacement only after a failed or expired attempt, while the order
   remains eligible. A lost response alone does not qualify.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 import { signPreparedTransaction } from '@swig-wallet/developer-sdk/signers';
@@ -545,7 +545,7 @@ The transfer uses the provider's current deposit details, including any
 repricing. After an uncertain submission, read the same order and transfer to
 check its state. Resolve an already submitted attempt with the same IDs:
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 await swig.ramp.submitTransfer({

@@ -1,24 +1,8 @@
 ---
 title: "Pricing and Quotas"
 sidebarTitle: "Pricing & quotas"
-description: "Read wallet data, DEX activity, yield, ramp orders, and paymaster balances through Swig's hosted APIs."
+description: "Compare monthly plans, included usage, and API quotas."
 ---
-
-Swig Query brings the hosted read APIs together. Choose the data your application
-needs, call the existing REST endpoint or Developer SDK, and account for the
-allowance that endpoint uses.
-
-## What you can query
-
-| Section | Available data | Usage allowance |
-| :--- | :--- | :--- |
-| [Wallet state](/query/wallets) | Token movements, roles, policies, rent recipient | API requests |
-| [Balances](/query/balances) | Native SOL and token holdings, total USD value | API requests |
-| [DEX activity](/query/dex) | Indexed trades and liquidity actions, individual transactions, latest positions | DEX queries |
-| [Yield](/query/yield) | Validators and rates, reward estimates, positions, totals, recorded rewards | API requests |
-| [Ramp](/query/ramp) | Supported countries and assets, buy/sell quotes, order status | API requests |
-| [Paymasters](/query/paymasters) | API and IdP paymaster configuration and SOL balances | API requests |
-| [Public wallet and identity reads](/query/public) | Wallet lookup/status and identity verification keys | Public-route rules described in that guide |
 
 ## Pricing and included usage
 
@@ -69,6 +53,19 @@ not add an admitted request. Each returned row is not a separate charge.
 
 For example, reading token balances once and three pages of DEX history uses
 **one API request and three DEX queries**. Retrying one DEX page adds one DEX query.
+
+## What you can query
+
+| Section | Available data | Usage allowance |
+| :--- | :--- | :--- |
+| [Wallets](/query/wallets) | Token movements, roles, policies, rent recipient | API requests |
+| [Balances](/query/balances) | Native SOL and token holdings, total USD value | API requests |
+| [DEX activity](/query/dex) | Indexed trades and liquidity actions, individual transactions, latest positions | DEX queries |
+| [Yield](/query/yield) | Validators and rates, reward estimates, positions, totals, recorded rewards | API requests |
+| [Ramping](/query/ramp) | Supported countries and assets, buy/sell quotes, order status | API requests |
+| [Paymasters](/query/paymasters) | API and IdP paymaster configuration and SOL balances | API requests |
+| [Public wallets and identity](/query/public) | Wallet lookup/status and identity verification keys | Public-route rules described in that guide |
+
 
 ## Make your first query
 

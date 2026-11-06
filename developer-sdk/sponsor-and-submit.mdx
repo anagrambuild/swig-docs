@@ -1,6 +1,6 @@
 ---
 title: "Submit and Sponsor Transactions"
-sidebarTitle: "Sponsor & Submit"
+sidebarTitle: "Sponsorship and submission"
 ---
 
 The Developer SDK prepares unsigned transactions and accepts
@@ -28,7 +28,7 @@ application-provided `sign_transaction` callback follows the
 [signing flow](/developer-sdk/signers), leaving the paymaster's signature
 for sponsorship.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const submitted = await swig.transactions.sponsor({
@@ -100,7 +100,7 @@ negative.
 Sponsorship permits retries when you pass an idempotency key. Other operations,
 such as [Ramp order creation](/developer-sdk/ramp), have their own replay rules.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 await swig.transactions.sponsor({
@@ -136,7 +136,7 @@ In Rust, `Some(nonempty_key)` enables eligible retries of the identical request.
 single bundle. Use it when several transactions must land together, such as the
 ordered plan returned by `wallet.prepare(...)`.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const bundle = await swig.transactions.sponsorBundle({
@@ -212,7 +212,7 @@ signature before sending the ordered bundle.
 
 ## Check paymaster funding
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const balance = await swig.paymaster.getBalance({ network: 'mainnet' });
