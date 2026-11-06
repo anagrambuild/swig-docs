@@ -1,6 +1,6 @@
 ---
 title: "Administrative"
-description: "Manage roles, recovery, wallet lifecycle, authorization holds, and subaccounts."
+description: "Manage roles, recovery, wallet lifecycle, and subaccounts."
 ---
 
 ## Introduction
@@ -8,7 +8,7 @@ description: "Manage roles, recovery, wallet lifecycle, authorization holds, and
 Administrative permissions delegate specific changes to wallet access and lifecycle.
 
 - **Use when:** a signer needs to administer wallet access or perform a specific management operation.
-- **For:** owners, trusted administrators, guardians, and delegated payment operators.
+- **For:** owners, trusted administrators, and guardians.
 
 ## How it works
 
@@ -26,11 +26,9 @@ Administrative permissions delegate specific changes to wallet access and lifecy
 | `ManageAuthority` | `manageAuthority()` | Add, remove, and update roles |
 | `ReplaceAuthority` | `replaceAuthority({ roleId })` | Replace one role's signer while keeping its type and permissions |
 | `CloseSwigAuthority` | `closeSwigAuthority()` | Authorize wallet and token-account closure, subject to lifecycle restrictions |
-| `ManageAuthorizationLocks` | `manageAuthorizationLocks({ maxDurationSlots })` | Place holds within the role's allowance and the maximum duration |
 
 - `ManageAuthority` lets its holder grant access to others; reserve it for trusted administrators.
 - `ReplaceAuthority` gives a guardian control over the replacement key for its target role.
-- `All` and `AllButManageAuthority` still need explicit `ManageAuthorizationLocks` to place holds.
 - Active holds constrain role removal, guardian replacement, and wallet closure.
 
 ## Subaccount management
@@ -61,4 +59,4 @@ const actions = Actions.set().manageAuthority().get();
 
 - Attach this permission set with [Add a role](/solana/add-role).
 - The role can manage access; this action alone does not grant a spending budget.
-- For narrower delegation, use the [guardian recovery](/solana/use-cases/recovery) or [authorization lock](/solana/use-cases/authorization-locks) example.
+- For narrower delegation, use the [guardian recovery](/solana/use-cases/recovery) example.
