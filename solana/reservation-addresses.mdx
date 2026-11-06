@@ -16,6 +16,9 @@ Verify support on your target cluster before funding a reserved address.
 
 The examples use the published **3.0.0** reservation APIs from
 [`swig-protocol-sdk`](https://github.com/anagrambuild/swig-protocol-sdk).
+<Tabs>
+<Tab title="TypeScript">
+
 Install Classic for Web3.js applications:
 
 ```bash
@@ -28,6 +31,9 @@ For Solana Kit applications, install Kit instead:
 npm install @swig-wallet/kit@3.0.0 @solana/kit@^2.1.0
 ```
 
+</Tab>
+<Tab title="Rust">
+
 For the Rust examples, add these published crates to `Cargo.toml`:
 
 ```toml
@@ -37,6 +43,9 @@ swig-interface = "3.0.0"
 solana-sdk = "4"
 solana-compute-budget-interface = "3"
 ```
+
+</Tab>
+</Tabs>
 
 - **TypeScript:** `ReservationV1` is exported by `@swig-wallet/lib`,
   `@swig-wallet/classic`, and `@swig-wallet/kit`.
@@ -61,7 +70,8 @@ normalize to the same reservation.
 
 ## Reserve and activate
 
-### TypeScript
+<Tabs>
+<Tab title="TypeScript">
 
 This Classic example reserves an Ed25519 wallet and prepares its activation
 instructions using the same reservation object.
@@ -121,7 +131,8 @@ and transaction fee. The program fixes role `0` to the committed owner with
 `All` permissions; the payer cannot substitute an owner or permission set.
 Activation preserves SOL deposited before account creation.
 
-### Rust
+</Tab>
+<Tab title="Rust">
 
 The Rust flow uses the same package bytes and addresses. Pass the reservation
 returned by `reserve_wallet` to `prepare_activation` to build instructions for
@@ -168,6 +179,9 @@ active config, it opens the wallet with the current authority without sending
 an activation transaction. RPC failures and invalid existing accounts remain
 errors.
 
+</Tab>
+</Tabs>
+
 ## Continue using the wallet
 
 - After confirmation, fetch the wallet by its **config address** and use the
@@ -193,7 +207,8 @@ When loading, check the expected program ID and compare the derived wallet
 address with your trusted record. The loaded reservation can be passed to
 the same activation builder used above.
 
-### TypeScript
+<Tabs>
+<Tab title="TypeScript">
 
 Save `reservation.toBytes()` and `walletAddress.toBase58()` from the Classic
 example. Kit addresses are already base58 strings.
@@ -220,7 +235,8 @@ export async function loadReservation(
 }
 ```
 
-### Rust
+</Tab>
+<Tab title="Rust">
 
 Save `reservation.package_bytes` and
 `reservation.addresses()?.wallet_address`.
@@ -241,6 +257,9 @@ pub fn load_reservation(
     Ok(reservation)
 }
 ```
+
+</Tab>
+</Tabs>
 
 ## Package compatibility
 

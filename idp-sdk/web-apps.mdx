@@ -21,7 +21,9 @@ Use:
 
 ## Basic shape
 
-```ts
+<CodeGroup dropdown>
+
+```ts TypeScript
 import { Network, createSwigWebClient } from "@swig-wallet/expo-idp-sdk/web";
 
 const swig = createSwigWebClient({
@@ -37,9 +39,13 @@ await swig.redirectToOAuth({
 });
 ```
 
+</CodeGroup>
+
 In your callback route:
 
-```ts
+<CodeGroup dropdown>
+
+```ts TypeScript
 import { createSwigWebClient } from "@swig-wallet/expo-idp-sdk/web";
 
 const swig = createSwigWebClient({
@@ -48,6 +54,8 @@ const swig = createSwigWebClient({
 
 const session = await swig.completeOAuthFromUrl(window.location.href);
 ```
+
+</CodeGroup>
 
 ## What this path is best for
 
