@@ -11,46 +11,6 @@
   "navigation": {
     "products": [
       {
-        "product": "Overview",
-        "icon": "book-open",
-        "description": "Choose a Swig integration and start building.",
-        "groups": [
-          {
-            "group": "Getting started",
-            "pages": [
-              "index",
-              "products-and-sdks",
-              "build-with-ai",
-              "links-and-contact"
-            ]
-          }
-        ]
-      },
-      {
-        "product": "Swig Query",
-        "icon": "magnifying-glass",
-        "description": "Read hosted wallet data and understand pricing and quotas.",
-        "groups": [
-          {
-            "group": "Getting started",
-            "pages": [
-              "query/index"
-            ]
-          },
-          {
-            "group": "What you can query",
-            "pages": [
-              "query/wallets",
-              "query/dex",
-              "query/yield",
-              "query/ramp",
-              "query/paymasters",
-              "query/public"
-            ]
-          }
-        ]
-      },
-      {
         "product": "Developer SDK",
         "icon": "building",
         "description": "Prepare, sign, and submit wallet operations through the hosted API.",
@@ -58,77 +18,82 @@
           {
             "group": "Getting started",
             "pages": [
-              "developer-sdk/index",
+              "index",
               "developer-sdk/integration-paths",
               "examples/dev-portal/create-api-key"
             ]
           },
           {
-            "group": "Guides",
+            "group": "Wallets",
             "pages": [
+              "developer-sdk/wallets",
+              "developer-sdk/create-wallets",
               {
-                "group": "Wallets and permissions",
+                "group": "Policies",
                 "pages": [
-                  "developer-sdk/create-wallets",
-                  "developer-sdk/permissions",
-                  "developer-sdk/add-roles-and-permissions",
-                  "developer-sdk/rent-claimers",
-                  "developer-sdk/authorization-locks"
-                ]
-              },
-              {
-                "group": "Signing and access",
-                "pages": [
-                  "developer-sdk/signers",
-                  "developer-sdk/participant-sets",
                   "examples/dev-portal/create-policy",
-                  "examples/dev-portal/fetch-policy",
-                  "developer-sdk/use-cases/guardian-recovery"
+                  "examples/dev-portal/fetch-policy"
                 ]
               },
+              "developer-sdk/permissions",
+              "developer-sdk/add-roles-and-permissions",
+              "developer-sdk/authorization-locks",
+              "developer-sdk/signers",
+              "developer-sdk/participant-sets",
+              "developer-sdk/custom-execution",
+              "developer-sdk/rent-claimers",
+              "developer-sdk/use-cases/guardian-recovery"
+            ]
+          },
+          {
+            "group": "Query",
+            "pages": [
+              "query/index",
+              "query/wallets",
+              "query/balances",
+              "query/dex",
+              "query/yield",
+              "query/ramp",
+              "query/paymasters",
+              "query/public",
               {
-                "group": "Transactions",
-                "pages": [
-                  "developer-sdk/transfers-and-swaps",
-                  "developer-sdk/swaps-and-batches",
-                  "developer-sdk/custom-execution",
-                  "developer-sdk/x402",
-                  "developer-sdk/sponsor-and-submit"
-                ]
-              },
-              {
-                "group": "Balances and funding",
+                "group": "SDK examples",
                 "pages": [
                   "developer-sdk/wallet-reads",
-                  "developer-sdk/dex-activity",
-                  "developer-sdk/ramp",
-                  "developer-sdk/yield"
+                  "developer-sdk/dex-activity"
                 ]
               }
             ]
           },
           {
-            "group": "Operations",
+            "group": "Finance",
             "pages": [
+              "developer-sdk/finance",
+              "developer-sdk/ramp",
+              "developer-sdk/transfers-and-swaps",
+              "developer-sdk/swaps-and-batches",
+              "developer-sdk/yield",
               {
-                "group": "Paymasters",
+                "group": "Paymaster",
                 "pages": [
                   "examples/dev-portal/paymaster-overview",
                   "examples/dev-portal/create-paymaster",
                   "examples/dev-portal/manage-paymaster",
+                  "developer-sdk/sponsor-and-submit",
                   "examples/dev-portal/transaction-history"
                 ]
               },
-              {
-                "group": "Workspace",
-                "pages": [
-                  "examples/dev-portal/index",
-                  "examples/dev-portal/projects",
-                  "examples/dev-portal/create-project",
-                  "examples/dev-portal/manage-members",
-                  "examples/dev-portal/subscriptions-billing"
-                ]
-              }
+              "developer-sdk/x402"
+            ]
+          },
+          {
+            "group": "Workspace",
+            "pages": [
+              "examples/dev-portal/index",
+              "examples/dev-portal/projects",
+              "examples/dev-portal/create-project",
+              "examples/dev-portal/manage-members",
+              "examples/dev-portal/subscriptions-billing"
             ]
           },
           {
@@ -149,6 +114,17 @@
                   "developer-api/identity"
                 ]
               }
+            ]
+          },
+          {
+            "group": "Additional resources",
+            "pages": [
+              "resources/solana",
+              "resources/evm",
+              "resources/idp",
+              "products-and-sdks",
+              "build-with-ai",
+              "links-and-contact"
             ]
           }
         ]
@@ -307,7 +283,7 @@
         ]
       },
       {
-        "product": "IdP",
+        "product": "IdP SDK",
         "icon": "fingerprint",
         "description": "Add user sign-in and persist a Swig session in web and mobile apps.",
         "groups": [
@@ -356,7 +332,7 @@
     },
     {
       "source": "/overview/developer-sdk",
-      "destination": "/developer-sdk"
+      "destination": "/"
     },
     {
       "source": "/overview/developer-api",
@@ -377,6 +353,10 @@
     {
       "source": "/reference",
       "destination": "/products-and-sdks"
+    },
+    {
+      "source": "/developer-sdk",
+      "destination": "/"
     }
   ],
   "logo": {

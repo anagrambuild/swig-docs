@@ -1,0 +1,39 @@
+---
+title: "Read Wallet Balances"
+sidebarTitle: "Read balances"
+description: "Read native SOL, token holdings, and total USD value for a Swig wallet."
+---
+
+Send your server API key and the Swig **config address** to read wallet holdings.
+Use `network=NETWORK_MAINNET` or `network=NETWORK_DEVNET` for the selected network.
+
+## What you can query
+
+| Data | Endpoint | Result |
+| :--- | :--- | :--- |
+| Total USD balance | `GET /wallet/swig/{swig_config_address}/balance/usd` | Wallet address and total USD value |
+| Token and SOL balances | `GET /wallet/swig/{swig_config_address}/token-balances` | Amounts, decimals, token metadata, prices, and USD values |
+
+## Interpret the result
+
+- Use exact raw amounts for arithmetic. REST token amounts are decimal strings;
+  SDK representations vary by language.
+- Use UI amounts and USD valuations for display. A valuation is separate from
+  the raw quantity held.
+- These reads use recorded wallet data and can lag chain state. Check transaction
+  confirmation separately before showing a transfer as complete.
+- Use [wallet history](/query/wallets) to explain inflows and outflows, and
+  [DEX activity](/query/dex) for venue actions and liquidity positions.
+
+## Quota
+
+Each admitted call consumes **one API request**, including a retry or a call
+that later returns an error. Reading the USD total and the token list separately
+uses two requests. These calls share the API-request allowance with other
+metered operations; they do not use DEX queries. See
+[pricing and quotas](/query#pricing-and-included-usage).
+
+## Reference and SDK examples
+
+- [Wallet REST fields](/developer-api/wallets)
+- [TypeScript, Python, and Rust balance examples](/developer-sdk/wallet-reads#balances)

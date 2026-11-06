@@ -1,10 +1,10 @@
 ---
-title: "Query Wallets and Tokens"
-sidebarTitle: "Wallets and tokens"
-description: "Read balances, token movements, roles, policies, and the rent recipient."
+title: "Read Wallet State"
+sidebarTitle: "Read wallets"
+description: "Read token movements, roles, policies, and the rent recipient."
 ---
 
-Use these reads to show wallet holdings, explain token movements, and inspect
+Use these reads to explain token movements and inspect
 wallet configuration. Send your server API key and use the Swig **config address**
 in wallet routes.
 
@@ -12,8 +12,6 @@ in wallet routes.
 
 | Data | Endpoint | Result |
 | :--- | :--- | :--- |
-| Total USD balance | `GET /wallet/swig/{swig_config_address}/balance/usd` | Wallet address and total USD value |
-| Token and SOL balances | `GET /wallet/swig/{swig_config_address}/token-balances` | Amounts, decimals, token metadata, prices, and USD values |
 | Token movements | `GET /wallet/swig/{swig_config_address}/token-transactions` | Recent wallet-relative inflows and outflows, including sub-account attribution |
 | Roles | `GET /wallet/swig/{swig_config_address}/roles` | Role IDs, authorities, and permission actions |
 | Policy | `GET /wallet/policies/{policy_id}` | A policy visible to your API-key organization |
@@ -28,7 +26,7 @@ in wallet routes.
 - Use decimal-string `amountRaw` for exact token arithmetic. Display amounts and
   USD values serve presentation; token movements are relative to the wallet,
   while [DEX actions](/query/dex) describe individual venue operations.
-- Balance, token-history, and role reads use recorded wallet data. The
+- Token-history and role reads use recorded wallet data. The
   rent-recipient endpoint reads finalized chain state; an absent recipient on a
   valid config differs from an account or RPC error.
 
@@ -42,6 +40,7 @@ with other metered operations; they do not use DEX queries. See
 ## Reference and SDK examples
 
 - [Wallet REST fields](/developer-api/wallets)
+- [Read balances](/query/balances) for holdings and USD values
 - [Wallet-read SDK examples](/developer-sdk/wallet-reads)
 - [Rent-recipient REST fields](/developer-api/transactions#read-the-recipient)
 - [Rent-claimer SDK examples](/developer-sdk/rent-claimers)
