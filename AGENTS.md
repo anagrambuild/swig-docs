@@ -129,7 +129,7 @@ TypeScript quickstart, Guides group, or Participant set.
 - Use a fenced `text` cascade when a diagram helps: plain labels, indentation,
   and `├─`, `└─`, `│` connectors. Read top to bottom; branch only for actual
   alternatives or parallel inputs. Use no boxes. Keep labels short and every
-  line at most 30 characters so the diagram fits on mobile.
+  line at most 26 characters so the diagram fits on mobile.
 - Keep prose brief. Remove repeated prerequisites, promotional claims,
   unrelated features, and repeated next-step card lists. Keep long secondary
   examples collapsed when they are necessary for a complete contract.
@@ -156,13 +156,13 @@ Prepare operation
   ├─ Member approval
   └─ Threshold reached
       └─ Compile approvals
-          └─ Sign and submit
+          └─ Sign + submit
 ```
 
 Use two-space indentation for first children and four additional spaces per
 nested level. Use `├─` for a continuing branch, `└─` for the last child, and
 `│` only when it connects actual siblings. Keep labels brief, omit blank rows,
-and use at most 30 characters per line. Show distinct alternatives or parallel
+and use at most 26 characters per line. Show distinct alternatives or parallel
 inputs as siblings; show a sequential continuation as a nested last child.
 Use the same fenced `text` rendering everywhere. Omit a diagram if it merely
 repeats a single method call.
