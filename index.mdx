@@ -83,24 +83,24 @@ use application callbacks. Rust also provides native signers that hold
 application-supplied local keys. Signing helpers need no API key and make no
 hosted request. Keep private keys in the runtime that owns signing.
 
-## Wallets
+## Wallet
 
 Create wallets and control how they can be used:
 
-- **Setup:** [create a wallet](/developer-sdk/create-wallets) and configure [rent claimers](/developer-sdk/rent-claimers).
-- **Members:** [add a role](/developer-sdk/add-roles-and-permissions), connect a [signer](/developer-sdk/signers), or require multiple approvals with [participant sets](/developer-sdk/participant-sets).
-- **Policies:** save [policy templates](/examples/dev-portal/create-policy), choose [permissions](/developer-sdk/permissions), and configure [guardian recovery](/developer-sdk/use-cases/guardian-recovery).
-- **Authorization locks:** [prepare and inspect holds](/developer-sdk/authorization-locks) on SOL or tokens.
-- **Custom operations:** [prepare instructions](/developer-sdk/custom-execution) that fit the role's permissions.
+- **Setup:** [create a wallet](/developer-sdk/create-wallets) and configure [rent claimer](/developer-sdk/rent-claimers).
+- **Member:** [add a role](/developer-sdk/add-roles-and-permissions), connect a [signer](/developer-sdk/signers), or require multiple approvals with [participant set](/developer-sdk/participant-sets).
+- **Policy:** save [policy template](/examples/dev-portal/create-policy), choose [permission](/developer-sdk/permissions), and configure [guardian recovery](/developer-sdk/use-cases/guardian-recovery).
+- **Authorization lock:** [prepare and inspect holds](/developer-sdk/authorization-locks) on SOL or tokens.
+- **Custom transaction:** [prepare instructions](/developer-sdk/custom-execution) that fit the role's permissions.
 
 ## Query
 
 Swig Query provides hosted wallet and market data. See
 [Pricing and quotas](/query) for included usage and the quota each endpoint consumes.
 
-- [Balances](/query/balances): native SOL, tokens, and total USD value.
+- [Balance](/query/balances): native SOL, tokens, and total USD value.
 - [DEX activity](/query/dex): trades, liquidity actions, and latest positions.
-- [Yield](/query/yield), [ramp](/query/ramp), and [paymasters](/query/paymasters).
+- [Yield](/query/yield) and [Ramp](/query/ramp).
 
 ## Finance
 
@@ -110,7 +110,7 @@ trading, or yield flow.
 - [Ramp funds on or off chain](/developer-sdk/ramp).
 - [Transfer SOL or tokens](/developer-sdk/transfers-and-swaps), [swap assets](/developer-sdk/swaps-and-batches), and [pay for x402 resources](/developer-sdk/x402).
 - [Earn yield through native staking](/developer-sdk/yield).
-- [Create a paymaster](/examples/dev-portal/create-paymaster) and [sponsor signed transactions](/developer-sdk/sponsor-and-submit).
+- [Paymaster](/developer-sdk/sponsor-and-submit): check funding and sponsor signed transactions.
 
 ## AI
 

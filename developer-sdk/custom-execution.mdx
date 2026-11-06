@@ -1,13 +1,45 @@
 ---
-title: "Build Custom Transactions"
-sidebarTitle: "Custom transactions"
+title: "Custom transaction"
+sidebarTitle: "Custom transaction"
+description: "Prepare a wallet transaction from your own Solana instructions."
 ---
 
-Use custom transactions to prepare your own Solana instructions for an
-existing Swig wallet. The backend builds the final transaction when the
-transfer and swap helpers do not cover your operation.
+## Introduction
 
-## Example
+A custom transaction executes your Solana instructions through an existing Swig
+wallet. Use it to integrate a program that the transfer and swap helpers do not
+cover. The acting role's program and asset permissions still apply.
+
+The backend prepares the transaction; your application reviews, signs, and
+submits it. Use the [Protocol SDK](/products-and-sdks) for direct instruction construction.
+
+## Input
+
+| Parameter | Required | Description |
+| :--- | :--- | :--- |
+| Wallet config address and network | Yes | Bind through the configured wallet client |
+| Requester authority | Yes | Ed25519, secp256r1, or ParticipantSet authority |
+| `feePayer` / `fee_payer` | Yes | Public key paying the transaction fee |
+| `instructions` | Yes | Nonempty ordered list of program IDs, account metadata, and instruction data |
+| Account metadata | For each instruction | Public key and signer/writable flags |
+| `addressLookupTableAccounts` / `address_lookup_table_accounts` | No | Distinct lookup-table addresses; must be empty for ParticipantSet requests |
+
+A signer account must be the derived Swig wallet address, fee payer, or
+Ed25519 requester. TypeScript accepts base64 instruction data; Python and Rust
+examples use bytes. Rust uses native `Instruction` and `AccountMeta` values.
+
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Invalid instruction input | The instruction list is empty or its account metadata is unsupported. | Supply instructions with valid program IDs, data, and permitted signer accounts. |
+| Unsupported lookup-table use | A ParticipantSet requester includes address lookup tables. | Keep the lookup-table list empty for that requester. |
+| Permission check fails | The operation exceeds the acting role's program or asset grants. | Inspect the target program, asset amount, and role permissions before signing. |
+
+## SDK example
+
+Use a wallet handle with its requester authority in TypeScript/Python, or
+`WalletClient` in Rust. See [Client setup](/developer-sdk/integration-paths).
 
 <CodeGroup>
 
@@ -78,29 +110,6 @@ let prepared = wallet
 
 </CodeGroup>
 
-The SDK normalizes the instruction input and sends it to
-`POST /transaction/prepare/custom`. The API returns the prepared transaction
-for your application-owned signing and submission flow.
-
-Rust accepts raw instruction bytes and handles wire encoding. Supply at least
-one instruction and distinct lookup-table addresses. Supported requesters are
-Ed25519, secp256r1, and ParticipantSet. ParticipantSet requesters require an
-empty `address_lookup_table_accounts` list.
-
-Instruction accounts marked as signers must be the derived Swig wallet address,
-the fee payer, or the Ed25519 requester. Invalid inputs fail preparation before
-signing.
-
-## What still applies
-
-This is still a prepared transaction result. Your application must inspect the
-serialized transaction's required signer set and process every
-`signatureRequests` / `signature_requests` record. The array covers embedded
-`secp256r1` and `secp256k1` signatures; an Ed25519 requirement appears in the
-Solana transaction instead. Your application then chooses direct or sponsored
-submission.
-
-## Full protocol control
-
-Use the [Protocol SDK](/reference) for full protocol control, custom role or
-action construction, or instruction-by-instruction authoring.
+Review the returned transaction and complete [Signing](/developer-sdk/signers).
+ParticipantSet operations first need [approval compilation](/developer-sdk/participant-sets).
+An empty embedded-signature list does not remove native Ed25519 signer requirements.

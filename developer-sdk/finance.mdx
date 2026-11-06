@@ -12,10 +12,10 @@ application-owned signing still apply to operations that move assets.
 | Goal | Guide | What to expect |
 | :--- | :--- | :--- |
 | Buy crypto with fiat or sell crypto for fiat | [Ramp](/developer-sdk/ramp) | Discover supported routes, request a quote, create an order, and follow its status |
-| Send SOL or tokens | [Transfers](/developer-sdk/transfers-and-swaps) | Prepare a transfer for an authorized wallet role to sign |
-| Exchange assets or combine operations | [Swaps](/developer-sdk/swaps-and-batches) | Prepare a swap or grouped wallet operations |
+| Send SOL or tokens | [Transfer](/developer-sdk/transfers-and-swaps) | Prepare a transfer for an authorized wallet role to sign |
+| Exchange assets or combine operations | [Swap](/developer-sdk/swaps-and-batches) | Prepare a swap or grouped wallet operations |
 | Stake SOL and manage the position | [Yield](/developer-sdk/yield) | Choose a validator, deposit, deactivate, and withdraw when the stake is available |
-| Pay transaction fees for users | [Paymaster](/examples/dev-portal/paymaster-overview) | Fund a paymaster, configure limits, and sponsor application-signed transactions |
+| Pay transaction fees for users | [Paymaster](/developer-sdk/sponsor-and-submit) | Fund a paymaster, configure limits, and sponsor application-signed transactions |
 | Pay for an HTTP resource | [x402 payments](/developer-sdk/x402) | Read a payment requirement, prepare and sign a payment, then retry the resource request |
 
 ## Understand the costs
@@ -36,7 +36,7 @@ transaction needs chain confirmation; a ramp order has its own status lifecycle.
 
 - Check [wallet balances](/query/balances) and [token movements](/query/wallets).
 - Inspect [DEX activity](/query/dex) and [yield positions and rewards](/query/yield).
-- Follow [ramp orders](/query/ramp) and monitor [paymaster balances](/query/paymasters).
+- Follow [ramp orders](/query/ramp) and monitor [paymaster balances](/developer-sdk/sponsor-and-submit).
 
 Indexed query results can lag chain state. Use the freshness signals described
 by each query guide when showing results to users.

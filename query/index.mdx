@@ -58,30 +58,34 @@ For example, reading token balances once and three pages of DEX history uses
 
 | Section | Available data | Usage allowance |
 | :--- | :--- | :--- |
-| [Wallets](/query/wallets) | Token movements, roles, policies, rent recipient | API requests |
-| [Balances](/query/balances) | Native SOL and token holdings, total USD value | API requests |
+| [Balance](/query/balances) | Native SOL and token holdings, total USD value | API requests |
 | [DEX activity](/query/dex) | Indexed trades and liquidity actions, individual transactions, latest positions | DEX queries |
 | [Yield](/query/yield) | Validators and rates, reward estimates, positions, totals, recorded rewards | API requests |
 | [Ramp](/query/ramp) | Supported countries and assets, buy/sell quotes, order status | API requests |
-| [Paymasters](/query/paymasters) | API and IdP paymaster configuration and SOL balances | API requests |
-| [Public wallets and identity](/query/public) | Wallet lookup/status and identity verification keys | Public-route rules described in that guide |
+| [Paymaster](/developer-sdk/sponsor-and-submit) | API and IdP paymaster configuration and SOL balances | API requests |
 
 
 ## Make your first query
 
-1. [Create an API key](/examples/dev-portal/create-api-key) for your organization.
-2. Keep it on your trusted server and send it as a bearer token.
-3. Choose a query guide above and use its network, filters, and pagination rules.
+[Create an API key](/examples/dev-portal/create-api-key) and initialize the server
+client using [Client setup](/developer-sdk/integration-paths). Choose the guide
+above for its inputs, returned fields, and pagination rules.
 
-```bash
-curl "https://api.onswig.com/wallet/swig/<swig-config-address>/token-balances?network=NETWORK_MAINNET" \
-  -H "Authorization: Bearer $SWIG_API_KEY"
+<CodeGroup>
+```typescript TypeScript
+const wallet = swig.wallets.use(swigConfigAddress);
+const result = await wallet.listTokenBalances();
 ```
 
-This call consumes one API request. Replace the config-address placeholder with
-your Swig config address. The public wallet and identity routes use their own
-client boundary and do not require this server API key.
+```python Python
+wallet = swig.wallets.use(swig_config_address)
+result = await wallet.list_token_balances()
+```
 
-For SDK setup, use [Client setup](/developer-sdk/integration-paths). For exact
-request and response fields, follow each guide's REST reference. Indexed data
-can lag chain state; each guide explains the available freshness signals.
+```rust Rust
+let result = wallet.list_token_balances(&swig_config_address).await?;
+```
+</CodeGroup>
+
+This call consumes one API request. Indexed data can lag chain state; each guide
+explains its freshness signals. Track transaction confirmation separately.
