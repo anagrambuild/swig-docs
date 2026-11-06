@@ -58,13 +58,11 @@
           {
             "group": "Query",
             "pages": [
-              "query/wallets",
               "query/balances",
               "query/dex",
               "query/yield",
               "query/ramp",
-              "query/paymasters",
-              "query/public"
+              "query/paymasters"
             ]
           },
           {
