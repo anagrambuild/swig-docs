@@ -1,6 +1,6 @@
 ---
-title: "Read Policy Templates"
-sidebarTitle: "Read Policy Templates"
+title: "Fetch Policy Templates"
+sidebarTitle: "Fetch templates"
 description: "Read saved wallet-creation configuration with the TypeScript or Python Developer SDK."
 ---
 
@@ -89,7 +89,7 @@ role, map them to the typed SDK inputs shown in the reference rather than
 forwarding stored action data unchanged.
 
 To inspect the authorities and permissions currently attached to a wallet,
-use [Read Wallet State](/developer-sdk/wallet-reads#roles).
+use [Wallet state](/developer-sdk/wallet-reads#roles).
 
 ## Handle read errors
 
@@ -116,6 +116,6 @@ Check the API key and its resource access for `401` or `403` responses. For a
 
 ## Continue with the template
 
-Pass the policy ID when you [Create Wallets](/developer-sdk/create-wallets).
+Pass the policy ID when you [Create a wallet](/developer-sdk/create-wallets).
 The SDK reads the template as part of wallet preparation. Your application then
 signs and submits the returned transactions.

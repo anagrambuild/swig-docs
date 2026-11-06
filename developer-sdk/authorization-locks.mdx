@@ -1,6 +1,6 @@
 ---
 title: "Authorization Locks"
-sidebarTitle: "Authorization Locks"
+sidebarTitle: "Authorization locks"
 ---
 
 Prepare SOL or token holds through the Developer API, inspect them, and prepare
@@ -28,7 +28,10 @@ Omit the mint for SOL; supply a token mint to use the wallet's associated token
 account. Reads include `currentSlot`/`current_slot`, `nextLockId`/`next_lock_id`,
 and the remaining amount and active status of each hold.
 
-## TypeScript
+## Prepare and inspect locks
+
+<Tabs>
+<Tab title="TypeScript">
 
 This function uses an existing server-side `SwigClient` and public addresses.
 The returned transaction is prepared, not submitted.
@@ -60,7 +63,8 @@ of an existing hold. Use decimal strings or `bigint` for amounts beyond
 JavaScript's safe integer range. Prepared lock kinds are
 `add-authorization-lock` and `remove-authorization-lock` (wire values 10 and 11).
 
-## Python
+</Tab>
+<Tab title="Python">
 
 ```python
 from swig_developer_sdk import AuthorizationLocksResult, PreparedTransaction, SwigClient
@@ -88,7 +92,8 @@ Use `wallet.remove_authorization_lock(fee_payer=fee_payer, lock_id=lock_id)`
 to prepare release. The SDK validates amounts and expiry values as unsigned
 64-bit integers and lock IDs as unsigned 32-bit integers.
 
-## Rust
+</Tab>
+<Tab title="Rust">
 
 ```rust
 use solana_pubkey::Pubkey;
@@ -135,6 +140,9 @@ The boolean includes expired and fully captured records. Rust returns typed
 The native secp256k1 and raw secp256r1 transaction signers handle both lock
 instructions. ParticipantSet requesters use the existing approval compilation
 flow before signing the compiled transaction.
+
+</Tab>
+</Tabs>
 
 ## Sign, submit, and observe
 

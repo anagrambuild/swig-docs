@@ -1,6 +1,6 @@
 ---
 title: "Participant Sets"
-sidebarTitle: "Participant Sets"
+sidebarTitle: "Participant sets"
 ---
 
 A ParticipantSet lets several independent members authorize one Swig role with
@@ -20,7 +20,7 @@ client configuration.
 This 2-of-2 example prepares a SOL-transfer role using two Ed25519 members. First
 prepare and submit the ParticipantSet creation transaction. After that
 transaction lands, use the general
-[Add Roles](/developer-sdk/add-roles-and-permissions) flow to
+[Add a role](/developer-sdk/add-roles-and-permissions) flow to
 attach the set to a role and choose its permissions.
 
 Use an existing authority with permission to add roles. TypeScript and Python
@@ -31,7 +31,7 @@ Rust passes the config address and requester authority with each preparation.
 submission, and confirmation helper. In Rust, it accepts `PreparedTransaction`.
 It returns only after confirmation.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 import { SystemProgram } from '@solana/web3.js';
@@ -160,7 +160,7 @@ sign_and_submit(add_role).await?;
 Set creation and role creation are separate transactions. Confirm the set
 creation before preparing the role. In Rust, use `role_id: None` for the new
 role, then read its assigned ID with `list_roles` after confirmation. See
-[Add Roles](/developer-sdk/add-roles-and-permissions).
+[Add a role](/developer-sdk/add-roles-and-permissions).
 
 <Note>
   Keep both actions on a scoped SOL-transfer role. The `program` action permits
@@ -185,7 +185,7 @@ After both setup transactions land, select the ParticipantSet as the requester.
 Supported preparation routes return a normal prepared transaction with a
 `participantSetApprovalPlan` / `participant_set_approval_plan`.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const participantWallet = swig.wallets.use(swigConfigAddress, {
@@ -274,7 +274,7 @@ local Ed25519, secp256k1, or P-256 key.
 | secp256r1 | TypeScript/Python use a WebAuthn assertion; Rust builds a software WebAuthn proof with a local P-256 key |
 | secp256k1 | Signs the lowercase 64-character ASCII hex challenge with EIP-191; TypeScript/Python callbacks apply the prefix, while Rust applies it internally |
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 import {
@@ -389,7 +389,7 @@ approval. The hosted compiler verifies the submitted proofs and plan freshness.
 Return the detached approvals with the original prepared transaction. The API
 validates the plan and simulates the final transaction before returning it.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const compiled = await swig.transactions.compileParticipantSetApprovals({

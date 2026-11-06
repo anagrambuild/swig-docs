@@ -85,23 +85,22 @@ hosted request. Keep private keys in the runtime that owns signing.
 
 ## Wallets
 
-Create wallets and control how they can be used. Start with the
-[wallet operations overview](/developer-sdk/wallets), then choose a guide:
+Create wallets and control how they can be used:
 
-- **Policies and roles:** save a [policy template](/examples/dev-portal/create-policy), choose [permissions](/developer-sdk/permissions), and [add an authority](/developer-sdk/add-roles-and-permissions).
-- **Signing and approvals:** connect a [signer](/developer-sdk/signers) or require multiple approvals with [Participant Sets](/developer-sdk/participant-sets).
-- **Wallet management:** configure [authorization locks](/developer-sdk/authorization-locks), [rent claimers](/developer-sdk/rent-claimers), or [guardian recovery](/developer-sdk/use-cases/guardian-recovery).
+- **Setup:** [create a wallet](/developer-sdk/create-wallets) and configure [rent claimers](/developer-sdk/rent-claimers).
+- **Members:** [add a role](/developer-sdk/add-roles-and-permissions), connect a [signer](/developer-sdk/signers), or require multiple approvals with [participant sets](/developer-sdk/participant-sets).
+- **Policies:** save [policy templates](/examples/dev-portal/create-policy), choose [permissions](/developer-sdk/permissions), and configure [authorization locks](/developer-sdk/authorization-locks) or [guardian recovery](/developer-sdk/use-cases/guardian-recovery).
 - **Custom operations:** [prepare instructions](/developer-sdk/custom-execution) that fit the role's permissions.
 
 ## Query
 
-[Swig Query](/query) covers hosted read APIs and explains prices, included usage,
-and the quota each endpoint consumes.
+Swig Query provides hosted wallet and market data. See
+[Pricing and quotas](/query) for included usage and the quota each endpoint consumes.
 
-- [Read wallet state](/query/wallets): roles, policies, token history, and rent recipients.
-- [Read balances](/query/balances): native SOL, tokens, and total USD value.
-- [Read DEX activity](/query/dex): trades, liquidity actions, and latest positions.
-- Read [yield data](/query/yield), [ramp data](/query/ramp), [paymasters](/query/paymasters), and [public wallet or identity data](/query/public).
+- [Wallets](/query/wallets): roles, policies, token history, and rent recipients.
+- [Balances](/query/balances): native SOL, tokens, and total USD value.
+- [DEX activity](/query/dex): trades, liquidity actions, and latest positions.
+- [Yield](/query/yield), [ramping](/query/ramp), [paymasters](/query/paymasters), and [public wallets and identity](/query/public).
 
 ## Finance
 
@@ -113,9 +112,14 @@ trading, or yield flow.
 - [Earn yield through native staking](/developer-sdk/yield).
 - [Create a paymaster](/examples/dev-portal/create-paymaster) and [sponsor signed transactions](/developer-sdk/sponsor-and-submit).
 
+## AI
+
+[Install MCP](/build-with-ai) to connect your assistant to Swig documentation
+or wallet tools.
+
 ## Additional resources
 
 - [Solana Protocol SDK](/solana): compose wallet transactions directly in TypeScript or Rust.
 - [EVM Protocol SDK](/evm): use the source-available TypeScript, Rust, or Python integrations.
 - [IdP SDK](/idp-sdk): add browser or mobile sign-in and persist a Swig session.
-- [Compare SDKs](/products-and-sdks), [build with AI](/build-with-ai), or use the [REST API reference](/developer-api).
+- [Compare SDKs](/products-and-sdks) to choose an integration.

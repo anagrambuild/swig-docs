@@ -1,6 +1,6 @@
 ---
-title: "Read DEX Activity"
-sidebarTitle: "Read DEX Activity"
+title: "DEX Activity Examples"
+sidebarTitle: "DEX activity"
 ---
 
 `swig.dex` reads what Swig's index recorded about a Swig your API key's
@@ -15,7 +15,7 @@ TypeScript `0.12.0` and Python `0.11.0` add these reads.
 
 ## List DEX transactions
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const page = await swig.dex.transactions.list({
@@ -93,7 +93,7 @@ the filters it came from, so keep them the same yourself. `pageSize` /
 `page_size` defaults to 25, and the backend caps it at 100. Each page is one
 API query, so a larger page reads a long history in fewer requests.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 import type { DexTransactionCursor } from '@swig-wallet/developer-sdk';
@@ -132,7 +132,7 @@ while True:
 
 ## Read one transaction
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const transaction = await swig.dex.transactions.get({
@@ -189,7 +189,7 @@ pool only when the instruction names one.
 
 ## List latest positions
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const { positions } = await swig.dex.positions.list({

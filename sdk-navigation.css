@@ -1,0 +1,6 @@
+/* These shortcuts stay within the docs, so they need no external-link icon. */
+:is(#sidebar-content, #mobile-nav-content)
+  a:is([href="/solana"], [href="/evm"], [href="/idp-sdk"])
+  > div > div:has(svg) {
+  display: none;
+}

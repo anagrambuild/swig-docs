@@ -1,6 +1,6 @@
 ---
-title: "Create Wallets"
-sidebarTitle: "Create Wallets"
+title: "Create a Swig Wallet"
+sidebarTitle: "Create a wallet"
 ---
 
 Prepare a new Swig wallet from a saved policy template or an inline authority. Your
@@ -23,7 +23,7 @@ one. The policy ID must be nonempty.
 
 ## Basic create flow
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const created = await swig.wallets.create({
@@ -66,7 +66,7 @@ let created = wallet
 An application may provide a `secp256r1` public key for a passkey-backed
 authority. Credential creation and signing stay outside the Developer SDK:
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const created = await swig.wallets.create({
@@ -108,7 +108,7 @@ let created = wallet
 
 EVM-backed creation works the same way with `secp256k1`:
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const created = await swig.wallets.create({
@@ -194,13 +194,13 @@ browser SDK surface.
   <Card title="Signers" icon="signature" href="/developer-sdk/signers">
     Basic signing support for application-owned wallets and passkeys
   </Card>
-  <Card title="Add Roles" icon="user-shield" href="/developer-sdk/add-roles-and-permissions">
+  <Card title="Add a role" icon="user-shield" href="/developer-sdk/add-roles-and-permissions">
     Attach a scoped role to an existing wallet
   </Card>
   <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-and-swaps">
     Wallet actions after create
   </Card>
-  <Card title="Read Wallet State" icon="magnifying-glass" href="/developer-sdk/wallet-reads">
+  <Card title="Wallet state" icon="magnifying-glass" href="/developer-sdk/wallet-reads">
     Balances, token activity, and roles
   </Card>
   <Card title="Sponsor & Submit" icon="paper-plane" href="/developer-sdk/sponsor-and-submit">

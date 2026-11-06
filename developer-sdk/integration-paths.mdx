@@ -8,7 +8,7 @@ language that owns your trusted application runtime.
 
 ## Choose your language
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 import { SwigClient } from '@swig-wallet/developer-sdk';
@@ -43,14 +43,21 @@ let paymaster = PaymasterClient::new(config.clone())?;
 
 ## Package entry points
 
+<Tabs>
+<Tab title="TypeScript">
+
 Install from npm with `bun add @swig-wallet/developer-sdk`. Import the API-key
 client from the package root. Application-owned signing helpers are available
 from `@swig-wallet/developer-sdk/signers`.
 
+</Tab>
+<Tab title="Python">
+
 Install from PyPI with `pip install swig-developer-sdk`. Python exposes signing
 helpers from the package root.
 
-## Rust
+</Tab>
+<Tab title="Rust">
 
 Install from crates.io with `cargo add swig-developer-sdk@0.1.0`.
 Requires Rust 1.87 or later. In `Cargo.toml`, set `package.rust-version` to
@@ -66,6 +73,9 @@ operations and the same network for your confirmation RPC.
 Authorize operations before signing. See [Signers](/developer-sdk/signers)
 for local signing and [Ramp](/developer-sdk/ramp#required-configuration)
 for Ramp client configuration.
+
+</Tab>
+</Tabs>
 
 ## Comparison
 

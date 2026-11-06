@@ -1,6 +1,6 @@
 ---
 title: "Earn Yield"
-sidebarTitle: "Yield (Staking)"
+sidebarTitle: "Yield"
 ---
 
 Use the yield client to stake SOL from an existing Swig wallet.
@@ -52,7 +52,7 @@ Choose a validator with `acceptsDeposits` set to `true` for a new deposit.
 Validators disabled for deposits stay listed. Existing positions can still
 exit and withdraw while their validator remains on the allowlist.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const yieldClient = swig.yield.forWallet({
@@ -117,7 +117,7 @@ Existing roles stay unchanged.
 To create a role, use an Ed25519 or Secp256r1 role-manager authority.
 That authority must hold an existing role with `All` or `ManageAuthority`.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const role = await yieldClient.prepareRole({
@@ -159,7 +159,7 @@ Exits and withdrawals do not spend that SOL allowance.
 
 ## Deposit
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const deposit = await yieldClient.deposit({
@@ -195,7 +195,7 @@ The wallet must keep its rent reserve after it funds the deposit.
 
 ## Exit
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const exit = await yieldClient.exit({
@@ -234,7 +234,7 @@ If the split address already exists, the API returns `ALREADY_EXISTS`.
 After cooldown the position is inactive. Withdraw returns its balance above
 the rent reserve to the Swig wallet.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const withdrawal = await yieldClient.withdraw({
@@ -258,7 +258,7 @@ withdrawal = await swig.yields.withdraw(
 
 ## Read positions, rewards, and estimates
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const { positions, nextPageToken, lastUpdatedAt } =

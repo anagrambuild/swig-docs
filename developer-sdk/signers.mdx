@@ -1,5 +1,5 @@
 ---
-title: "Signers"
+title: "Signing"
 sidebarTitle: "Signing"
 ---
 
@@ -48,7 +48,7 @@ TypeScript and Python use a callback to sign a serialized Solana transaction.
 Rust uses Solana's signing APIs to add each required signature while preserving
 the message and existing signatures:
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 import {
@@ -119,7 +119,7 @@ application environment and patch its WebAuthn data into the prepared Swig
 transaction. Rust signs raw P-256 authority requests with a local
 `p256::ecdsa::SigningKey` shared through `Arc`:
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 import {
@@ -175,7 +175,7 @@ The TypeScript and Python EVM adapters wrap an EIP-1193 provider with
 signs raw authority requests with a local `k256::ecdsa::SigningKey` shared
 through `Arc`:
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 import {

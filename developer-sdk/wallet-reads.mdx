@@ -1,6 +1,6 @@
 ---
-title: "Read Wallet State"
-sidebarTitle: "Read Wallet State"
+title: "Wallet State Examples"
+sidebarTitle: "Wallets"
 ---
 
 Every wallet read is an API-key `GET`. Reads follow the client's retry policy,
@@ -8,7 +8,7 @@ so they are safe to repeat.
 
 ## Start from a wallet handle
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const wallet = swig.wallets.use({
@@ -31,7 +31,7 @@ In Rust, use the `wallet` client from
 
 ## Balances
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const usd = await wallet.getUsdBalance();
@@ -88,7 +88,7 @@ values (`f64`) are for display.
 
 ## Token activity
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const activity = await wallet.listTokenTransactions({ limit: 25 });
@@ -155,7 +155,7 @@ Rust reports direction as `TransactionDirection::{Inflow, Outflow}`.
 Roles are how you inspect who currently holds authority over a Swig and what
 each authority is allowed to do.
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const { swigConfigAddress, walletAddress, roles } = await wallet.listRoles();
@@ -239,13 +239,13 @@ Rust `0.1.0`.
 ## DEX activity
 
 DEX transaction history and the latest state of liquidity positions are a
-separate read, `swig.dex`. See [Read DEX Activity](/developer-sdk/dex-activity).
+separate read, `swig.dex`. See [DEX activity](/developer-sdk/dex-activity).
 
 ## Policy metadata
 
 Policy reads are a separate, portal-scoped lookup rather than a wallet read:
 
-<CodeGroup dropdown>
+<CodeGroup>
 
 ```typescript TypeScript
 const policy = await swig.wallets.getPolicy(policyId);
