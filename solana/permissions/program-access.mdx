@@ -22,12 +22,12 @@ Program permissions control which Solana applications a role may invoke.
 | Permission | SDK builder | Access |
 | --- | --- | --- |
 | `Program` | `programLimit({ programId })` | One named program |
-| `ProgramScope` | `programScopeBasic({ programId, targetAccount })` | A program and a specific target account |
+| `ProgramScope` | No supported Classic helper for this flow | Advanced checks on an observed account field |
 | `ProgramCurated` | `programCurated()` | The deployed protocol's curated program set |
 | `ProgramAll` | `programAll()` | Unrestricted program invocation |
 
 - Prefer `Program` for a known integration and add each required program explicitly.
-- `ProgramScope`'s basic form scopes access; it does not add an amount limit.
+- `ProgramScope` is not a standalone program allowlist. Classic's `programScopeBasic()` does not provide a usable scoped flow; use `programLimit()` for an explicit program allowlist.
 - `ProgramCurated` depends on the deployed program's list; use explicit IDs when the application needs a fixed allowlist.
 - `ProgramAll` is highly privileged. Use it only when arbitrary program invocation is intended.
 

@@ -21,13 +21,14 @@ Recovery lets a designated guardian replace one role's lost signer while preserv
 
 | Item | Behavior |
 | --- | --- |
+| Supported target | Ed25519, Secp256r1, Secp256k1, or their session variants |
 | Target role | Keeps its ID, authority type, and permissions |
 | Replacement key | Must match the target authority type |
 | Guardian access | Can replace only the role named by its permission |
 | Session target | Replacement clears its temporary key and expiry |
 | Active authorization locks | Block guardian replacement until captured, released, or expired |
 
-The guardian chooses the key that inherits the target's access. If the target's only key is lost while it has an active hold, recovery may need to wait for expiry.
+ProgramExec authorities cannot be replacement targets. The guardian chooses the key that inherits the target's access. If the target's only key is lost while it has an active hold, recovery may need to wait for expiry.
 
 ## SDK example
 

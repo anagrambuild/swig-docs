@@ -20,6 +20,8 @@ Removing a role revokes its authority, permissions, and any session attached to 
 ## Removal rules
 
 - Root role `0` cannot be removed; use [Recovery](/solana/use-cases/recovery) to replace a protected key.
+- Close any live V1 subaccounts attached to the target role before removing it.
+- Keep at least one administrator with `All` or `ManageAuthority`; removal cannot leave the wallet without one.
 - Active authorization locks must be captured, released, or expired before removal.
 - Other roles belonging to the same signer remain active.
 - Assets stay at the wallet address.
