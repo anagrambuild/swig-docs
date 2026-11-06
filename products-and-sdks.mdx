@@ -1,64 +1,60 @@
 ---
-title: "Choose a Product"
+title: "Choose an Integration"
+sidebarTitle: "Choose an integration"
+description: "Choose a language, then the wallet or identity layer your application needs."
 ---
 
-Swig has five product surfaces. Choose the one that matches how your app will integrate.
+## Choose your language
 
-## Quick routing
+<Tabs>
+  <Tab title="TypeScript">
+    - [Developer SDK](/developer-sdk): hosted wallet preparation and submission from a trusted server.
+    - [Solana Protocol SDK](/solana): direct transactions with Solana Kit or Web3.js.
+    - [EVM Protocol SDK](/evm): direct transactions with Viem and supported smart-account clients.
+    - [IdP](/idp-sdk): browser and Expo / React Native sign-in.
+  </Tab>
+  <Tab title="Rust">
+    - [Solana Protocol SDK](/reference/rust): wallet APIs and instruction builders.
+    - [EVM Protocol SDK](/evm): source-available SDK and Alloy examples.
+  </Tab>
+  <Tab title="Python">
+    - [Developer SDK](/developer-sdk): hosted wallet preparation and submission from a trusted server.
+    - [EVM Protocol SDK](/evm): source-available SDK and Web3.py examples.
+  </Tab>
+</Tabs>
 
-| If you are trying to... | Start here |
-| :--- | :--- |
-| Understand the on-chain protocol and repo layout | [Swig Protocol](/protocol) |
-| Integrate directly with Solana or EVM wallets | [Swig Protocol SDK](/reference) |
-| Prepare wallet operations and submit signed transactions from a trusted server | [Swig Developer SDK](/developer-sdk) |
-| Call hosted backend endpoints directly over REST | [Swig Developer API](/developer-api) |
-| Add OAuth, email OTP, or SMS OTP login flows | [Swig IDP SDK](/idp-sdk) |
+## Developer SDK
 
-## Product map
+Use the hosted API to prepare transactions and read wallet state. Your
+application owns authentication, authorization, signing, and confirmation.
 
-### Swig Protocol
+- Start with [client setup](/developer-sdk/integration-paths) and an [API key](/examples/dev-portal/create-api-key).
+- Follow [wallet creation](/developer-sdk/create-wallets), [transfers](/developer-sdk/transfers-and-swaps), and [sponsored submission](/developer-sdk/sponsor-and-submit).
+- Use the [REST API reference](/developer-api) for endpoint paths and payloads.
 
-The on-chain wallet system in `swig-wallet`.
+## Solana Protocol SDK
 
-- Use it when you need to understand permissions, sessions, recovery, or program behavior.
-- Start at [Protocol](/protocol).
+Use the protocol directly when your application owns its RPC connection,
+authority keys, instruction composition, and transaction submission.
 
-### Swig Protocol SDK
+- Start with the [Solana SDK overview](/solana).
+- Choose [TypeScript packages](/reference/typescript) or [Rust packages](/reference/rust).
+- Read [protocol concepts](/protocol) for accounts, permissions, sessions, and recovery.
 
-Direct wallet integrations: TypeScript and Rust for Solana; TypeScript, Rust,
-and Python for EVM.
+## EVM Protocol SDK
 
-- Use it when your app talks to Swig wallets directly and controls its own authority or signing flows.
-- Start at [Protocol SDK](/reference).
-- For wallet scenarios, choose [Solana](/solana) or [EVM](/evm).
+Use the source-available SDKs with a compatible Swig deployment and your own
+keys and RPC connection.
 
-### Swig Developer SDK
+- Start with the [EVM SDK overview](/evm) and [environment setup](/evm/setup).
+- Follow [wallet creation](/evm/create-wallet), [role assignment](/evm/add-role), and [transfers](/evm/send-transfer).
+- Check [bundler compatibility](/evm/bundler-compatibility) before sponsoring operations.
 
-Hosted transaction preparation through `@swig-wallet/developer-sdk` (TypeScript) and `swig-developer-sdk` (Python).
+## IdP
 
-- Use it when a trusted backend should prepare wallet creation, transfers,
-  swaps, reads, or fiat ramps and submit transactions signed by
-  application-owned wallet or custody code.
-- Start at [Developer SDK](/developer-sdk).
+Authenticate users and persist a Swig session before continuing into wallet
+flows. The published SDK uses TypeScript for browser and Expo / React Native apps.
 
-### Swig Developer API
-
-REST access to Swig's hosted backend services.
-
-- Use it when you need exact endpoint paths, payloads, response fields, or direct API integration without SDK wrappers.
-- Start at [Developer API](/developer-api).
-
-### Swig IDP SDK
-
-Login-provider SDKs in `swig-idp-sdk`.
-
-- Use it when you need OAuth or OTP sign-in that creates Swig sessions for web or Expo apps.
-- Start at [IDP SDK](/idp-sdk).
-
-## Relationship between the five
-
-- The **Swig Protocol** is the on-chain foundation.
-- The **Swig Protocol SDK** integrates with that protocol directly.
-- The **Swig Developer SDK** uses hosted backend services to prepare and operate on Swig wallets through API-key access.
-- The **Swig Developer API** documents the REST endpoints exposed by those hosted backend services.
-- The **Swig IDP SDK** handles end-user identity and session bootstrap for login-provider flows.
+- Choose an [authentication method](/idp-sdk/auth-methods).
+- Follow the [browser](/idp-sdk/web-apps) or [mobile](/idp-sdk/expo-and-react-native) guide.
+- Understand [sessions and security](/idp-sdk/sessions-and-security) before handing the session to your wallet layer.

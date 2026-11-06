@@ -13,201 +13,15 @@
       {
         "product": "Overview",
         "icon": "book-open",
-        "description": "Use this section to choose the right Swig product and docs path",
+        "description": "Choose a Swig integration and start building.",
         "groups": [
           {
-            "group": "Overview",
+            "group": "Getting started",
             "pages": [
               "index",
               "products-and-sdks",
-              "build-with-ai"
-            ]
-          },
-          {
-            "group": "Product Areas",
-            "pages": [
-              "overview/protocol",
-              "overview/protocol-sdk",
-              "overview/developer-sdk",
-              "overview/developer-api",
-              "overview/idp-sdk"
-            ]
-          }
-        ]
-      },
-      {
-        "product": "Protocol",
-        "icon": "shield",
-        "description": "The on-chain wallet protocol in swig-wallet",
-        "groups": [
-          {
-            "group": "Getting Started",
-            "pages": [
-              "protocol/index"
-            ]
-          },
-          {
-            "group": "Authorization Model",
-            "pages": [
-              "protocol/account-model",
-              "protocol/concepts-and-permissions"
-            ]
-          },
-          {
-            "group": "Execution Model",
-            "pages": [
-              "protocol/program-walkthrough",
-              "protocol/signing-and-execution",
-              "protocol/sessions-and-subaccounts",
-              "protocol/recovery-model"
-            ]
-          },
-          {
-            "group": "Security",
-            "pages": [
-              "protocol/security-and-audits"
-            ]
-          }
-        ]
-      },
-      {
-        "product": "Protocol SDK",
-        "icon": "terminal",
-        "description": "Direct Solana and EVM wallet integrations from TypeScript, Rust, and Python",
-        "tabs": [
-          {
-            "tab": "Overview",
-            "groups": [
-              {
-                "group": "Choose your chain",
-                "pages": [
-                  "reference/index"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "Solana",
-            "groups": [
-              {
-                "group": "Start here",
-                "pages": [
-                  "solana/index"
-                ]
-              },
-              {
-                "group": "Quickstarts",
-                "pages": [
-                  "tutorials/typescript/index",
-                  "tutorials/typescript/env",
-                  "tutorials/typescript/create",
-                  "solana/reservation-addresses",
-                  "tutorials/typescript/managing_authorities",
-                  "tutorials/typescript/sign",
-                  "tutorials/embeded_wallet_para/index"
-                ]
-              },
-              {
-                "group": "TypeScript Packages",
-                "pages": [
-                  "reference/typescript/index",
-                  "reference/typescript/kit",
-                  "reference/typescript/actions"
-                ]
-              },
-              {
-                "group": "Rust Packages",
-                "pages": [
-                  "reference/rust/index",
-                  "reference/rust/instruction_builder",
-                  "reference/rust/rust_wallet"
-                ]
-              },
-              {
-                "group": "AI & MCP",
-                "pages": [
-                  "tutorials/mcp/index",
-                  "reference/mcp-server",
-                  "mcp-support"
-                ]
-              },
-              {
-                "group": "Examples & Recipes",
-                "pages": [
-                  "examples/index",
-                  {
-                    "group": "Wallet Basics",
-                    "pages": [
-                      "examples/transfer",
-                      "examples/swap",
-                      "examples/credit_card",
-                      "examples/subscription"
-                    ]
-                  },
-                  {
-                    "group": "Wallet Integrations",
-                    "pages": [
-                      "examples/ethereum_keys",
-                      "examples/passkeys",
-                      "examples/paymaster/index",
-                      "examples/paymaster/sponsor-transactions",
-                      "examples/paymaster/advanced-usage"
-                    ]
-                  },
-                  {
-                    "group": "Advanced Wallet Patterns",
-                    "pages": [
-                      "examples/secp256r1_authority",
-                      "examples/sessions",
-                      "examples/sub_accounts",
-                      "examples/v2_features",
-                      "examples/multi_authority",
-                      "examples/migrating-from-squads"
-                    ]
-                  }
-                ]
-              },
-              {
-                "group": "Error Types",
-                "pages": [
-                  "reference/error-types/index"
-                ]
-              },
-              {
-                "group": "Migration & Releases",
-                "pages": [
-                  "tutorials/typescript/migration-v1",
-                  "v1-release-notes"
-                ]
-              }
-            ]
-          },
-          {
-            "tab": "EVM",
-            "groups": [
-              {
-                "group": "Start here",
-                "pages": [
-                  "evm/index",
-                  "evm/setup"
-                ]
-              },
-              {
-                "group": "Build wallet flows",
-                "pages": [
-                  "evm/create-wallet",
-                  "evm/add-role",
-                  "evm/read-role",
-                  "evm/send-transfer",
-                  "evm/send-sponsored-transfer"
-                ]
-              },
-              {
-                "group": "Operate your fleet",
-                "pages": [
-                  "evm/bundler-compatibility"
-                ]
-              }
+              "build-with-ai",
+              "links-and-contact"
             ]
           }
         ]
@@ -215,10 +29,10 @@
       {
         "product": "Developer SDK",
         "icon": "building",
-        "description": "Prepare wallet creation, transfers, swaps, reads, ramps, and sponsored submission from a trusted TypeScript or Python server",
+        "description": "Prepare, sign, and submit wallet operations through the hosted API.",
         "groups": [
           {
-            "group": "Start Here",
+            "group": "Getting started",
             "pages": [
               "developer-sdk/index",
               "developer-sdk/integration-paths",
@@ -226,60 +40,60 @@
             ]
           },
           {
-            "group": "Wallet Access",
+            "group": "Guides",
             "pages": [
-              "developer-sdk/permissions",
-              "examples/dev-portal/create-policy",
-              "examples/dev-portal/fetch-policy",
-              "developer-sdk/signers",
-              "developer-sdk/participant-sets"
-            ]
-          },
-          {
-            "group": "Build Wallet Flows",
-            "pages": [
-              "developer-sdk/create-wallets",
-              "developer-sdk/rent-claimers",
-              "developer-sdk/add-roles-and-permissions",
-              "developer-sdk/transfers-and-swaps",
-              "developer-sdk/swaps-and-batches",
-              "developer-sdk/x402",
-              "developer-sdk/custom-execution"
-            ]
-          },
-          {
-            "group": "Use Cases",
-            "pages": [
-              "developer-sdk/use-cases/guardian-recovery"
-            ]
-          },
-          {
-            "group": "Balances and Funding",
-            "pages": [
-              "developer-sdk/wallet-reads",
-              "developer-sdk/dex-activity",
-              "developer-sdk/ramp",
-              "developer-sdk/yield"
-            ]
-          },
-          {
-            "group": "Operate in Production",
-            "pages": [
-              "developer-sdk/sponsor-and-submit",
-              "examples/dev-portal/paymaster-overview",
               {
-                "group": "Paymaster Admin",
+                "group": "Wallets and permissions",
                 "pages": [
-                  "examples/dev-portal/create-paymaster",
-                  "examples/dev-portal/manage-paymaster",
-                  "examples/dev-portal/transaction-history"
+                  "developer-sdk/create-wallets",
+                  "developer-sdk/permissions",
+                  "developer-sdk/add-roles-and-permissions",
+                  "developer-sdk/rent-claimers"
+                ]
+              },
+              {
+                "group": "Signing and access",
+                "pages": [
+                  "developer-sdk/signers",
+                  "developer-sdk/participant-sets",
+                  "examples/dev-portal/create-policy",
+                  "examples/dev-portal/fetch-policy",
+                  "developer-sdk/use-cases/guardian-recovery"
+                ]
+              },
+              {
+                "group": "Transactions",
+                "pages": [
+                  "developer-sdk/transfers-and-swaps",
+                  "developer-sdk/swaps-and-batches",
+                  "developer-sdk/custom-execution",
+                  "developer-sdk/x402",
+                  "developer-sdk/sponsor-and-submit"
+                ]
+              },
+              {
+                "group": "Balances and funding",
+                "pages": [
+                  "developer-sdk/wallet-reads",
+                  "developer-sdk/dex-activity",
+                  "developer-sdk/ramp",
+                  "developer-sdk/yield"
                 ]
               }
             ]
           },
           {
-            "group": "Workspace Admin",
+            "group": "Operations",
             "pages": [
+              {
+                "group": "Paymasters",
+                "pages": [
+                  "examples/dev-portal/paymaster-overview",
+                  "examples/dev-portal/create-paymaster",
+                  "examples/dev-portal/manage-paymaster",
+                  "examples/dev-portal/transaction-history"
+                ]
+              },
               {
                 "group": "Workspace",
                 "pages": [
@@ -291,70 +105,204 @@
                 ]
               }
             ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              {
+                "group": "REST API",
+                "pages": [
+                  "developer-api/index",
+                  "developer-api/authentication",
+                  "developer-api/errors",
+                  "developer-api/transactions",
+                  "developer-api/wallets",
+                  "developer-api/dex",
+                  "developer-api/paymaster",
+                  "developer-api/ramp",
+                  "developer-api/yield",
+                  "developer-api/identity"
+                ]
+              }
+            ]
           }
         ]
       },
       {
-        "product": "Developer API",
-        "icon": "code",
-        "description": "REST reference for Swig's API-key guarded runtime APIs",
+        "product": "Solana Protocol SDK",
+        "icon": "layer-group",
+        "description": "Build Solana wallet transactions directly in TypeScript or Rust.",
         "groups": [
           {
-            "group": "Start Here",
+            "group": "Getting started",
             "pages": [
-              "developer-api/index",
-              "developer-api/authentication",
-              "developer-api/errors"
+              "solana/index",
+              "tutorials/typescript/index"
             ]
           },
           {
-            "group": "Runtime APIs",
+            "group": "Guides",
             "pages": [
-              "developer-api/transactions",
-              "developer-api/wallets",
-              "developer-api/dex",
-              "developer-api/paymaster",
-              "developer-api/ramp",
-              "developer-api/yield"
+              {
+                "group": "First wallet",
+                "pages": [
+                  "tutorials/typescript/env",
+                  "tutorials/typescript/create",
+                  "solana/reservation-addresses",
+                  "tutorials/typescript/managing_authorities",
+                  "tutorials/typescript/sign"
+                ]
+              },
+              {
+                "group": "Transfers and payments",
+                "pages": [
+                  "examples/index",
+                  "examples/transfer",
+                  "examples/swap",
+                  "examples/credit_card",
+                  "examples/subscription"
+                ]
+              },
+              {
+                "group": "Signers and integrations",
+                "pages": [
+                  "examples/ethereum_keys",
+                  "examples/passkeys",
+                  "examples/secp256r1_authority",
+                  "tutorials/embeded_wallet_para/index"
+                ]
+              },
+              {
+                "group": "Sessions and advanced flows",
+                "pages": [
+                  "examples/sessions",
+                  "examples/sub_accounts",
+                  "examples/v2_features",
+                  "examples/multi_authority",
+                  "examples/migrating-from-squads"
+                ]
+              },
+              {
+                "group": "Fee sponsorship",
+                "pages": [
+                  "examples/paymaster/index",
+                  "examples/paymaster/sponsor-transactions",
+                  "examples/paymaster/advanced-usage"
+                ]
+              },
+              {
+                "group": "AI and MCP",
+                "pages": [
+                  "tutorials/mcp/index",
+                  "reference/mcp-server",
+                  "mcp-support"
+                ]
+              }
             ]
           },
           {
-            "group": "Boundaries",
+            "group": "Protocol concepts",
             "pages": [
-              "developer-api/identity"
+              {
+                "group": "Accounts and execution",
+                "pages": [
+                  "protocol/index",
+                  "protocol/account-model",
+                  "protocol/concepts-and-permissions",
+                  "protocol/program-walkthrough",
+                  "protocol/signing-and-execution",
+                  "protocol/sessions-and-subaccounts",
+                  "protocol/recovery-model",
+                  "protocol/security-and-audits"
+                ]
+              }
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              {
+                "group": "TypeScript packages",
+                "pages": [
+                  "reference/typescript/index",
+                  "reference/typescript/kit",
+                  "reference/typescript/actions"
+                ]
+              },
+              {
+                "group": "Rust packages",
+                "pages": [
+                  "reference/rust/index",
+                  "reference/rust/instruction_builder",
+                  "reference/rust/rust_wallet"
+                ]
+              },
+              {
+                "group": "Errors and migrations",
+                "pages": [
+                  "reference/error-types/index",
+                  "tutorials/typescript/migration-v1",
+                  "v1-release-notes"
+                ]
+              }
             ]
           }
         ]
       },
       {
-        "product": "IDP SDK",
+        "product": "EVM Protocol SDK",
+        "icon": "cube",
+        "description": "Build EVM wallet transactions directly in TypeScript, Rust, or Python.",
+        "groups": [
+          {
+            "group": "Getting started",
+            "pages": [
+              "evm/index",
+              "evm/setup"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "evm/create-wallet",
+              "evm/add-role",
+              "evm/read-role",
+              "evm/send-transfer",
+              "evm/send-sponsored-transfer"
+            ]
+          },
+          {
+            "group": "Reference",
+            "pages": [
+              "evm/bundler-compatibility"
+            ]
+          }
+        ]
+      },
+      {
+        "product": "IdP",
         "icon": "fingerprint",
-        "description": "Sign users in and return a Swig session for the wallet layer that follows",
+        "description": "Add user sign-in and persist a Swig session in web and mobile apps.",
         "groups": [
           {
-            "group": "Getting Started",
+            "group": "Getting started",
             "pages": [
               "idp-sdk/index",
-              "idp-sdk/auth-methods",
-              "idp-sdk/web-and-mobile"
+              "idp-sdk/auth-methods"
             ]
           },
           {
-            "group": "Expo & React Native",
+            "group": "Guides",
             "pages": [
+              "idp-sdk/web-and-mobile",
+              "idp-sdk/web-apps",
               "idp-sdk/expo-and-react-native"
             ]
           },
           {
-            "group": "Browser Apps",
+            "group": "Reference",
             "pages": [
-              "idp-sdk/web-apps",
-              "idp-sdk/authority-and-agents"
-            ]
-          },
-          {
-            "group": "Sessions & Security",
-            "pages": [
+              "idp-sdk/authority-and-agents",
               "idp-sdk/sessions-and-security"
             ]
           }
@@ -378,6 +326,30 @@
     {
       "source": "/developer-sdk/transfers-swaps-and-signing",
       "destination": "/developer-sdk/transfers-and-swaps"
+    },
+    {
+      "source": "/overview/developer-sdk",
+      "destination": "/developer-sdk"
+    },
+    {
+      "source": "/overview/developer-api",
+      "destination": "/developer-api"
+    },
+    {
+      "source": "/overview/protocol",
+      "destination": "/protocol"
+    },
+    {
+      "source": "/overview/protocol-sdk",
+      "destination": "/products-and-sdks"
+    },
+    {
+      "source": "/overview/idp-sdk",
+      "destination": "/idp-sdk"
+    },
+    {
+      "source": "/reference",
+      "destination": "/products-and-sdks"
     }
   ],
   "logo": {

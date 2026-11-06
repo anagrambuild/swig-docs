@@ -1,50 +1,50 @@
 ---
-title: "Swig on Solana"
-sidebarTitle: "Solana Overview"
-mode: "wide"
+title: "Solana Protocol SDK"
+sidebarTitle: "Overview"
 description: "Create a wallet, assign authority permissions, and compose Solana transactions."
 ---
 
-Build wallet flows in **TypeScript or Rust**. Follow the TypeScript guides below,
-or start your Rust integration with the
-[package reference](/reference/rust).
+Build and sign Solana wallet transactions directly using your own RPC
+connection and authority keys.
 
-## Build a wallet flow in TypeScript
+## Choose your language
 
-<CardGroup cols={2}>
-  <Card title="Set up your environment" icon="terminal" href="/tutorials/typescript/env">
-    Prepare the TypeScript examples and a local Solana validator.
-  </Card>
-  <Card title="Create a wallet" icon="wallet" href="/tutorials/typescript/create">
-    Create a Swig account and choose its initial authority.
-  </Card>
-  <Card title="Manage authorities" icon="key" href="/tutorials/typescript/managing_authorities">
-    Add authorities with SOL or token spending permissions.
-  </Card>
-  <Card title="Sign a transaction" icon="signature" href="/tutorials/typescript/sign">
-    Authorize wallet instructions with the selected role.
-  </Card>
-  <Card title="Send a transfer" icon="arrow-right-arrow-left" href="/examples/transfer">
-    Follow the SOL transfer example with a spending authority.
-  </Card>
-  <Card title="Sponsor transaction fees" icon="gas-pump" href="/examples/paymaster">
-    Use Swig's hosted Paymaster with an API key and funded paymaster.
-  </Card>
-</CardGroup>
+<CodeGroup dropdown>
 
-## Choose your client
+```bash TypeScript
+npm install @swig-wallet/classic@3.0.0 @solana/web3.js@^1.98.0
+```
 
-| Language and client | Swig package | Start here |
-| --- | --- | --- |
-| TypeScript with Solana Kit | `@swig-wallet/kit` | [TypeScript quickstart](/tutorials/typescript) |
-| TypeScript with Web3.js 1.x | `@swig-wallet/classic` | [TypeScript quickstart](/tutorials/typescript) |
-| Rust | `swig-sdk` | [Rust packages](/reference/rust) |
+```toml Rust
+[dependencies]
+swig-sdk = "3.0.0"
+swig-interface = "3.0.0"
+solana-sdk = "4"
+```
 
-The [TypeScript package guide](/reference/typescript) also covers shared helpers
-and lower-level encoding. Use [instruction builders](/reference/rust/instruction_builder)
-for direct Rust instruction construction.
+</CodeGroup>
 
-## Add more wallet capabilities
+The TypeScript command installs Classic for Web3.js 1.x. For Solana Kit, use
+`@swig-wallet/kit@3.0.0` with `@solana/kit@^2.1.0` instead. Add the Rust
+dependencies to `Cargo.toml`.
+
+## Get started
+
+<Tabs>
+  <Tab title="TypeScript">
+    1. [Set up your environment](/tutorials/typescript/env).
+    2. [Create a wallet](/tutorials/typescript/create) and choose its authority.
+    3. [Assign permissions](/tutorials/typescript/managing_authorities).
+    4. [Sign a transaction](/tutorials/typescript/sign) and [send a transfer](/examples/transfer).
+  </Tab>
+  <Tab title="Rust">
+    1. [Explore the Rust packages](/reference/rust).
+    2. [Reserve and activate a wallet](/solana/reservation-addresses).
+    3. [Build instructions](/reference/rust/instruction_builder) or use the [wallet API](/reference/rust/rust_wallet).
+  </Tab>
+</Tabs>
+
+## Build wallet flows
 
 Use [reservation addresses](/solana/reservation-addresses) to derive a wallet
 from an owner's public key and activate it later with a funded payer.
@@ -57,4 +57,9 @@ permission, and execution models behind these flows.
 For API-key-based transaction preparation and sponsorship from a trusted
 server, use the [Developer SDK](/developer-sdk).
 
-Building on EVM? See [Swig on EVM](/evm).
+## Reference and next steps
+
+- Explore [TypeScript packages](/reference/typescript) and [Rust packages](/reference/rust).
+- Read [protocol concepts](/protocol) for accounts, permissions, and execution.
+- Add [fee sponsorship](/examples/paymaster) to your transaction flow.
+- Building on EVM? Use the [EVM Protocol SDK](/evm).
