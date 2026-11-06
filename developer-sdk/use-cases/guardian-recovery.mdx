@@ -16,32 +16,51 @@ The protocol permission is `ReplaceAuthority { role_id }`, used with
 actions. A passkey role therefore receives another P-256 key. Older names were
 `RecoveryAuthority` and `RecoverAuthorityV1`.
 
+## SDK examples
+
+The Developer SDK does not currently expose scoped replacement permission or a
+working recovery preparation method. Compatibility recovery types do not supply
+that flow. Use a compatible [Protocol SDK integration](/protocol/recovery-model)
+with the [scoped permission definition](https://github.com/anagrambuild/swig-wallet/blob/3e0411f0c2980b26296903eaa4aa0c2d07869316/state/src/action/replace_authority.rs).
+
+After confirmation, verify that the target role uses the new key and retains its
+permissions. Replacing a session authority also clears its session key and expiry.
+
+For multiple guardians, one participant-controlled recovery role would hold the
+scoped permission. Giving each guardian a separate recovery role permits each
+to recover independently. Connecting threshold approval to the replacement-specific
+proof requires additional integration; ordinary [Participant set](/developer-sdk/participant-sets)
+approval is not that proof. Hosted participant recovery is not currently supported.
+
+
+### Verify the recovered role
+
+After a compatible protocol integration confirms replacement, inspect the target role’s key and retained permissions.
+
+<CodeGroup>
+
+```typescript TypeScript
+const result = await swig.wallets.use(swigConfigAddress).roles.list();
+```
+
+```python Python
+result = await swig.wallets.use(swig_config_address).roles.list()
+```
+
+```rust Rust
+let result = wallet.list_roles(&swig_config_address).await?;
+```
+
+</CodeGroup>
+
 ## Flow
 
 ```text
-+------------------------+
-| Grant recovery         |
-+------------------------+
-            |
-            v
-+------------------------+
-| Create replacement key |
-+------------------------+
-            |
-            v
-+------------------------+
-| Guardian approves key  |
-+------------------------+
-            |
-            v
-+------------------------+
-| Replace role key       |
-+------------------------+
-            |
-            v
-+------------------------+
-| Confirm permissions    |
-+------------------------+
+Grant scoped recovery
+  └─ New key
+      └─ Guardian approval
+          └─ Replace key
+              └─ Confirm
 ```
 
 ## Input
@@ -61,24 +80,8 @@ A delay or cancellation mechanism requires a separate recovery policy.
 
 ## Errors
 
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| No surviving recovery path | No authorized signer can configure or exercise the required delegation. | Configure scoped recovery while an administrator is available; a new key alone cannot restore access. |
-| Replacement not authorized | The guardian lacks ReplaceAuthority for the exact target role. | Use the previously configured recovery role for that wallet and role ID. |
-| Hosted preparation unavailable | The Developer SDK has no working scoped-replacement method. | Use a compatible protocol integration; compatibility types are not a recovery flow. |
-
-## SDK example
-
-The Developer SDK does not currently expose scoped replacement permission or a
-working recovery preparation method. Compatibility recovery types do not supply
-that flow. Use a compatible [Protocol SDK integration](/protocol/recovery-model)
-with the [scoped permission definition](https://github.com/anagrambuild/swig-wallet/blob/3e0411f0c2980b26296903eaa4aa0c2d07869316/state/src/action/replace_authority.rs).
-
-After confirmation, verify that the target role uses the new key and retains its
-permissions. Replacing a session authority also clears its session key and expiry.
-
-For multiple guardians, one participant-controlled recovery role would hold the
-scoped permission. Giving each guardian a separate recovery role permits each
-to recover independently. Connecting threshold approval to the replacement-specific
-proof requires additional integration; ordinary [Participant set](/developer-sdk/participant-sets)
-approval is not that proof. Hosted participant recovery is not currently supported.
+| Error | Meaning |
+| :--- | :--- |
+| No surviving recovery path | No authorized signer can configure or exercise the required delegation. Configure scoped recovery while an administrator is available; a new key alone cannot restore access. |
+| Replacement not authorized | The guardian lacks ReplaceAuthority for the exact target role. Use the previously configured recovery role for that wallet and role ID. |
+| Hosted preparation unavailable | The Developer SDK has no working scoped-replacement method. Use a compatible protocol integration; compatibility types are not a recovery flow. |

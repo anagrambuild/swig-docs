@@ -1,0 +1,145 @@
+---
+title: "Yield option"
+sidebarTitle: "Option"
+---
+
+## Introduction
+
+This dataset describes allowlisted validators, their observed rates, and simple
+reward projections. Use it to compare options before a [yield deposit](/developer-sdk/yield).
+A rate is an estimate after commission, not a guaranteed return.
+
+Use the configured TypeScript `swig.yield` or Python `swig.yields` client. Rust has no yield client. Each admitted call/page consumes one API request; see [Pricing & quotas](/query#api-requests).
+
+## SDK examples
+
+### List yield options
+
+Get allowlisted validators and their current estimated rates.
+
+<CodeGroup>
+
+```typescript TypeScript
+const yieldClient = swig.yield.forWallet({ swigConfigAddress, network: 'mainnet' });
+const options = await yieldClient.listOptions();
+```
+
+```python Python
+options = await swig.yields.list_options(
+    network="mainnet", swig_config_address=swig_config_address,
+)
+```
+
+</CodeGroup>
+
+#### SDK returned structure
+
+Illustrative output; Python shows the dataclass as JSON.
+
+<CodeGroup>
+
+```json TypeScript
+[
+  {
+    "voteAddress": "VALIDATOR_VOTE_ADDRESS",
+    "name": "Validator",
+    "acceptsDeposits": true,
+    "rate": { "validatorVoteAddress": "VALIDATOR_VOTE_ADDRESS", "estimatedNetAprBps": 600, "commissionBps": 500, "lastUpdatedAt": "2026-11-06T12:00:00Z" }
+  }
+]
+```
+
+```json Python
+[
+  {
+    "vote_address": "VALIDATOR_VOTE_ADDRESS",
+    "name": "Validator",
+    "accepts_deposits": true,
+    "rate": { "validator_vote_address": "VALIDATOR_VOTE_ADDRESS", "estimated_net_apr_bps": 600, "commission_bps": 500, "last_updated_at": "2026-11-06T12:00:00Z" }
+  }
+]
+```
+
+</CodeGroup>
+
+### Estimate yield
+
+Project rewards over fully active earning days using the current net APR.
+
+<CodeGroup>
+
+```typescript TypeScript
+const projection = await yieldClient.estimate({
+  validatorVoteAddress,
+  principal: 5_000_000_000n,
+  horizonDays: 365,
+});
+```
+
+```python Python
+projection = await swig.yields.estimate(
+    network="mainnet",
+    swig_config_address=swig_config_address,
+    validator_vote_address=validator_vote_address,
+    principal=5_000_000_000,
+    horizon_days=365,
+)
+```
+
+</CodeGroup>
+
+#### SDK returned structure
+
+Illustrative output; Python shows the dataclass as JSON.
+
+<CodeGroup>
+
+```json TypeScript
+{
+  "principalLamports": "5000000000",
+  "horizonDays": 365,
+  "estimatedRewardsLamports": "300000000",
+  "estimatedTotalLamports": "5300000000",
+  "rate": { "validatorVoteAddress": "VALIDATOR_VOTE_ADDRESS", "estimatedNetAprBps": 600, "commissionBps": 500, "lastUpdatedAt": "2026-11-06T12:00:00Z" }
+}
+```
+
+```json Python
+{
+  "principal_lamports": "5000000000",
+  "horizon_days": 365,
+  "estimated_rewards_lamports": "300000000",
+  "estimated_total_lamports": "5300000000",
+  "rate": { "validator_vote_address": "VALIDATOR_VOTE_ADDRESS", "estimated_net_apr_bps": 600, "commission_bps": 500, "last_updated_at": "2026-11-06T12:00:00Z" }
+}
+```
+
+</CodeGroup>
+
+## Input parameters
+
+| Parameter | Requirement |
+| :--- | :--- |
+| Wallet config and network | Same organization-owned wallet scope used by other yield queries. |
+| `validatorVoteAddress` / `validator_vote_address` | Allowlisted validator for an estimate. |
+| `principal` | Positive lamports; bigint/decimal string in TypeScript, integer in Python. |
+| `horizonDays` / `horizon_days` | 1–365 fully active earning days. |
+
+## Returned result
+
+| Field | Meaning |
+| :--- | :--- |
+| `voteAddress`, `name`, `acceptsDeposits` | Validator identity and whether new deposits are allowed. |
+| Optional `rate` | Estimated APR, commission, and observation time; absent when no rate is available. |
+| `estimatedNetAprBps`, `commissionBps` | 600 APR basis points means 6% after commission. |
+| `principalLamports`, `horizonDays` | Estimate input echoed in the projection. |
+| `estimatedRewardsLamports` | Principal × APR × days / 365, rounded down. Excludes compounding, rent, and fees. |
+| `estimatedTotalLamports` | Principal plus estimated rewards. |
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| API quota exhausted | The applicable request allowance has reached its admission cap. Check Pricing & quotas before retrying. |
+| Invalid estimate | Principal must be positive, horizon must be 1–365 days, and the validator must be supported. |
+| Unavailable rate or index | The backing rate/index source is temporarily unavailable; optional rate fields can also be absent. |

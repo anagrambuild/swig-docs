@@ -1,12 +1,20 @@
 ---
-title: "Transfer SOL and Tokens"
+title: "Transfer"
 sidebarTitle: "Transfer"
 ---
 
-Prepare wallet movements from a trusted server. The SDK returns unsigned
-transactions; signing stays in application-owned wallet or custody code.
+## Introduction
 
-## Start from a wallet handle
+Transfer moves SOL or tokens from a Swig wallet to another account. Use it for
+payments, withdrawals, or distributing funds to several recipients. The SDK
+prepares transactions for the selected role; your application signs and submits
+them. Use clients from [Client setup](/developer-sdk/integration-paths).
+
+## SDK examples
+
+### Choose the wallet
+
+Use an existing config and the authority that will authorize the transfer.
 
 <CodeGroup>
 
@@ -36,15 +44,9 @@ wallet = swig.wallets.use(
 
 </CodeGroup>
 
-TypeScript and Python authority shapes may also be `secp256k1` or
-`secp256r1`. The SDK uses the public authority value to prepare the correct
-request; it never accesses the corresponding private key or authenticator.
+### Transfer SOL
 
-Rust supplies the config address and requester authority on each call. See
-[Rust integration](/developer-sdk/integration-paths#rust) for client setup.
-Supported requesters are Ed25519, secp256r1, and ParticipantSet.
-
-## SOL transfer
+Send a positive amount in lamports to a Solana address.
 
 <CodeGroup>
 
@@ -80,13 +82,9 @@ let prepared = wallet
 
 </CodeGroup>
 
-Use a positive amount in lamports.
+### Transfer a token
 
-## Token transfer
-
-Token transfers are owner-based. The backend derives the token program,
-source associated token account, destination associated token account, and any
-destination account creation it needs.
+Send base units to a recipient owner. The backend resolves associated token accounts and prepares destination-account creation when needed.
 
 <CodeGroup>
 
@@ -125,26 +123,98 @@ let prepared = wallet
 
 </CodeGroup>
 
-Use a positive amount in the mint's smallest units.
+### Group transfers
 
-## Continue the flow
+Prepare an ordered plan containing multiple SOL and token transfers.
 
-For threshold-authorized SOL or token transfers, follow the
-[Participant Sets](/developer-sdk/participant-sets) flow for role creation,
-approval collection, and compilation. A scoped SOL-transfer role carries both
-System Program access and a SOL spending limit.
+<CodeGroup>
 
-Use the requester authority and the serialized transaction's required signer
-set to coordinate signing in your application. For `secp256r1` and
-`secp256k1`, also process every `signatureRequests` / `signature_requests`
-record. The optional [signing helpers](/developer-sdk/signers)
-can adapt application-provided signatures. With TypeScript and Python, return
-the signed base64 transaction to the server, then use
-[Sponsor & Submit](/developer-sdk/sponsor-and-submit) or your own RPC path.
+```typescript TypeScript
+const prepared = await wallet.prepare({
+  feePayer,
+  operations: [
+    {
+      type: 'transferSol',
+      destination,
+      amount: 1_000_000n,
+    },
+    {
+      type: 'transferToken',
+      mint,
+      destinationOwner,
+      amount: 10_000n,
+    },
+  ],
+});
+```
 
-Keep Rust's preparation metadata until signing is complete. For a
-ParticipantSet requester, collect and compile the approvals in
-`participant_set_approval_plan` before submission.
+```python Python
+from swig_developer_sdk import TransferSolOperation, TransferTokenOperation
 
-For swaps and multi-operation preparation, continue to
-[Swaps](/developer-sdk/swaps-and-batches).
+prepared = await wallet.prepare(
+    fee_payer=fee_payer,
+    operations=(
+        TransferSolOperation(
+            destination=destination,
+            amount=1_000_000,
+        ),
+        TransferTokenOperation(
+            mint=mint,
+            destination_owner=destination_owner,
+            amount=10_000,
+        ),
+    ),
+)
+```
+
+```rust Rust
+use swig_developer_sdk::{PrepareOperation, PrepareTransfersArgs};
+
+let prepared = wallet
+    .prepare_transfers(PrepareTransfersArgs {
+        swig_config_address,
+        fee_payer,
+        requester_authority: requester_authority.clone(),
+        operations: vec![
+            PrepareOperation::TransferSol {
+                destination,
+                amount: 1_000_000,
+            },
+            PrepareOperation::TransferToken {
+                mint,
+                destination_owner,
+                amount: 10_000,
+            },
+        ],
+    })
+    .await?;
+```
+
+</CodeGroup>
+
+TypeScript/Python return an ordered transaction list. Sign and submit it in order. Rust accepts a response containing exactly one transaction, even when that transaction holds multiple operations.
+
+## Input
+
+| Operation | Input | Requirement |
+| :--- | :--- | :--- |
+| All | Wallet config, network, requester authority | Existing wallet and a role permitted to invoke the target program and spend the asset. Rust supplies these on each call. |
+| All | `feePayer` / `fee_payer` | Public key paying fees and any destination-account rent. |
+| SOL | `destination`, `amount` | Recipient public key and positive integer lamports. |
+| Token | `mint`, `destinationOwner` / `destination_owner`, `amount` | Token mint, recipient owner (not an arbitrary token account), and positive base units. |
+| Grouped | `operations` | Nonempty ordered list of SOL/token operations; same requester and fee payer. |
+
+Use `bigint` or decimal strings for large TypeScript amounts, Python integers,
+and Rust `u64`. Rust supports Ed25519, secp256r1, and ParticipantSet requesters.
+For a participant set, [compile member approvals](/developer-sdk/participant-sets)
+before signing the outer transaction. See [Signing](/developer-sdk/signers) for
+embedded requests and native signer requirements.
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Invalid amount or address | Amounts must be positive base-unit integers and addresses must match the operation’s account type. |
+| Permission denied | The role lacks program access or sufficient spending allowance; both are checked. |
+| Insufficient funds | The wallet cannot cover the transfer or the fee payer cannot cover fees/account rent. |
+| Unsupported Rust plan | Rust rejects zero or multiple returned transactions. TypeScript/Python can consume ordered plans. |

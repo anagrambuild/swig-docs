@@ -1,67 +1,22 @@
 ---
-title: "Ramp data"
+title: "Ramp"
 sidebarTitle: "Ramp"
-description: "Discover available countries, currencies, payment methods, and crypto assets."
 ---
 
 ## Introduction
 
-Ramp options describe the countries, fiat currencies, payment methods, and crypto
-assets available for your configuration. Use this dataset to build a buy/sell
-form that shows supported choices before requesting a quote.
+Ramp data describes supported checkout options, current quotes, and stored order
+status. Use it to build buy/sell forms, compare available routes, and track
+customer settlement. TypeScript, Python, and Rust support these queries.
 
-The example queries options. The same SDK also supports [quotes and order status](/developer-sdk/ramp).
-Quotes are temporary and have no reusable quote ID; creating an order obtains a
-fresh price. Reading a non-final order may refresh its provider state, but does
-not submit a transfer. Keep customer-specific launch URLs out of logs.
+Each admitted options, quote, or order call consumes **one API request**, including
+retries and admitted errors. See [Pricing & quotas](/query#api-requests).
 
-Each admitted options, quote, or order query consumes **one API request**,
-including retries and admitted errors. See [Pricing & quotas](/query#api-requests).
+## SDK examples
 
-## Returned result
+### List Ramp options
 
-TypeScript field names are shown below; Python and Rust use snake_case.
-
-| Field | Type | Meaning |
-| :--- | :--- | :--- |
-| `countries` | array | Supported countries |
-| `countries[].code`, `name` | string | Country code and display name |
-| `countries[].subdivisions` | array | Subdivision codes and names |
-| `fiatCurrencies` | array | Supported fiat currencies |
-| `fiatCurrencies[].currencyCode` | string | Currency code, such as `USD` |
-| `fiatCurrencies[].exponent` | number | Minor-unit decimal places; USD uses 2 |
-| `paymentMethods` | string array | Available payment-method identifiers |
-| `assets` | array | Supported crypto assets |
-| `assets[].asset` | object | Native SOL (`type: sol`) or a token (`type: token`, with `mint`) |
-| `assets[].name` | string | Asset display name |
-| `assets[].iconUrl` | string, optional | Asset image URL |
-| `assets[].decimals` | number | Base-unit decimal places |
-
-Rust represents the asset as `CryptoAsset::Sol` or `CryptoAsset::Token { mint }`,
-where the mint is a `Pubkey`. Country and currency collections are typed vectors.
-
-## Input parameters
-
-| TypeScript / Python | Required | Description |
-| :--- | :--- | :--- |
-| `configurationId` / `configuration_id` | Yes | Your Ramp configuration ID; set on `RampClient` in Rust |
-| `environment` | Yes | `sandbox` or `production`; set on `RampClient` in Rust |
-| `direction` | Yes | `buy` or `sell` |
-| `countryCode` / `country_code` | No | Filter by country; omitting it returns countries alone |
-| `fiatCurrencyCode` / `fiat_currency_code` | No | Further narrow the available options |
-
-Provider environment is separate from Solana network. Sandbox orders still settle
-on mainnet. Use the server client from [Client setup](/developer-sdk/integration-paths).
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Missing or invalid configuration | The Ramp configuration or provider environment is unavailable to the caller. | Use the configuration ID and sandbox/production environment belonging to your organization. |
-| Invalid options input | A supplied country or currency value is empty or invalid. | Omit optional filters or supply supported nonempty values. |
-| Provider unavailable or request timed out | The options request could not complete. | Retry the read according to your client policy; each admitted retry counts. |
-
-## SDK example
+Query supported choices for the provider configuration and customer’s country.
 
 <CodeGroup>
 ```typescript TypeScript
@@ -99,7 +54,7 @@ let result = ramp.get_options(GetRampOptionsArgs {
 ```
 </CodeGroup>
 
-## SDK returned structure
+#### SDK returned structure
 
 Illustrative TypeScript output, not a live availability quote. Python returns
 `RampOptions` with snake_case fields; Rust returns the typed structure below.
@@ -108,26 +63,55 @@ Illustrative TypeScript output, not a live availability quote. Python returns
 ```json TypeScript
 {
   "countries": [
-    { "code": "US", "name": "United States", "subdivisions": [
-      { "code": "CA", "name": "California" }
-    ] }
+    {
+      "code": "US",
+      "name": "United States",
+      "subdivisions": [
+        { "code": "CA", "name": "California" }
+      ]
+    }
   ],
-  "fiatCurrencies": [{ "currencyCode": "USD", "exponent": 2 }],
-  "paymentMethods": ["CREDIT_DEBIT_CARD"],
-  "assets": [{ "asset": { "type": "sol" }, "name": "Solana", "decimals": 9 }]
+  "fiatCurrencies": [
+    { "currencyCode": "USD", "exponent": 2 }
+  ],
+  "paymentMethods": [
+    "CREDIT_DEBIT_CARD"
+  ],
+  "assets": [
+    {
+      "asset": { "type": "sol" },
+      "name": "Solana",
+      "decimals": 9
+    }
+  ]
 }
 ```
 
 ```json Python
 {
   "countries": [
-    { "code": "US", "name": "United States", "subdivisions": [
-      { "code": "CA", "name": "California" }
-    ] }
+    {
+      "code": "US",
+      "name": "United States",
+      "subdivisions": [
+        { "code": "CA", "name": "California" }
+      ]
+    }
   ],
-  "fiat_currencies": [{ "currency_code": "USD", "exponent": 2 }],
-  "payment_methods": ["CREDIT_DEBIT_CARD"],
-  "assets": [{ "asset": { "type": "sol" }, "name": "Solana", "icon_url": null, "decimals": 9 }]
+  "fiat_currencies": [
+    { "currency_code": "USD", "exponent": 2 }
+  ],
+  "payment_methods": [
+    "CREDIT_DEBIT_CARD"
+  ],
+  "assets": [
+    {
+      "asset": { "type": "sol" },
+      "name": "Solana",
+      "icon_url": null,
+      "decimals": 9
+    }
+  ]
 }
 ```
 
@@ -141,5 +125,245 @@ pub struct RampOptions {
 ```
 </CodeGroup>
 
-The Python block is a JSON view of the returned dataclasses. For transport
-fields, see the [Ramp API reference](/developer-api/ramp).
+### Get quotes
+
+Get current route prices for the chosen amount, asset, and location. An empty list means no offer is available.
+
+<CodeGroup>
+
+```typescript TypeScript
+const quotes = await swig.ramp.getQuotes({
+  configurationId,
+  environment: 'sandbox',
+  location: { countryCode: 'US' },
+  order: {
+    type: 'buy',
+    spend: { currencyCode: 'USD', minorUnits: 10_000n },
+    receive: { type: 'token', mint: usdcMint },
+  },
+});
+```
+
+```python Python
+from swig_developer_sdk import FiatAmountInput, RampBuyOrderRequest, RampLocation, SplTokenAsset
+
+quotes = await swig.ramp.get_quotes(
+    configuration_id=configuration_id,
+    environment="sandbox",
+    location=RampLocation(country_code="US"),
+    order=RampBuyOrderRequest(
+        spend=FiatAmountInput(currency_code="USD", minor_units=10_000),
+        receive=SplTokenAsset(mint=usdc_mint),
+    ),
+)
+```
+
+```rust Rust
+use swig_developer_sdk::{
+    CryptoAsset, FiatAmount, GetRampQuotesArgs, RampLocation, RampOrderRequest,
+};
+
+let quotes = ramp
+    .get_quotes(GetRampQuotesArgs {
+        location: RampLocation {
+            country_code: "US".into(),
+            subdivision_code: None,
+        },
+        order: RampOrderRequest::Buy {
+            spend: FiatAmount {
+                currency_code: "USD".into(),
+                minor_units: 10_000,
+            },
+            receive: CryptoAsset::Token { mint: usdc_mint },
+        },
+    })
+    .await?;
+```
+
+</CodeGroup>
+
+#### SDK returned structure
+
+Illustrative output; Python shows the dataclass as JSON.
+
+<CodeGroup>
+
+```json TypeScript
+[
+  {
+    "route": { "provider": "PROVIDER", "paymentMethod": "PAYMENT_METHOD" },
+    "details": {
+      "type": "buy",
+      "spend": { "currencyCode": "USD", "minorUnits": "10000" },
+      "receive": {
+        "asset": { "type": "token", "mint": "TOKEN_MINT" },
+        "baseUnits": "97000000"
+      },
+      "totalFee": { "currencyCode": "USD", "minorUnits": "300" },
+      "exchangeRate": "1"
+    }
+  }
+]
+```
+
+```json Python
+[
+  {
+    "route": { "provider": "PROVIDER", "payment_method": "PAYMENT_METHOD" },
+    "details": {
+      "type": "buy",
+      "spend": { "currency_code": "USD", "minor_units": "10000" },
+      "receive": {
+        "asset": { "type": "token", "mint": "TOKEN_MINT" },
+        "base_units": "97000000"
+      },
+      "total_fee": { "currency_code": "USD", "minor_units": "300" },
+      "exchange_rate": "1"
+    }
+  }
+]
+```
+
+```rust Rust
+// Vec<RampQuote>; each quote contains route and details.
+// RampQuoteDetails::Buy holds spend, receive, total_fee, exchange_rate.
+// Rust amount fields use u64; token mint addresses use Pubkey.
+```
+
+</CodeGroup>
+
+### Get order status
+
+Fetch a stored order to follow checkout and settlement. Existing-order calls need only the order ID.
+
+<CodeGroup>
+
+```typescript TypeScript
+const current = await swig.ramp.getOrder({ orderId: orderId });
+```
+
+```python Python
+current = await swig.ramp.get_order(order_id=order_id)
+```
+
+```rust Rust
+let current = ramp.get_order(&order_id).await?;
+```
+
+</CodeGroup>
+
+#### SDK returned structure
+
+Illustrative output; Python shows the dataclass as JSON.
+
+<CodeGroup>
+
+```json TypeScript
+{
+  "id": "ORDER_ID",
+  "type": "buy",
+  "status": "settled",
+  "createdAt": "2026-11-06T11:00:00Z",
+  "updatedAt": "2026-11-06T12:00:00Z",
+  "quote": {
+    "type": "buy",
+    "spend": { "currencyCode": "USD", "minorUnits": "10000" },
+    "receive": {
+      "asset": { "type": "token", "mint": "TOKEN_MINT" },
+      "baseUnits": "97000000"
+    },
+    "totalFee": { "currencyCode": "USD", "minorUnits": "300" },
+    "exchangeRate": "1"
+  }
+}
+```
+
+```json Python
+{
+  "id": "ORDER_ID",
+  "type": "buy",
+  "status": "settled",
+  "created_at": "2026-11-06T11:00:00Z",
+  "updated_at": "2026-11-06T12:00:00Z",
+  "quote": {
+    "type": "buy",
+    "spend": { "currency_code": "USD", "minor_units": "10000" },
+    "receive": {
+      "asset": { "type": "token", "mint": "TOKEN_MINT" },
+      "base_units": "97000000"
+    },
+    "total_fee": { "currency_code": "USD", "minor_units": "300" },
+    "exchange_rate": "1"
+  },
+  "launch_url": null
+}
+```
+
+```rust Rust
+// RampOrder::Buy(RampBuyOrder) or RampOrder::Sell(RampSellOrder).
+// Common fields: id, status, created_at, updated_at, quote, launch_url.
+// Sell also carries optional deposit and transfer metadata.
+```
+
+</CodeGroup>
+
+## Input parameters
+
+| TypeScript / Python | Required | Description |
+| :--- | :--- | :--- |
+| `configurationId` / `configuration_id` | Yes | Your Ramp configuration ID; set on `RampClient` in Rust |
+| `environment` | Yes | `sandbox` or `production`; set on `RampClient` in Rust |
+| `direction` | Yes | `buy` or `sell` |
+| `countryCode` / `country_code` | No | Filter by country; omitting it returns countries alone |
+| `fiatCurrencyCode` / `fiat_currency_code` | No | Further narrow the available options |
+
+Provider environment is separate from Solana network. Sandbox orders still settle
+on mainnet. Use the server client from [Client setup](/developer-sdk/integration-paths).
+
+| Operation | Input | Meaning |
+| :--- | :--- | :--- |
+| Quote | `location`, `order` | Country/subdivision plus buy or sell amount and asset. Fiat uses minor units, crypto uses base units. |
+| Order status | `orderId` / `order_id` | Stored order identifier; no quote or provider configuration is needed. |
+
+## Returned result
+
+TypeScript field names are shown below; Python and Rust use snake_case.
+
+| Field | Type | Meaning |
+| :--- | :--- | :--- |
+| `countries` | array | Supported countries |
+| `countries[].code`, `name` | string | Country code and display name |
+| `countries[].subdivisions` | array | Subdivision codes and names |
+| `fiatCurrencies` | array | Supported fiat currencies |
+| `fiatCurrencies[].currencyCode` | string | Currency code, such as `USD` |
+| `fiatCurrencies[].exponent` | number | Minor-unit decimal places; USD uses 2 |
+| `paymentMethods` | string array | Available payment-method identifiers |
+| `assets` | array | Supported crypto assets |
+| `assets[].asset` | object | Native SOL (`type: sol`) or a token (`type: token`, with `mint`) |
+| `assets[].name` | string | Asset display name |
+| `assets[].iconUrl` | string, optional | Asset image URL |
+| `assets[].decimals` | number | Base-unit decimal places |
+
+Rust represents the asset as `CryptoAsset::Sol` or `CryptoAsset::Token { mint }`,
+where the mint is a `Pubkey`. Country and currency collections are typed vectors.
+
+| Operation | Field | Meaning |
+| :--- | :--- | :--- |
+| Quote | `route.provider`, `route.paymentMethod` | Customer-selectable provider and payment method. |
+| Quote | `details` | Buy: fiat spend and crypto receive. Sell: crypto sell and fiat receive. Both include total fee and exact decimal-string exchange rate. |
+| Order | `id`, `type`, `status`, `createdAt`, `updatedAt`, `quote` | Current stored order and its price. Querying non-final status may refresh provider state. |
+| Order | Optional `launchUrl` | Private customer checkout URL; keep it out of logs. |
+| Sell order | Optional `deposit`, `transfer` | Provider deposit and attempt state, IDs, expiry, and optional Solana signature. Fetching an order does not submit or resolve a transfer. |
+
+Quotes have no ID and must not be cached; order creation obtains a fresh price.
+A settled order may later become refunded. For buy/sell creation and transfer
+recovery, use [Finance Ramp](/developer-sdk/ramp).
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Missing or invalid configuration | The Ramp configuration or provider environment is unavailable to the caller. Use the configuration ID and sandbox/production environment belonging to your organization. |
+| Invalid options input | A supplied country or currency value is empty or invalid. Omit optional filters or supply supported nonempty values. |
+| Provider unavailable or request timed out | The options request could not complete. Retry the query according to your client policy; each admitted retry counts. |
+| Order not found | The stored order ID is unavailable to this organization. |

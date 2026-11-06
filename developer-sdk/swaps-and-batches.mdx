@@ -3,10 +3,17 @@ title: "Swap"
 sidebarTitle: "Swap"
 ---
 
-Prepare swaps or group SOL and token transfers in one request.
-Amounts use lamports or the token mint's smallest units.
+## Introduction
 
-## Prepare a swap
+Swap exchanges one token for another from a Swig wallet. Use it for portfolio
+rebalancing or payments that need a different asset. The SDK prepares a swap
+transaction; review its amounts and destination before signing and submitting.
+
+## SDK examples
+
+### Prepare a swap
+
+Use a wallet handle with its requester authority, or `WalletClient` in Rust.
 
 <CodeGroup>
 
@@ -57,98 +64,59 @@ let prepared_swap = wallet
 
 </CodeGroup>
 
-`destinationAccount` is the recipient owner. The backend resolves the output
-ATA for SPL outputs or the native destination for unwrapped SOL.
+### Bound execution settings
 
-Rust accepts Ed25519 and secp256r1 requesters. Use a positive amount and a
-compute-unit price percentile no greater than 10,000 basis points. Optional
-settings include tips, maximum accounts, and blockhash expiry slots.
-
-## Grouped operations
-
-Prepare several SOL and token transfers in one request. All three SDKs send
-this request to `POST /transaction/prepare/batch`.
+Limit routing account count and transaction lifetime when preparing a swap for your application’s execution budget.
 
 <CodeGroup>
 
 ```typescript TypeScript
-const prepared = await wallet.prepare({
+const prepared = await wallet.swap({
   feePayer,
-  operations: [
-    {
-      type: 'transferSol',
-      destination,
-      amount: 1_000_000n,
-    },
-    {
-      type: 'transferToken',
-      mint,
-      destinationOwner,
-      amount: 10_000n,
-    },
-  ],
+  inputMint,
+  outputMint,
+  amount: '10000000',
+  slippageBps: 50,
+  destinationAccount: recipientOwner,
+  wrapAndUnwrapSol: true,
+  maxAccounts: 32,
+  blockhashSlotsToExpiry: 30,
 });
 ```
 
 ```python Python
-from swig_developer_sdk import TransferSolOperation, TransferTokenOperation
-
-prepared = await wallet.prepare(
+prepared = await wallet.swap(
     fee_payer=fee_payer,
-    operations=(
-        TransferSolOperation(
-            destination=destination,
-            amount=1_000_000,
-        ),
-        TransferTokenOperation(
-            mint=mint,
-            destination_owner=destination_owner,
-            amount=10_000,
-        ),
-    ),
+    input_mint=input_mint,
+    output_mint=output_mint,
+    amount=10_000_000,
+    slippage_bps=50,
+    destination_account=recipient_owner,
+    wrap_and_unwrap_sol=True,
+    max_accounts=32,
+    blockhash_slots_to_expiry=30,
 )
-```
-
-```rust Rust
-use swig_developer_sdk::{PrepareOperation, PrepareTransfersArgs};
-
-let prepared = wallet
-    .prepare_transfers(PrepareTransfersArgs {
-        swig_config_address,
-        fee_payer,
-        requester_authority: requester_authority.clone(),
-        operations: vec![
-            PrepareOperation::TransferSol {
-                destination,
-                amount: 1_000_000,
-            },
-            PrepareOperation::TransferToken {
-                mint,
-                destination_owner,
-                amount: 10_000,
-            },
-        ],
-    })
-    .await?;
 ```
 
 </CodeGroup>
 
-Rust accepts Ed25519, secp256r1, and ParticipantSet requesters. Supply at least
-one operation with positive amounts.
+## Input
 
-Rust accepts a batch response containing exactly one transaction, even if the
-request includes several operations.
+| Input | Requirement |
+| :--- | :--- |
+| Wallet, network, requester | Existing wallet with input-asset spending and required program permissions. Rust accepts Ed25519 or secp256r1. |
+| `feePayer` / `fee_payer` | Public key paying transaction fees and required account rent. |
+| `inputMint`, `outputMint`, `amount` | Source/destination mints and positive exact input base units. Python uses snake_case. |
+| `slippageBps` / `slippage_bps` | Allowed slippage in basis points; 50 means 0.5%. |
+| `destinationAccount` / `destination_account` | Recipient owner; the backend resolves its output ATA or native SOL destination. Rust names this `destination_owner`. |
+| `wrapAndUnwrapSol` / `wrap_and_unwrap_sol` | Whether to wrap or unwrap native SOL. |
+| Execution options | Tips, maximum accounts, blockhash expiry slots, and compute-unit-price percentile. Percentile is at most 10,000 basis points. |
 
-Continue to [Signers](/developer-sdk/signers) and
-[Sponsor & Submit](/developer-sdk/sponsor-and-submit).
+## Errors
 
-## When to use this page
-
-Use swaps to exchange one asset for another.
-
-Use grouped operations when:
-
-- you want the backend to return one ordered plan
-- your app already knows several actions should happen together
-- you want one preparation response instead of several separate ones
+| Error | Meaning |
+| :--- | :--- |
+| Invalid swap input | Missing/invalid mints, nonpositive amount, or an out-of-range execution option. |
+| No usable route | The requested asset pair, amount, or routing constraints cannot produce a swap. |
+| Permission or balance failure | The role lacks required program/asset permission or the wallet/fee payer cannot fund the operation. |
+| Expired or changed market state | A prepared transaction can expire or fail its execution constraints. Reconcile submission before preparing a replacement. |

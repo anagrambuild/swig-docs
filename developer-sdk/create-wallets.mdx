@@ -4,6 +4,9 @@ sidebarTitle: "Create a wallet"
 description: "Prepare a Swig wallet with an initial authority or a saved policy."
 ---
 
+<span id="choose-an-interaction" />
+<span id="policies-roles-and-signing" />
+
 ## Introduction
 
 A Swig wallet holds assets and gives each authority a defined set of permissions.
@@ -13,54 +16,11 @@ You can supply an initial authority directly or reuse a saved policy template.
 The SDK prepares transactions. Your application signs and submits them; the
 wallet exists on-chain after confirmation. Start with [Client setup](/developer-sdk/integration-paths).
 
-## Flow
+## SDK examples
 
-```text
-+------------------------+
-| Choose authority or    |
-| policy                 |
-+------------------------+
-            |
-            v
-+------------------------+
-| Prepare creation       |
-+------------------------+
-            |
-            v
-+------------------------+
-| Sign and submit        |
-+------------------------+
-            |
-            v
-+------------------------+
-| Confirm the wallet     |
-+------------------------+
-```
+### Create with an initial authority
 
-## Input
-
-| Parameter | Required | Description |
-| :--- | :--- | :--- |
-| `feePayer` / `fee_payer` | Yes | Public key paying transaction fees and account rent |
-| `initialUser` / `initial_user` | For inline creation | Initial authority: Ed25519, secp256k1, or secp256r1 public key; also required when a saved policy asks for it |
-| `policyId` / `policy_id` | No | Saved policy ID; omit for inline creation |
-| `network` | Yes, on the call or client | `mainnet` or `devnet`; Rust uses its configured `Network` |
-
-TypeScript/Python use address strings. Rust uses `Pubkey` for Ed25519 and
-compressed 33-byte SEC1 keys for secp256k1/secp256r1. An application supplies
-passkey or EVM public keys; credential creation remains in your signing layer.
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Missing network or initial authority | Creation has no resolved network or the template needs an authority. | Set the client network and supply the required initial authority. |
-| Invalid public key | The key cannot be decoded or is invalid for its curve. | Use the correct authority type; Rust secp256 keys must be compressed 33-byte SEC1 keys. |
-| Unsupported creation plan in Rust | The response contains zero or multiple transactions. | Use the TypeScript/Python ordered-plan flow for a multi-transaction creation. |
-
-## SDK example
-
-The example creates an inline Ed25519 wallet. Use the configured `swig` client
+Create an inline Ed25519 wallet. Use the configured `swig` client
 in TypeScript/Python and `wallet: WalletClient` in Rust.
 
 <CodeGroup>
@@ -114,3 +74,70 @@ Complete embedded signature requests and inspect each transaction's required
 Solana signers, including its fee payer. An empty signature-request list can
 still require an Ed25519 signature. Continue with [Signing](/developer-sdk/signers)
 and [Paymaster](/developer-sdk/sponsor-and-submit) for sponsored submission.
+
+
+### Create from a policy template
+
+Use the saved template ID. Supply the initial authority only when the template expects an application-provided key.
+
+<CodeGroup>
+```typescript TypeScript
+const created = await swig.wallets.create({
+  feePayer,
+  policyId,
+  initialUser: { ed25519: { publicKey: userPublicKey } },
+});
+```
+
+```python Python
+created = await swig.wallets.create(
+    fee_payer=fee_payer,
+    policy_id=policy_id,
+    initial_user={"ed25519": {"publicKey": user_public_key}},
+)
+```
+
+```rust Rust
+use swig_developer_sdk::{PrepareCreateWalletArgs, WalletAuthority};
+
+let created = wallet.prepare_create_wallet(PrepareCreateWalletArgs {
+    fee_payer,
+    policy_id: Some(policy_id),
+    initial_user: Some(WalletAuthority::Ed25519 {
+        public_key: user_public_key,
+    }),
+}).await?;
+```
+</CodeGroup>
+
+<span id="follow-the-transaction-lifecycle" />
+
+## Flow
+
+```text
+Choose initial authority
+  └─ Prepare wallet
+      └─ Sign and submit
+          └─ Confirm
+```
+
+## Input
+
+| Parameter | Required | Description |
+| :--- | :--- | :--- |
+| `feePayer` / `fee_payer` | Yes | Public key paying transaction fees and account rent |
+| `initialUser` / `initial_user` | For inline creation | Initial authority: Ed25519, secp256k1, or secp256r1 public key; also required when a saved policy asks for it |
+| `policyId` / `policy_id` | No | Saved policy ID; omit for inline creation |
+| `network` | Yes, on the call or client | `mainnet` or `devnet`; Rust uses its configured `Network` |
+
+TypeScript/Python use address strings. Rust uses `Pubkey` for Ed25519 and
+compressed 33-byte SEC1 keys for secp256k1/secp256r1. An application supplies
+passkey or EVM public keys; credential creation remains in your signing layer.
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Missing network or initial authority | Creation has no resolved network or the template needs an authority. Set the client network and supply the required initial authority. |
+| Invalid public key | The key cannot be decoded or is invalid for its curve. Use the correct authority type; Rust secp256 keys must be compressed 33-byte SEC1 keys. |
+| Unsupported creation plan in Rust | The response contains zero or multiple transactions. Use the TypeScript/Python ordered-plan flow for a multi-transaction creation. |

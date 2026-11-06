@@ -3,161 +3,71 @@ title: "API key"
 sidebarTitle: "API key"
 ---
 
-API keys authenticate your trusted server when it calls Swig's hosted API.
-Create a key in the Developer Portal and keep it in your server's secret
-storage. Wallet operations still require the appropriate authority's signature
-or approval proofs; the API key does not grant wallet signing authority.
+## Introduction
 
-## What API Keys Are Used For
+An API key authenticates your server to Swig’s hosted services and attributes
+usage to your organization. Use it for Developer SDK queries and preparation.
+Wallet authority signatures are still required for writes.
 
-API keys are required for:
+Create a key in **API Keys** in the [Developer Portal](https://dashboard.onswig.com/).
+Copy its secret when shown and store it in server configuration; keep it out of
+browser bundles.
 
-- Reading policy template details via the API
-- Creating Swig wallets programmatically
-- Accessing paymaster services for transaction sponsorship
+## SDK examples
 
-## Prerequisites
+### Use the key
 
-Before creating an API key, ensure you have:
+Read the stored secret when constructing the client. Replace a revoked key in the same server configuration.
 
-- A Swig account at [dashboard.onswig.com](https://dashboard.onswig.com)
-- Access to a project
+<CodeGroup>
 
-## Creating an API Key
+```typescript TypeScript
+import { SwigClient } from '@swig-wallet/developer-sdk';
 
-### Step 1: Navigate to API Keys
+const apiKey = process.env.SWIG_API_KEY;
+if (!apiKey) throw new Error('SWIG_API_KEY is required');
 
-1. Log in to the [Developer Portal](https://dashboard.onswig.com)
-2. Select your project from the sidebar
-3. Click **API Keys** in the navigation menu
-
-### Step 2: Create New Key
-
-1. Click the **Create API Key** button
-2. Enter a **name** for your key (required, 1-100 characters)
-   - Use descriptive names like `production-backend` or `dev-testing`
-3. Optionally set an **expiration date**
-   - Leave empty for keys that never expire
-4. Click **Create**
-
-### Step 3: Copy Your Key
-
-<Warning>
-  **Important:** Your API key is only shown once. Copy it immediately and store it securely.
-  You will not be able to view the full key again.
-</Warning>
-
-After creation, the portal displays your full API key. Copy it and store it in a secure location such as:
-
-- Environment variables
-- A secrets manager (AWS Secrets Manager, HashiCorp Vault, etc.)
-- Your CI/CD platform's secret storage
-
-## API Key Format
-
-Swig API keys follow this format:
-
-```
-sk_<64-hexadecimal-characters>
-```
-
-Example:
-```
-sk_a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef12345678
-```
-
-The `sk_` prefix identifies it as a Swig API key.
-
-## Subscription Limits
-
-API key limits depend on your subscription tier:
-
-| Tier | API Keys Allowed |
-|------|------------------|
-| Free | 1 |
-| Paid | Unlimited |
-
-<Tip>
-  Need more API keys? Upgrade your subscription in the portal's billing section.
-</Tip>
-
-## Using Your API Key
-
-### In HTTP Requests
-
-Include your API key in the `Authorization` header:
-
-```bash
-curl -X GET "https://dashboard.onswig.com/api/v1/policies/{policyId}" \
-  -H "Authorization: Bearer sk_your_api_key"
-```
-
-### With the SDK
-
-Pass your API key when initializing the client:
-
-```typescript
-import { SwigApiClient } from '@swig-wallet/api';
-
-const client = new SwigApiClient({
-  apiKey: process.env.SWIG_API_KEY,
-  portalUrl: 'https://dashboard.onswig.com',
+const swig = new SwigClient({
+  apiKey,
+  network: 'devnet',
 });
 ```
 
-## Best Practices
+```python Python
+import os
 
-### Security
+from swig_developer_sdk import SwigClient
 
-- **Never commit API keys** to version control
-- **Use environment variables** to store keys in your application
-- **Rotate keys periodically**, especially if you suspect compromise
-- **Use separate keys** for development and production environments
+swig = SwigClient(
+    api_key=os.environ["SWIG_API_KEY"],
+    network="devnet",
+)
+```
 
-### Naming Conventions
+```rust Rust
+use std::env;
+use swig_developer_sdk::{ClientConfig, Network, PaymasterClient, WalletClient};
 
-Use descriptive names that indicate:
-- The environment (`dev-`, `staging-`, `prod-`)
-- The service or application using the key
-- The purpose (`backend-api`, `mobile-app`, `testing`)
+let config = ClientConfig::new(env::var("SWIG_API_KEY")?, Network::Devnet);
+let wallet = WalletClient::new(config.clone())?;
+let paymaster = PaymasterClient::new(config.clone())?;
+```
 
-Examples:
-- `prod-backend-service`
-- `dev-local-testing`
-- `staging-mobile-app`
+</CodeGroup>
 
-### Expiration
+## Input
 
-Consider setting expiration dates for:
-- Temporary access (contractors, testing)
-- Compliance requirements
-- Regular rotation schedules
+| Input | Requirement |
+| :--- | :--- |
+| Key name | A descriptive name for the server/integration. |
+| Expiration | Optional expiration selected at creation; expired keys cannot authenticate. |
+| `SWIG_API_KEY` | The full secret, available when the key is created. Keep it in the runtime making hosted calls. |
 
-## Managing API Keys
+## Errors
 
-### Viewing Keys
-
-The API Keys page shows all your keys with:
-- Name
-- Creation date
-- Expiration date (if set)
-- Usage count
-- Last used timestamp
-
-### Deleting Keys
-
-To revoke an API key:
-1. Find the key in the API Keys table
-2. Click the **Delete** action
-3. Confirm deletion
-
-<Warning>
-  Deleting an API key immediately invalidates it. Any applications using that key will lose access.
-</Warning>
-
-## Next Steps
-
-Now that you have an API key, you can:
-- [Create a policy template](./create-policy) for wallet-creation configuration
-- [Read policy templates](./fetch-policy) programmatically
-- [Create wallets](/developer-sdk/create-wallets) with the Developer SDK
+| Error | Meaning |
+| :--- | :--- |
+| Missing key | The server configuration has no API key; client setup cannot complete. |
+| Authentication failed | The key is invalid, expired, or revoked. |
+| Access denied | The authenticated organization cannot access the requested wallet or resource. |
+| Quota exhausted | The organization’s admission cap is reached; [Pricing & quotas](/query) defines its allowances. |

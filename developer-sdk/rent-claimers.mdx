@@ -14,6 +14,58 @@ The TypeScript SDK supports reading the recipient and preparing its one-time
 setter. The backend checks finalized chain state. Python and Rust do not
 currently expose this hosted operation.
 
+## SDK examples
+
+Use the configured `swig` client and public address strings.
+
+### Get the rent claimer
+
+Inspect the configured recipient before preparing its one-time setter.
+
+<CodeGroup>
+
+```typescript TypeScript
+const wallet = swig.wallets.use(swigConfigAddress, {
+  requesterAuthority: { ed25519: { publicKey: requesterPublicKey } },
+});
+const recipient = await wallet.getRentClaimer();
+```
+
+</CodeGroup>
+
+### Set the rent claimer
+
+Prepare the recipient once. Sign with the requester and fee payer, submit, then wait for finality.
+
+<CodeGroup>
+
+```typescript TypeScript
+const prepared = await wallet.setRentClaimer({
+  feePayer,
+  rentClaimer: rentClaimerPublicKey,
+});
+```
+
+</CodeGroup>
+
+### Confirm the recipient
+
+After the setter reaches finality, fetch the recipient again.
+
+<CodeGroup>
+
+```typescript TypeScript
+const confirmedRecipient = await wallet.getRentClaimer();
+if (confirmedRecipient !== rentClaimerPublicKey) {
+  throw new Error('Confirmed rent claimer differs from the requested recipient');
+}
+```
+
+</CodeGroup>
+
+Preparation changes no chain state. Concurrent preparations may succeed, but
+only the first valid setter can land. The setter is not automatically retried.
+
 ## Input
 
 | Operation | Parameter | Description |
@@ -35,34 +87,9 @@ same recipient. Session, passkey, EVM, and ParticipantSet requesters are unsuppo
 
 ## Errors
 
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Recipient already set | The on-chain recipient cannot be changed, even to the same key. | Read the current recipient and use that confirmed value. |
-| Requester not allowed | The setter requires direct Ed25519 with All or CloseSwigAuthority. | Choose an eligible role; ManageAuthority alone is insufficient. |
-| Invalid recipient | The address is zero, the Swig config, or its wallet-address PDA. | Supply a valid separate rent-recipient account. |
-| Account read failed | State is missing, malformed, unsupported, or unavailable. | Check the config and network. Only a valid unset config returns null. |
-
-## SDK example
-
-Use the server-side `swig` client from [Client setup](/developer-sdk/integration-paths).
-All address variables below are public keys encoded as strings.
-
-```typescript TypeScript
-const wallet = swig.wallets.use(swigConfigAddress, {
-  requesterAuthority: { ed25519: { publicKey: requesterPublicKey } },
-});
-
-const recipient = await wallet.getRentClaimer();
-const prepared = await wallet.setRentClaimer({
-  feePayer,
-  rentClaimer: rentClaimerPublicKey,
-});
-```
-
-The read needs no authority signature. The setter returns an unsigned
-`set-rent-claimer` transaction. The requester and fee payer sign it; one
-signature suffices when they are the same key. Follow [Signing](/developer-sdk/signers).
-
-Preparation changes no chain state. After submission, wait for finality and
-read the recipient again. Concurrent preparations may succeed, but only the
-first valid setter can land. The setter POST is not retried automatically.
+| Error | Meaning |
+| :--- | :--- |
+| Recipient already set | The on-chain recipient cannot be changed, even to the same key. Read the current recipient and use that confirmed value. |
+| Requester not allowed | The setter requires direct Ed25519 with All or CloseSwigAuthority. Choose an eligible role; ManageAuthority alone is insufficient. |
+| Invalid recipient | The address is zero, the Swig config, or its wallet-address PDA. Supply a valid separate rent-recipient account. |
+| Account read failed | State is missing, malformed, unsupported, or unavailable. Check the config and network. Only a valid unset config returns null. |

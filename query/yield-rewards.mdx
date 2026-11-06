@@ -1,0 +1,108 @@
+---
+title: "Yield reward"
+sidebarTitle: "Reward"
+---
+
+## Introduction
+
+This dataset contains native staking reward credits indexed for a Swig wallet.
+Use it for reward history and reconciliation. Credits are oldest first by on-chain
+credit time; the index may lag the chain.
+
+Use the configured TypeScript `swig.yield` or Python `swig.yields` client. Rust has no yield client. Each admitted call/page consumes one API request; see [Pricing & quotas](/query#api-requests).
+
+## SDK examples
+
+### List rewards
+
+Get native reward credits, oldest first by credit time.
+
+<CodeGroup>
+
+```typescript TypeScript
+const yieldClient = swig.yield.forWallet({ swigConfigAddress, network: 'mainnet' });
+const rewards = await yieldClient.listRewards({ pageSize: 50 });
+```
+
+```python Python
+rewards = await swig.yields.list_rewards(network="mainnet", swig_config_address=swig_config_address, page_size=50)
+```
+
+</CodeGroup>
+
+#### SDK returned structure
+
+Illustrative output; Python shows the dataclass as JSON.
+
+<CodeGroup>
+
+```json TypeScript
+{
+  "rewards": [
+    { "swigConfigAddress": "SWIG_CONFIG_ADDRESS", "positionAddress": "POSITION_ADDRESS", "amountLamports": "10000000", "earnedAt": "2026-11-06T12:00:00Z" }
+  ]
+}
+```
+
+```json Python
+{
+  "rewards": [
+    { "swig_config_address": "SWIG_CONFIG_ADDRESS", "position_address": "POSITION_ADDRESS", "amount_lamports": "10000000", "earned_at": "2026-11-06T12:00:00Z" }
+  ],
+  "next_page_token": null
+}
+```
+
+</CodeGroup>
+
+### Page through a collection
+
+Positions and rewards use separate continuation tokens. Keep the wallet and network unchanged.
+
+<CodeGroup>
+
+```typescript TypeScript
+if (rewards.nextPageToken) {
+  const nextPage = await yieldClient.listRewards({
+    pageSize: 50, pageToken: rewards.nextPageToken,
+  });
+}
+```
+
+```python Python
+if rewards.next_page_token:
+    next_page = await swig.yields.list_rewards(
+    network="mainnet",
+        swig_config_address=swig_config_address,
+        page_size=50, page_token=rewards.next_page_token,
+    )
+```
+
+</CodeGroup>
+
+## Input parameters
+
+| Parameter | Requirement |
+| :--- | :--- |
+| `swigConfigAddress` / `swig_config_address` | Wallet config owned by the API key’s organization. |
+| `network` | Wallet network; otherwise use the client setting. |
+| `pageSize` / `page_size` | 50 by default, maximum 200 for position/reward pages. |
+| `pageToken` / `page_token` | Previous continuation token for the same organization, wallet, network, and collection. |
+
+## Returned result
+
+| Field | Meaning |
+| :--- | :--- |
+| `rewards[]` | Credited rewards; an empty list is a valid result. |
+| `swigConfigAddress`, `positionAddress` | Wallet config and stake account that earned the reward. |
+| `amountLamports` | Exact credit as a decimal string. |
+| Optional `earnedAt` | On-chain credit time when available. |
+| Optional `nextPageToken` | Continue with the same scope; absent on the final page, null in Python JSON. |
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Wallet access denied | The API key's organization does not own the Swig config. Use the owning organization's key and correct network. |
+| Invalid continuation token | The token is malformed or does not match its organization, network, and wallet. Restart pagination or use the original query scope. |
+| API quota exhausted | The applicable request allowance has reached its admission cap. Check Pricing & quotas before retrying. |

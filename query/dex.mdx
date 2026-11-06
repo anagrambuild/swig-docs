@@ -1,86 +1,26 @@
 ---
-title: "DEX activity"
-sidebarTitle: "DEX activity"
-description: "Query indexed trades and liquidity activity for a Swig wallet."
+title: "DEX transaction"
+sidebarTitle: "Transaction"
 ---
 
 ## Introduction
 
-This dataset records DEX transactions executed by a Swig wallet, including each
-trade, liquidity change, fee claim, and reward claim. Use it for activity feeds,
-trade history, or explaining which venues a wallet used.
+This dataset records a Swig wallet’s swaps, liquidity changes, fee claims, and
+reward claims. Use it for transaction history and execution detail.
+TypeScript and Python expose `swig.dex`; Rust has no DEX client.
 
-The example lists transaction history with `swig.dex.transactions.list` in
-TypeScript or Python. The same client provides
-[one-transaction lookups and latest liquidity positions](/developer-sdk/dex-activity#read-one-transaction).
-Current transaction coverage includes PumpSwap, Meteora DLMM, Raydium AMM v4,
-Raydium CPMM, Raydium CLMM, and Orca Whirlpool. Latest position state covers
-Raydium CLMM.
+Transaction coverage includes PumpSwap, Meteora DLMM, Raydium AMM v4, Raydium CPMM,
+Raydium CLMM, and Orca Whirlpool. Latest positions have a [separate guide](/query/dex-positions). Indexed data can lag the chain. The organization must own the active Swig;
+each admitted call/page consumes **one DEX query**, separate from API requests.
+See [Pricing & quotas](/query#dex-queries).
 
-This is indexed data, so an unprocessed transaction can be absent. The API key's
-organization must own the active Swig. Each admitted call or page consumes
-**one DEX query**; retries and admitted errors count too. This is separate from
-API-request usage. See [pricing and quotas](/query#dex-queries).
+## SDK examples
 
-## Returned result
+<span id="list-dex-transactions" />
 
-TypeScript field names are shown below. Python exposes the same structure with
-snake_case attributes. The SDK normalizes protocol and action names.
+### List transactions
 
-| Field | Type | Meaning |
-| :--- | :--- | :--- |
-| `transactions` | array | Matching transactions, newest first |
-| `transactions[].swigConfigAddress` | string | Wallet configuration account |
-| `transactions[].transactionSignature` | string | Solana transaction signature |
-| `transactions[].slot` | number | Transaction slot |
-| `transactions[].blockTime` | string, optional | RFC 3339 block time, when known |
-| `transactions[].actions` | array | Every indexed DEX action the Swig executed in that transaction |
-| `actions[].actionIndex` | number | Action's order within the transaction |
-| `actions[].swigVaultAddress` | string | Wallet vault or sub-account that executed the action |
-| `actions[].actingRoleId` | number | Role that authorized the action |
-| `actions[].protocol` | string | Normalized venue name, such as `raydium-clmm` |
-| `actions[].dexProgramAddress` | string | Venue program address |
-| `actions[].action` | discriminated object | Action data selected by its `type`; the example below is a swap |
-| `action.protocolInstruction` | string | Venue instruction name |
-| `action.protocolActorAddress` | string | Account whose asset changes the action describes |
-| `action.dexPoolAddress` | string | Pool address for a swap |
-| `action.input`, `action.output` | object | Mint address, signed decimal-string `amountRaw`, and optional `decimals` |
-| `nextCursor` | object, optional | Last row's `slot` and `transactionSignature`; absent on the final page |
-
-An action's negative amount left its protocol actor; a positive amount entered
-it. When an aggregator holds the assets, that actor can be the router rather
-than the Swig vault. Keep raw amounts as strings or arbitrary-precision integers.
-Other action types carry deposits, withdrawals, or claims; see
-[DEX action fields](/developer-sdk/dex-activity#what-a-transaction-carries).
-
-## Input parameters
-
-Use the [server client](/developer-sdk/integration-paths) as `swig`.
-
-| TypeScript / Python | Required | Description |
-| :--- | :--- | :--- |
-| `swigConfigAddress` / `swig_config_address` | Yes | Swig config address owned by your organization |
-| `network` | No | `mainnet` or `devnet`; otherwise use the client's setting |
-| `pageSize` / `page_size` | No | 25 by default; maximum 100 |
-| `cursor` | No | Previous response's `nextCursor` / `next_cursor` |
-| `startSlot`, `endSlot` / `start_slot`, `end_slot` | No | Inclusive slot range; start must not exceed end |
-| `protocol` | No | One of the supported normalized venue names |
-| `actionType` / `action_type` | No | `swap`, `position-open`, `liquidity-add`, `liquidity-remove`, `position-rebalance`, `fee-claim`, `reward-claim`, or `position-close` |
-| `swigVaultAddress` / `swig_vault_address` | No | Restrict to a vault or sub-account |
-
-Filters combine with AND. Protocol, action type, and vault must match the same
-action; each returned transaction still includes all its indexed DEX actions.
-Pass the cursor unchanged with the same wallet, network, and filters.
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Invalid filter or cursor | A filter value is unsupported or pagination input is malformed. | Use the listed values and return the previous cursor with the same filters. |
-| Transaction detail not found | The requested signature has no matching indexed DEX record for the wallet. | Check the config, network, signature, and supported index coverage. |
-| 429 / RESOURCE_EXHAUSTED | The organization has reached its monthly DEX query cap. | Wait for reset or use a plan with a higher DEX quota; API overage does not extend it. |
-
-## SDK example
+Filter wallet activity by venue, action, vault, or slot range.
 
 <CodeGroup>
 ```typescript TypeScript
@@ -104,7 +44,7 @@ result = await swig.dex.transactions.list(
 ```
 </CodeGroup>
 
-## SDK returned structure
+#### SDK returned structure
 
 Example of a final page containing one swap. TypeScript returns an object;
 Python returns typed dataclasses, shown here as JSON after conversion with
@@ -132,16 +72,8 @@ Python returns typed dataclasses, shown here as JSON after conversion with
             "protocolInstruction": "SwapV2",
             "protocolActorAddress": "4k9xWkFvjifracRGbBUHeKg2z8qzJBPwjqjCySu28Mej",
             "dexPoolAddress": "EYJkpMH4KJy8XDQyK59DM2xBUodvPkerDxKMCwyL1ber",
-            "input": {
-              "mintAddress": "USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk",
-              "amountRaw": "-85238320",
-              "decimals": 6
-            },
-            "output": {
-              "mintAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-              "amountRaw": "85263893",
-              "decimals": 6
-            }
+            "input": { "mintAddress": "USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk", "amountRaw": "-85238320", "decimals": 6 },
+            "output": { "mintAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "amountRaw": "85263893", "decimals": 6 }
           }
         }
       ]
@@ -170,16 +102,8 @@ Python returns typed dataclasses, shown here as JSON after conversion with
             "protocol_instruction": "SwapV2",
             "protocol_actor_address": "4k9xWkFvjifracRGbBUHeKg2z8qzJBPwjqjCySu28Mej",
             "dex_pool_address": "EYJkpMH4KJy8XDQyK59DM2xBUodvPkerDxKMCwyL1ber",
-            "input": {
-              "mint_address": "USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk",
-              "amount_raw": "-85238320",
-              "decimals": 6
-            },
-            "output": {
-              "mint_address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-              "amount_raw": "85263893",
-              "decimals": 6
-            }
+            "input": { "mint_address": "USDvUSpnhCr9yBgj3UyVrD239HRUv4RsHwH2FxsWuMk", "amount_raw": "-85238320", "decimals": 6 },
+            "output": { "mint_address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "amount_raw": "85263893", "decimals": 6 }
           }
         }
       ]
@@ -190,4 +114,159 @@ Python returns typed dataclasses, shown here as JSON after conversion with
 ```
 </CodeGroup>
 
-See the [DEX API reference](/developer-api/dex) for the underlying transport.
+<span id="page-through-results" />
+
+### Page through transactions
+
+Pass the returned cursor with the same wallet, network, and filters. Stop when the next cursor is absent.
+
+<CodeGroup>
+
+```typescript TypeScript
+import type { DexTransactionCursor } from '@swig-wallet/developer-sdk';
+
+let cursor: DexTransactionCursor | undefined;
+do {
+  const page = await swig.dex.transactions.list({
+    swigConfigAddress,
+    network: 'mainnet',
+    actionType: 'swap',
+    cursor,
+  });
+  // handle page.transactions
+  cursor = page.nextCursor;
+} while (cursor);
+```
+
+```python Python
+from swig_developer_sdk import DexTransactionCursor
+
+cursor: DexTransactionCursor | None = None
+while True:
+    page = await swig.dex.transactions.list(
+        swig_config_address=swig_config_address,
+        network="mainnet",
+        action_type="swap",
+        cursor=cursor,
+    )
+    # handle page.transactions
+    cursor = page.next_cursor
+    if cursor is None:
+        break
+```
+
+</CodeGroup>
+
+<span id="read-one-transaction" />
+
+### Get one transaction
+
+Fetch the indexed DEX interpretation for a known transaction signature.
+
+<CodeGroup>
+
+```typescript TypeScript
+const transaction = await swig.dex.transactions.get({
+  swigConfigAddress,
+  network: 'mainnet',
+  transactionSignature,
+});
+```
+
+```python Python
+transaction = await swig.dex.transactions.get(
+    swig_config_address=swig_config_address,
+    network="mainnet",
+    transaction_signature=transaction_signature,
+)
+```
+
+</CodeGroup>
+
+#### SDK returned structure
+
+The result is one transaction from the `transactions` array above, without the
+page wrapper. Its `actions` remain in execution order.
+
+```typescript
+import type { DexTransaction } from '@swig-wallet/developer-sdk';
+// transaction: DexTransaction
+// { swigConfigAddress, transactionSignature, slot, blockTime?, actions }
+```
+
+## Input parameters
+
+Use the [server client](/developer-sdk/integration-paths) as `swig`.
+
+| TypeScript / Python | Required | Description |
+| :--- | :--- | :--- |
+| `swigConfigAddress` / `swig_config_address` | Yes | Swig config address owned by your organization |
+| `network` | No | `mainnet` or `devnet`; otherwise use the client's setting |
+| `pageSize` / `page_size` | No | 25 by default; maximum 100 |
+| `cursor` | No | Previous response's `nextCursor` / `next_cursor` |
+| `startSlot`, `endSlot` / `start_slot`, `end_slot` | No | Inclusive slot range; start must not exceed end |
+| `protocol` | No | One of the supported normalized venue names |
+| `actionType` / `action_type` | No | `swap`, `position-open`, `liquidity-add`, `liquidity-remove`, `position-rebalance`, `fee-claim`, `reward-claim`, or `position-close` |
+| `swigVaultAddress` / `swig_vault_address` | No | Restrict to a vault or sub-account |
+
+Filters combine with AND. Protocol, action type, and vault must match the same
+action; each returned transaction still includes all its indexed DEX actions.
+Pass the cursor unchanged with the same wallet, network, and filters.
+
+For a detail lookup, supply `transactionSignature` / `transaction_signature`.
+
+<span id="what-a-transaction-carries" />
+
+## Returned result
+
+TypeScript field names are shown below. Python exposes the same structure with
+snake_case attributes. The SDK normalizes protocol and action names.
+
+| Field | Type | Meaning |
+| :--- | :--- | :--- |
+| `transactions` | array | Matching transactions, newest first |
+| `transactions[].swigConfigAddress` | string | Wallet configuration account |
+| `transactions[].transactionSignature` | string | Solana transaction signature |
+| `transactions[].slot` | number | Transaction slot |
+| `transactions[].blockTime` | string, optional | RFC 3339 block time, when known |
+| `transactions[].actions` | array | Every indexed DEX action the Swig executed in that transaction |
+| `actions[].actionIndex` | number | Action's order within the transaction |
+| `actions[].swigVaultAddress` | string | Wallet vault or sub-account that executed the action |
+| `actions[].actingRoleId` | number | Role that authorized the action |
+| `actions[].protocol` | string | Normalized venue name, such as `raydium-clmm` |
+| `actions[].dexProgramAddress` | string | Venue program address |
+| `actions[].action` | discriminated object | Action data selected by its `type`; the example above is a swap |
+| `action.protocolInstruction` | string | Venue instruction name |
+| `action.protocolActorAddress` | string | Account whose asset changes the action describes |
+| `action.dexPoolAddress` | string | Pool address for a swap |
+| `action.input`, `action.output` | object | Mint address, signed decimal-string `amountRaw`, and optional `decimals` |
+| `nextCursor` | object, optional | Last row's `slot` and `transactionSignature`; absent on the final page |
+
+<span id="read-the-amounts-as-the-venue-saw-them" />
+
+An action's negative amount left its protocol actor; a positive amount entered
+it. When an aggregator holds the assets, that actor can be the router rather
+than the Swig vault. Keep raw amounts as strings or arbitrary-precision integers.
+Other action types carry deposits, withdrawals, or claims; see
+the action table below.
+
+| Action type | Additional fields |
+| :--- | :--- |
+| `position-open`, `liquidity-add` | Pool, position, and `deposits`. |
+| `liquidity-remove` | Pool, position, and `withdrawals`. |
+| `position-rebalance` | Pool, position, `deposits`, and `withdrawals`. |
+| `fee-claim`, `reward-claim` | Pool, position, and `claimed` assets. |
+| `position-close` | Position; pool is absent when the venue instruction does not identify one. |
+
+<span id="list-latest-positions" />
+<span id="underlying-routes" />
+
+For current liquidity and account state, see [DEX position](/query/dex-positions).
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Invalid filter or cursor | A filter value is unsupported or pagination input is malformed. Use the listed values and return the previous cursor with the same filters. |
+| Transaction detail not found | The requested signature has no matching indexed DEX record for the wallet. Check the config, network, signature, and supported index coverage. |
+| 429 / RESOURCE_EXHAUSTED | The organization has reached its monthly DEX query cap. Wait for reset or use a plan with a higher DEX quota; API overage does not extend it. |

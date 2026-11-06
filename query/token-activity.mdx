@@ -1,0 +1,180 @@
+---
+title: "Token activity"
+sidebarTitle: "Token activity"
+---
+
+## Introduction
+
+This dataset contains recent SOL and token movements for a Swig wallet and its
+sub-accounts. Use it for payment history and to explain changes in holdings.
+An item is one asset movement, so a transaction can produce several items.
+
+Each admitted query consumes one API request. Data can lag chain confirmation;
+see [Pricing & quotas](/query#api-requests).
+
+## SDK examples
+
+Use clients from [Client setup](/developer-sdk/integration-paths). TypeScript
+and Python use a wallet handle bound to the config address; Rust uses `WalletClient`.
+
+### Token activity
+
+List recent SOL and token movements for a wallet activity feed.
+
+<CodeGroup>
+
+```typescript TypeScript
+const activity = await wallet.listTokenTransactions({ limit: 25 });
+
+for (const transaction of activity.transactions) {
+  console.log(
+    transaction.transactionSignature,
+    transaction.direction, // 'inflow' | 'outflow'
+    transaction.assetKind, // 'token' | 'native-sol' | 'unspecified'
+    transaction.uiAmount,
+    transaction.tokenSymbol,
+  );
+}
+```
+
+```python Python
+activity = await wallet.list_token_transactions(limit=25)
+
+for transaction in activity.transactions:
+    print(
+        transaction.transaction_signature,
+        transaction.direction,  # "inflow" | "outflow"
+        transaction.asset_kind,
+        transaction.ui_amount,
+        transaction.token_symbol,
+    )
+```
+
+```rust Rust
+use swig_developer_sdk::{AssetTransfer, ListSwigTokenTransactionsArgs};
+
+let activity = wallet
+    .list_token_transactions(ListSwigTokenTransactionsArgs {
+        swig_config_address,
+        limit: Some(25),
+    })
+    .await?;
+
+for transaction in &activity.transactions {
+    match &transaction.transfer {
+        AssetTransfer::Sol { lamports, .. } => println!("SOL: {lamports}"),
+        AssetTransfer::Token { mint_address, amount_raw, .. } => {
+            println!("{mint_address}: {amount_raw}");
+        }
+    }
+}
+```
+
+</CodeGroup>
+
+#### SDK returned structure
+
+Illustrative output; Python shows the dataclass as JSON.
+
+<CodeGroup>
+
+```json TypeScript
+{
+  "swigConfigAddress": "SWIG_CONFIG_ADDRESS",
+  "walletAddress": "WALLET_ADDRESS",
+  "transactions": [
+    {
+      "transactionSignature": "TRANSACTION_SIGNATURE",
+      "slot": 450000000,
+      "blockTime": "2026-11-06T12:00:00Z",
+      "ownerAddress": "WALLET_ADDRESS",
+      "walletAddress": "WALLET_ADDRESS",
+      "isSubaccount": false,
+      "tokenAccountAddress": "TOKEN_ACCOUNT",
+      "mintAddress": "TOKEN_MINT",
+      "tokenProgram": 1,
+      "direction": "inflow",
+      "amountRaw": "10000000",
+      "decimals": 6,
+      "uiAmount": 10,
+      "usdPrice": 1,
+      "usdValue": 10,
+      "tokenSymbol": "USDC",
+      "tokenName": "USD Coin",
+      "assetKind": "token"
+    }
+  ]
+}
+```
+
+```json Python
+{
+  "swig_config_address": "SWIG_CONFIG_ADDRESS",
+  "wallet_address": "WALLET_ADDRESS",
+  "transactions": [
+    {
+      "transaction_signature": "TRANSACTION_SIGNATURE",
+      "slot": 450000000,
+      "block_time": "2026-11-06T12:00:00Z",
+      "owner_address": "WALLET_ADDRESS",
+      "wallet_address": "WALLET_ADDRESS",
+      "is_subaccount": false,
+      "token_account_address": "TOKEN_ACCOUNT",
+      "mint_address": "TOKEN_MINT",
+      "token_program": 1,
+      "direction": "inflow",
+      "amount_raw": "10000000",
+      "decimals": 6,
+      "ui_amount": 10,
+      "usd_price": 1,
+      "usd_value": 10,
+      "token_symbol": "USDC",
+      "token_name": "USD Coin",
+      "asset_kind": "token"
+    }
+  ]
+}
+```
+
+```rust Rust
+// WalletTransactionList contains native addresses and integer amounts.
+pub struct WalletTransactionList {
+    pub swig_config_address: solana_pubkey::Pubkey,
+    pub wallet_address: solana_pubkey::Pubkey,
+    pub transactions: Vec<swig_developer_sdk::WalletTransaction>,
+}
+// Each WalletTransaction has signature, slot, optional block_time,
+// owner_address, wallet_address, is_subaccount, direction, and transfer.
+// transfer is AssetTransfer::Sol { lamports, ... } or
+// AssetTransfer::Token { mint_address, amount_raw, ... }.
+```
+
+</CodeGroup>
+
+## Input parameters
+
+| Parameter | Requirement |
+| :--- | :--- |
+| Wallet config and network | Use the config address on its matching network; no authority signature is required. |
+| `limit` | 25 by default, capped at 100. This recent-window query has no pagination cursor. |
+
+## Returned result
+
+| Field | Meaning |
+| :--- | :--- |
+| `swigConfigAddress`, `walletAddress` | Queried configuration and asset-holding wallet. |
+| `transactions[]` | Recent asset movements. |
+| `transactionSignature`, `slot`, optional `blockTime` | Solana identity and chain timing. |
+| `ownerAddress`, `walletAddress`, `isSubaccount` | Ownership and whether the movement belongs to a sub-account. |
+| `direction` | `inflow` or `outflow`. |
+| `amountRaw`, `decimals`, `mintAddress`, `tokenProgram` | Exact base-unit amount and asset identity. |
+| `uiAmount`, `usdPrice`, `usdValue`, `tokenSymbol`, `tokenName`, `assetKind` | Display values and normalized native-SOL/token discriminator. |
+| Rust `transfer` | Asset-specific fields are grouped in `AssetTransfer::Sol` or `AssetTransfer::Token`; exact amounts are `u64`. |
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Authentication or access denied | The server API key cannot access the wallet query. Check the key, organization, and wallet config address. |
+| Invalid wallet or network | The supplied config does not resolve on the selected network. Use the Swig config address and its matching client network. |
+| API quota exhausted | The applicable request allowance has reached its admission cap. Check Pricing & quotas; retries also consume admitted requests. |

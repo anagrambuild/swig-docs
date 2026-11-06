@@ -39,7 +39,8 @@
                 "pages": [
                   "developer-sdk/add-roles-and-permissions",
                   "developer-sdk/signers",
-                  "developer-sdk/participant-sets"
+                  "developer-sdk/participant-sets",
+                  "developer-sdk/grant-access"
                 ]
               },
               {
@@ -59,8 +60,22 @@
             "group": "Query",
             "pages": [
               "query/balances",
-              "query/dex",
-              "query/yield",
+              "query/token-activity",
+              {
+                "group": "DEX activity",
+                "pages": [
+                  "query/dex",
+                  "query/dex-positions"
+                ]
+              },
+              {
+                "group": "Yield",
+                "pages": [
+                  "query/yield-options",
+                  "query/yield",
+                  "query/yield-rewards"
+                ]
+              },
               "query/ramp"
             ]
           },
@@ -68,10 +83,23 @@
             "group": "Finance",
             "pages": [
               "developer-sdk/finance",
-              "developer-sdk/ramp",
+              {
+                "group": "Ramp",
+                "pages": [
+                  "developer-sdk/ramp",
+                  "developer-sdk/ramp-sell",
+                  "developer-sdk/ramp-transfer"
+                ]
+              },
               "developer-sdk/transfers-and-swaps",
               "developer-sdk/swaps-and-batches",
-              "developer-sdk/yield",
+              {
+                "group": "Yield",
+                "pages": [
+                  "developer-sdk/yield",
+                  "developer-sdk/yield-withdrawal"
+                ]
+              },
               "developer-sdk/sponsor-and-submit",
               "developer-sdk/x402"
             ]
@@ -305,6 +333,26 @@
     {
       "source": "/examples/dev-portal/transaction-history",
       "destination": "/developer-sdk/sponsor-and-submit"
+    },
+    {
+      "source": "/developer-sdk/wallet-reads",
+      "destination": "/query/balances"
+    },
+    {
+      "source": "/developer-sdk/dex-activity",
+      "destination": "/query/dex"
+    },
+    {
+      "source": "/developer-sdk/wallets",
+      "destination": "/developer-sdk/create-wallets"
+    },
+    {
+      "source": "/query/wallets",
+      "destination": "/query/balances"
+    },
+    {
+      "source": "/query/public",
+      "destination": "/developer-api/identity"
     },
     {
       "source": "/solana/permissions",

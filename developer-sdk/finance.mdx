@@ -1,42 +1,89 @@
 ---
 title: "Finance"
-sidebarTitle: "Finance overview"
-description: "Fund wallets, transfer and swap assets, earn yield, and sponsor transaction fees."
+sidebarTitle: "Finance"
 ---
 
-Choose a flow by what should happen to the funds. Wallet permissions and
-application-owned signing still apply to operations that move assets.
+## Introduction
 
-## Choose a flow
+Finance operations fund wallets, move assets, stake SOL, or pay transaction fees.
+Use the guides below for the lifecycle of each operation. A prepared transaction
+is a proposal; the wallet authority authorizes it before submission.
 
-| Goal | Guide | What to expect |
-| :--- | :--- | :--- |
-| Buy crypto with fiat or sell crypto for fiat | [Ramp](/developer-sdk/ramp) | Discover supported routes, request a quote, create an order, and follow its status |
-| Send SOL or tokens | [Transfer](/developer-sdk/transfers-and-swaps) | Prepare a transfer for an authorized wallet role to sign |
-| Exchange assets or combine operations | [Swap](/developer-sdk/swaps-and-batches) | Prepare a swap or grouped wallet operations |
-| Stake SOL and manage the position | [Yield](/developer-sdk/yield) | Choose a validator, deposit, deactivate, and withdraw when the stake is available |
-| Pay transaction fees for users | [Paymaster](/developer-sdk/sponsor-and-submit) | Fund a paymaster, configure limits, and sponsor application-signed transactions |
-| Pay for an HTTP resource | [x402 payments](/developer-sdk/x402) | Read a payment requirement, prepare and sign a payment, then retry the resource request |
+## SDK examples
 
-## Understand the costs
+### Prepare a wallet transfer
 
-- **Hosted API usage:** metered requests share your organization's allowance.
-  See [pricing and quotas](/query#pricing-and-included-usage).
-- **Transaction fees:** the transaction's fee payer or paymaster funds chain
-  execution. Keep the paymaster funded for the network you use.
-- **Ramp and swap quotes:** inspect amounts, provider fees, and slippage in the
-  selected flow before collecting authorization.
-- **Staking:** validator rates and reward estimates are estimates. Native stake
-  activation and deactivation affect when funds can earn rewards or be withdrawn.
+Use an existing wallet handle with its requester authority. Select the intended fee payer during preparation.
 
-## Track the result
+<CodeGroup>
 
-Use the identifier returned by each flow to follow its outcome. A submitted
-transaction needs chain confirmation; a ramp order has its own status lifecycle.
+```typescript TypeScript
+const prepared = await wallet.transfer.sol({
+  feePayer, destination, amount: 1_000_000n,
+});
+```
 
-- Check [wallet balances](/query/balances) and [token movements](/query/wallets).
-- Inspect [DEX activity](/query/dex) and [yield positions and rewards](/query/yield).
-- Follow [ramp orders](/query/ramp) and monitor [paymaster balances](/developer-sdk/sponsor-and-submit).
+```python Python
+prepared = await wallet.transfer.sol(
+    fee_payer=fee_payer, destination=destination, amount=1_000_000,
+)
+```
 
-Indexed query results can lag chain state. Use the freshness signals described
-by each query guide when showing results to users.
+```rust Rust
+use swig_developer_sdk::PrepareTransferSolArgs;
+
+let prepared = wallet.prepare_transfer_sol(PrepareTransferSolArgs {
+    swig_config_address, fee_payer, requester_authority,
+    destination, amount: 1_000_000,
+}).await?;
+```
+
+</CodeGroup>
+
+### Track the wallet balance
+
+After chain confirmation, use indexed balances for the portfolio view. Index updates may arrive later than confirmation.
+
+<CodeGroup>
+
+```typescript TypeScript
+const balances = await wallet.listTokenBalances();
+```
+
+```python Python
+balances = await wallet.list_token_balances()
+```
+
+```rust Rust
+let balances = wallet.list_token_balances(&swig_config_address).await?;
+```
+
+</CodeGroup>
+
+## Input
+
+| Flow | Input / choice |
+| :--- | :--- |
+| [Ramp](/developer-sdk/ramp) | Fiat/crypto amount, route, customer context, and a persisted order request ID. |
+| [Transfer](/developer-sdk/transfers-and-swaps) | SOL/token amount and recipient; group multiple transfers when needed. |
+| [Swap](/developer-sdk/swaps-and-batches) | Input/output assets, exact amount, and slippage limit. |
+| [Yield](/developer-sdk/yield) | Validator, delegated principal, and a role allowed to stake. |
+| [Paymaster](/developer-sdk/sponsor-and-submit) | Configured fee payer and signed transaction; retain the sponsorship idempotency key. |
+| [x402](/developer-sdk/x402) | Approved payment challenge and facilitator-supported wallet transaction. |
+
+## Output
+
+| Result | Meaning |
+| :--- | :--- |
+| Prepared transaction | Unsigned transaction plus signer metadata; complete [Signing](/developer-sdk/signers) or [Participant set](/developer-sdk/participant-sets). |
+| Submission identifier | Track chain confirmation separately from request acceptance. |
+| Ramp order | Checkout and settlement lifecycle separate from the sell transfer. |
+| Indexed balance or position | A recorded view, potentially behind the latest chain state. |
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Permission failure | The acting role must permit the relevant programs and asset movement. |
+| Funding failure | Wallet principal, transaction fees, and account rent have separate funding requirements. |
+| Uncertain submission | Reconcile the existing attempt before creating another payment or order. |

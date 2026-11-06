@@ -13,33 +13,9 @@ The Developer Portal calls this **Wallet templates**.
 A template is saved configuration. Editing it does not change permissions on
 an existing wallet; use [Role](/developer-sdk/add-roles-and-permissions) for that.
 
-## Input
+## SDK examples
 
-| Field | Required | Description |
-| :--- | :--- | :--- |
-| Name | Yes | Identifies the template |
-| Description | No | Explains its purpose |
-| Initial authority | Yes, now or at wallet creation | Choose the public-key type; save a key or let the application supply it later |
-| Additional user | No | Public key and at least one allowed action; provision this role separately after wallet creation |
-
-The portal gives the initial user full root access (`All`). Its form does not
-provide an initial-user spending-limit editor. Additional users saved in the
-template are **not automatically added** by Developer SDK wallet creation.
-
-Open **Wallet templates** in the [Developer Portal](https://dashboard.onswig.com),
-select **New template**, enter the fields above, and save the policy ID.
-Recovery-guardian setup in that form is currently unavailable; see
-[Guardian recovery](/developer-sdk/use-cases/guardian-recovery).
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Template lookup is denied or missing | The policy ID is unavailable to the server API key. | Check the ID and resource access using Fetch template. |
-| Initial authority missing at creation | The template expects the application to supply its key. | Set initialUser / initial_user when preparing the wallet. |
-| Additional role absent after creation | Stored additional users are not provisioned by template-based creation. | Add each role after wallet creation confirms, then inspect its permissions. |
-
-## SDK example
+### Create a wallet from a template
 
 Template creation is a portal action. Use the saved policy ID with the SDK to
 prepare a wallet. This example assumes the template asks for an Ed25519 initial
@@ -79,3 +55,50 @@ Use the clients from [Client setup](/developer-sdk/integration-paths).
 [Sign and submit the creation plan](/developer-sdk/create-wallets), then add each
 additional role and verify its confirmed permissions. To inspect saved template
 metadata, use [Fetch template](/examples/dev-portal/fetch-policy).
+
+
+### Inspect the template
+
+Fetch saved metadata to verify the template selected by your application.
+
+<CodeGroup>
+
+```typescript TypeScript
+const template = await swig.wallets.getPolicy(policyId);
+```
+
+```python Python
+template = await swig.wallets.get_policy(policy_id)
+```
+
+```rust Rust
+let template = wallet.get_policy(&policy_id).await?;
+```
+
+</CodeGroup>
+
+## Input
+
+| Field | Required | Description |
+| :--- | :--- | :--- |
+| Name | Yes | Identifies the template |
+| Description | No | Explains its purpose |
+| Initial authority | Yes, now or at wallet creation | Choose the public-key type; save a key or let the application supply it later |
+| Additional user | No | Public key and at least one allowed action; provision this role separately after wallet creation |
+
+The portal gives the initial user full root access (`All`). Its form does not
+provide an initial-user spending-limit editor. Additional users saved in the
+template are **not automatically added** by Developer SDK wallet creation.
+
+Open **Wallet templates** in the [Developer Portal](https://dashboard.onswig.com),
+select **New template**, enter the fields above, and save the policy ID.
+Recovery-guardian setup in that form is currently unavailable; see
+[Guardian recovery](/developer-sdk/use-cases/guardian-recovery).
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Template lookup is denied or missing | The policy ID is unavailable to the server API key. Check the ID and resource access using Fetch template. |
+| Initial authority missing at creation | The template expects the application to supply its key. Set initialUser / initial_user when preparing the wallet. |
+| Additional role absent after creation | Stored additional users are not provisioned by template-based creation. Add each role after wallet creation confirms, then inspect its permissions. |

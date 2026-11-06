@@ -1,0 +1,105 @@
+---
+title: "Grant access"
+sidebarTitle: "Grant access"
+---
+
+## Introduction
+
+Request an owner-approved role through One Business when your application does
+not hold the wallet’s administrator key. TypeScript and Python provide URL and
+callback helpers. The owner reviews the request and approves the on-chain grant;
+the helpers alone do not authenticate a callback or create a role.
+
+## SDK examples
+
+### Request owner-approved access
+
+TypeScript and Python can build a One Business grant-access link for a new authority. Your application supplies the requested One Business action objects and a saved, unpredictable callback state. The owner reviews the grant.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { buildOneBusinessGrantAccessUrl } from '@swig-wallet/developer-sdk';
+
+const grantUrl = buildOneBusinessGrantAccessUrl({
+  swigPubkey: swigConfigAddress,
+  authorityPublicKey: newRolePublicKey,
+  actions: requestedActions,
+  appName: 'Wallet integration',
+  redirectUri: callbackUrl,
+  state: savedState,
+});
+```
+
+```python Python
+from swig_developer_sdk import build_one_business_grant_access_url
+
+grant_url = build_one_business_grant_access_url(
+    swig_pubkey=swig_config_address,
+    authority_public_key=new_role_public_key,
+    actions=requested_actions,
+    app_name="Wallet integration",
+    redirect_uri=callback_url,
+    state=saved_state,
+)
+```
+
+</CodeGroup>
+
+Return the URL through your application. Browser integrations can use `redirectToOneBusinessGrantAccess`; Python accepts an application-provided location adapter through `redirect_to_one_business_grant_access`. These helpers navigate; they do not grant a role themselves.
+
+### Parse the grant callback
+
+Validate the returned state and wallet/key against the saved request, then verify the confirmed role. Callback parsing alone does not prove an on-chain grant.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { completeOneBusinessGrantAccess } from '@swig-wallet/developer-sdk';
+
+const grant = completeOneBusinessGrantAccess(returnedCallbackUrl);
+if (grant.state !== savedState || grant.swigPubkey !== swigConfigAddress ||
+    grant.authorityPublicKey !== newRolePublicKey) {
+  throw new Error('Grant callback does not match the requested access');
+}
+const currentRoles = await swig.wallets.use(swigConfigAddress).roles.list();
+// Verify grant.roleId, the authority, and its actual actions in currentRoles.
+```
+
+```python Python
+from swig_developer_sdk import complete_one_business_grant_access
+
+grant = complete_one_business_grant_access(returned_callback_url)
+if (grant.state != saved_state or grant.swig_pubkey != swig_config_address
+        or grant.authority_public_key != new_role_public_key):
+    raise ValueError("Grant callback does not match the requested access")
+current_roles = await swig.wallets.use(swig_config_address).roles.list()
+# Verify grant.role_id, the authority, and its actual actions in current_roles.
+```
+
+</CodeGroup>
+
+## Input
+
+| Input | Requirement |
+| :--- | :--- |
+| Wallet and authority | Config address and public key for the new authority. |
+| `requestedActions` / `requested_actions` | Application-supplied One Business JSON action objects; these differ from hosted `AddRoleAction` inputs. |
+| Callback URI and state | Trusted application callback and saved unpredictable state bound to the authenticated session. Consume it once. |
+| Confirmed role data | Verify the returned role ID, authority, and actual grants before enabling access. |
+
+## Output
+
+| Callback field | Meaning |
+| :--- | :--- |
+| `status`, `swigPubkey`, `walletAddress`, `roleId`, `authorityPublicKey` | Parsed result identity; not proof of a grant. |
+| Optional `signature`, `state` | Transaction reference and application correlation value. Python uses snake_case. |
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| `OneBusinessGrantAccessCallbackError` | The callback carries an owner/provider error. |
+| Malformed callback | Required identity fields are missing or the role ID is invalid. |
+| Request mismatch | State, wallet, or authority differs from the saved request. |
+| Grant not confirmed | The confirmed wallet state does not contain the expected role and permissions. |

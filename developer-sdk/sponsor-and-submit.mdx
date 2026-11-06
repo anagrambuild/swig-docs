@@ -10,85 +10,7 @@ A paymaster pays a transaction's Solana fee on behalf of your user. Use it when
 your application should cover fees so the user can transact without holding SOL
 for gas. Your user still authorizes the wallet operation.
 
-Create and fund your API paymaster for the selected network in the
-[Developer Portal](https://dashboard.onswig.com). Review its spending limits and
-transaction history there. Keep your API key on the server. See
-[Pricing & quotas](/query) for request usage.
-
-## Flow
-
-```text
-+------------------------+
-| Check API funding      |
-+------------------------+
-            |
-            v
-+------------------------+
-| Prepare with fee payer |
-+------------------------+
-            |
-            v
-+------------------------+
-| Collect signatures     |
-+------------------------+
-            |
-            v
-+------------------------+
-| Sponsor and submit     |
-+------------------------+
-            |
-            v
-+------------------------+
-| Track confirmation     |
-+------------------------+
-```
-
-## Input
-
-| Operation | Parameter | Description |
-| :--- | :--- | :--- |
-| Both | `network` | `mainnet` or `devnet`; use the same network for wallet and paymaster clients |
-| Balance | `kind` | `api` for transaction sponsorship; `idp` for IdP funding |
-| Sponsor | `transaction` | Signed base64 transaction in TypeScript/Python; native `VersionedTransaction` in Rust |
-| Sponsor | `idempotencyKey` / `idempotency_key` | Stable key for this exact transaction; reuse it for retries |
-
-Use the API paymaster's returned address as `feePayer` / `fee_payer` during
-preparation. Complete participant approval and embedded signatures, then every
-required application-owned Solana signature. Sponsorship adds the paymaster's
-signature; it does not replace the other signers.
-
-Keep the same signed transaction and key on retry. A matching retry returns the
-original result without another spend. Resolve an uncertain attempt before
-starting another. In Rust, `Some(nonempty_key)` enables eligible retries;
-`None` or an empty key disables them.
-
-## Output
-
-The balance read returns the following fields. Python uses snake_case attributes.
-
-| Field | TypeScript/Python type | Meaning |
-| :--- | :--- | :--- |
-| `configured` | boolean | Distinguishes an absent paymaster from one with zero SOL |
-| `kind` | string | `api`, `idp`, or `unspecified` |
-| `id`, `address`, `label` | string | Identifier, public key, and display label |
-| `balanceLamports` / `balance_lamports` | string | Exact balance in lamports |
-| `balanceSol` / `balance_sol` | number | SOL balance for display |
-
-Rust returns `PaymasterBalance` with a `Pubkey` address and `u64` lamport balance.
-It has no `configured` field.
-Each admitted balance call consumes one API request, including retries and
-admitted errors. Reading funding does not spend the sponsorship budget.
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| API paymaster not configured | TypeScript/Python return configured=false; Rust returns GetPaymasterBalanceError::NotConfigured. | Create an API paymaster for this network. IdP funding is a separate balance. |
-| Insufficient funding or spending limit reached | The paymaster cannot cover this request within its configured limits. | Check its balance and limits in the Developer Portal. |
-| Missing signature or incorrect fee payer | The transaction is not ready for this paymaster to sponsor. | Prepare with the API paymaster address and complete all other required signatures. |
-| Idempotency conflict or lost response | The outcome of this attempt needs reconciliation. | Keep the original transaction and key; resolve the attempt before starting a replacement. |
-
-## SDK example
+## SDK examples
 
 Use the clients from [Client setup](/developer-sdk/integration-paths). Rust uses
 separate `WalletClient` and `PaymasterClient` instances on the same network.
@@ -115,7 +37,6 @@ if not balance.configured:
 
 ```rust Rust
 let balance = paymaster.get_balance().await?;
-let idp_balance = paymaster.get_idp_balance().await?;
 ```
 
 </CodeGroup>
@@ -190,7 +111,7 @@ The result contains the request ID, submitted signature, and paymaster spend.
 RPC acceptance is not confirmation; track confirmation or finality separately.
 Rust returns a native `Signature`; `spent_by_paymaster` is an `i64` and may be negative.
 
-<Accordion title="Sponsor a bundle">
+### Sponsor a bundle
 
 Use an ordered bundle for one to five signed transactions that must land
 together. Bundles are mainnet-only. Before collecting signatures:
@@ -250,4 +171,82 @@ The response preserves signature order. A `bundleId` means acceptance by Jito,
 not confirmation; `estimatedSpentByPaymaster` is an estimate, not a settled charge.
 The same transaction-and-key retry rules apply.
 
-</Accordion>
+
+
+
+### Check IdP funding
+
+Query the separate IdP paymaster when your integration sponsors IdP operations.
+
+<CodeGroup>
+
+```typescript TypeScript
+const idpBalance = await swig.paymaster.getIdpBalance({ network: 'mainnet' });
+if (!idpBalance.configured) throw new Error('IdP paymaster is not configured');
+```
+
+```python Python
+idp_balance = await swig.paymaster.get_idp_balance(network="mainnet")
+if not idp_balance.configured:
+    raise RuntimeError("IdP paymaster is not configured")
+```
+
+```rust Rust
+let idp_balance = paymaster.get_idp_balance().await?;
+```
+
+</CodeGroup>
+
+## Flow
+
+```text
+Prepare with paymaster
+  └─ User signs
+      └─ Sponsor fees
+          └─ Confirm
+```
+
+## Input
+
+| Operation | Parameter | Description |
+| :--- | :--- | :--- |
+| Both | `network` | `mainnet` or `devnet`; use the same network for wallet and paymaster clients |
+| Balance | `kind` | `api` for transaction sponsorship; `idp` for IdP funding |
+| Sponsor | `transaction` | Signed base64 transaction in TypeScript/Python; native `VersionedTransaction` in Rust |
+| Sponsor | `idempotencyKey` / `idempotency_key` | Stable key for this exact transaction; reuse it for retries |
+
+Use the API paymaster's returned address as `feePayer` / `fee_payer` during
+preparation. Complete participant approval and embedded signatures, then every
+required application-owned Solana signature. Sponsorship adds the paymaster's
+signature; it does not replace the other signers.
+
+Keep the same signed transaction and key on retry. A matching retry returns the
+original result without another spend. Resolve an uncertain attempt before
+starting another. In Rust, `Some(nonempty_key)` enables eligible retries;
+`None` or an empty key disables them.
+
+## Output
+
+The balance read returns the following fields. Python uses snake_case attributes.
+
+| Field | TypeScript/Python type | Meaning |
+| :--- | :--- | :--- |
+| `configured` | boolean | Distinguishes an absent paymaster from one with zero SOL |
+| `kind` | string | `api`, `idp`, or `unspecified` |
+| `id`, `address`, `label` | string | Identifier, public key, and display label |
+| `balanceLamports` / `balance_lamports` | string | Exact balance in lamports |
+| `balanceSol` / `balance_sol` | number | SOL balance for display |
+
+Rust returns `PaymasterBalance` with a `Pubkey` address and `u64` lamport balance.
+It has no `configured` field.
+Each admitted balance call consumes one API request, including retries and
+admitted errors. Reading funding does not spend the sponsorship budget.
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| API paymaster not configured | TypeScript/Python return configured=false; Rust returns GetPaymasterBalanceError::NotConfigured. Create an API paymaster for this network. IdP funding is a separate balance. |
+| Insufficient funding or spending limit reached | The paymaster cannot cover this request within its configured limits. Check its balance and limits in the Developer Portal. |
+| Missing signature or incorrect fee payer | The transaction is not ready for this paymaster to sponsor. Prepare with the API paymaster address and complete all other required signatures. |
+| Idempotency conflict or lost response | The outcome of this attempt needs reconciliation. Keep the original transaction and key; resolve the attempt before starting a replacement. |

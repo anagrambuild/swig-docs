@@ -14,6 +14,139 @@ Program access and asset spending are checked separately. A SOL transfer needs
 System Program access and a SOL allowance; program access alone grants no
 unlimited spending budget.
 
+## SDK examples
+
+### Limit a SOL budget
+
+These actions allow System Program invocation and a total spend of 1,000,000
+lamports. Pass them to the `actions` parameter in the [Role example](/developer-sdk/add-roles-and-permissions).
+
+<CodeGroup>
+```typescript TypeScript
+import { type AddRoleAction } from '@swig-wallet/developer-sdk';
+
+const actions = [
+  { type: 'program', programId: '11111111111111111111111111111111' },
+  { type: 'solLimit', amount: 1_000_000n },
+] satisfies AddRoleAction[];
+```
+
+```python Python
+from swig_developer_sdk import ProgramAction, SolLimitAction
+
+actions = (
+    ProgramAction(program_id="11111111111111111111111111111111"),
+    SolLimitAction(amount=1_000_000),
+)
+```
+
+```rust Rust
+use solana_pubkey::pubkey;
+use swig_developer_sdk::WalletPermission;
+
+let actions = vec![
+    WalletPermission::Program {
+        program_id: pubkey!("11111111111111111111111111111111"),
+    },
+    WalletPermission::SolLimit { amount: 1_000_000 },
+];
+```
+</CodeGroup>
+
+
+### Renew a SOL allowance
+
+Allow a budget per slot window instead of a lifetime total. The window is measured in slots, not seconds.
+
+<CodeGroup>
+
+```typescript TypeScript
+const actions = [
+  { type: 'program', programId: '11111111111111111111111111111111' },
+  { type: 'solRecurringLimit', recurringAmount: 1_000_000n, window: 10_000n },
+] satisfies AddRoleAction[];
+```
+
+```python Python
+from swig_developer_sdk import ProgramAction, SolRecurringLimitAction
+
+actions = (
+    ProgramAction(program_id="11111111111111111111111111111111"),
+    SolRecurringLimitAction(recurring_amount=1_000_000, window=10_000),
+)
+```
+
+```rust Rust
+let actions = vec![
+    WalletPermission::Program {
+        program_id: pubkey!("11111111111111111111111111111111"),
+    },
+    WalletPermission::SolRecurringLimit {
+        recurring_amount: 1_000_000, window: 10_000,
+    },
+];
+```
+
+</CodeGroup>
+
+### Restrict a token and recipient
+
+Limit spending to a mint and its exact recipient token account. The token-program public key must match that mint.
+
+<CodeGroup>
+
+```typescript TypeScript
+const actions = [
+  { type: 'program', programId: tokenProgramId },
+  { type: 'tokenDestinationLimit', mint, amount: 10_000_000n,
+    destination: recipientTokenAccount },
+] satisfies AddRoleAction[];
+```
+
+```python Python
+from swig_developer_sdk import ProgramAction, TokenDestinationLimitAction
+
+actions = (
+    ProgramAction(program_id=token_program_id),
+    TokenDestinationLimitAction(
+        mint=mint, amount=10_000_000, destination=recipient_token_account,
+    ),
+)
+```
+
+```rust Rust
+let actions = vec![
+    WalletPermission::Program { program_id: token_program_id },
+    WalletPermission::TokenDestinationLimit {
+        mint, amount: 10_000_000, destination: recipient_token_account,
+    },
+];
+```
+
+</CodeGroup>
+
+### Delegate role management
+
+Grant authority administration only when that person or service should be able to assign other roles.
+
+<CodeGroup>
+
+```typescript TypeScript
+const actions = [{ type: 'manageAuthority' }] satisfies AddRoleAction[];
+```
+
+```python Python
+from swig_developer_sdk import ManageAuthorityAction
+
+actions = (ManageAuthorityAction(),)
+```
+
+```rust Rust
+let actions = vec![WalletPermission::ManageAuthority];
+```
+
+</CodeGroup>
+
 ## Input
 
 Pass an `actions` list when [adding a role](/developer-sdk/add-roles-and-permissions).
@@ -102,45 +235,8 @@ permissions outside this creation surface.
 
 ## Errors
 
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Unsupported action | The requested grant is outside the hosted add-role surface. | Use one of the listed actions or a compatible Protocol SDK integration. |
-| Program invocation rejected | The role lacks permission for the invoked program. | Grant the appropriate program access in addition to the asset allowance. |
-| Spend rejected | The amount, destination, mint, or slot window exceeds the role grant. | Check the remaining allowance and exact destination/account units. |
-
-## SDK example
-
-These actions allow System Program invocation and a total spend of 1,000,000
-lamports. Pass them to the `actions` parameter in the [Role example](/developer-sdk/add-roles-and-permissions).
-
-<CodeGroup>
-```typescript TypeScript
-import { type AddRoleAction } from '@swig-wallet/developer-sdk';
-
-const actions = [
-  { type: 'program', programId: '11111111111111111111111111111111' },
-  { type: 'solLimit', amount: 1_000_000n },
-] satisfies AddRoleAction[];
-```
-
-```python Python
-from swig_developer_sdk import ProgramAction, SolLimitAction
-
-actions = (
-    ProgramAction(program_id="11111111111111111111111111111111"),
-    SolLimitAction(amount=1_000_000),
-)
-```
-
-```rust Rust
-use solana_pubkey::pubkey;
-use swig_developer_sdk::WalletPermission;
-
-let actions = vec![
-    WalletPermission::Program {
-        program_id: pubkey!("11111111111111111111111111111111"),
-    },
-    WalletPermission::SolLimit { amount: 1_000_000 },
-];
-```
-</CodeGroup>
+| Error | Meaning |
+| :--- | :--- |
+| Unsupported action | The requested grant is outside the hosted add-role surface. Use one of the listed actions or a compatible Protocol SDK integration. |
+| Program invocation rejected | The role lacks permission for the invoked program. Grant the appropriate program access in addition to the asset allowance. |
+| Spend rejected | The amount, destination, mint, or slot window exceeds the role grant. Check the remaining allowance and exact destination/account units. |
