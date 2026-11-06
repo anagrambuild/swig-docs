@@ -28,6 +28,14 @@ A signer account must be the derived Swig wallet address, fee payer, or
 Ed25519 requester. TypeScript accepts base64 instruction data; Python and Rust
 examples use bytes. Rust uses native `Instruction` and `AccountMeta` values.
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Invalid instruction input | The instruction list is empty or its account metadata is unsupported. | Supply instructions with valid program IDs, data, and permitted signer accounts. |
+| Unsupported lookup-table use | A ParticipantSet requester includes address lookup tables. | Keep the lookup-table list empty for that requester. |
+| Permission check fails | The operation exceeds the acting role's program or asset grants. | Inspect the target program, asset amount, and role permissions before signing. |
+
 ## SDK example
 
 Use a wallet handle with its requester authority in TypeScript/Python, or

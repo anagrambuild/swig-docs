@@ -56,12 +56,20 @@ or secp256k1. Approvals bind the same operation and shared nonce.
 | Compile | Original preparation and approvals | Supply distinct, valid approvals meeting the threshold |
 
 Serialize operations per set. Concurrent plans share the next nonce; once one
-lands, prepare and approve the others again. A stale nonce or expired plan needs
-fresh approval. Compilation rejects insufficient or duplicate approvals.
+lands, prepare and approve the others again.
 
 Supported flows include SOL/token transfers, transfer batches, and custom
 instructions without lookup tables. Swaps and lookup-table transactions need a
 direct requester. Hosted recovery preparation is not supported.
+
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Insufficient or duplicate approvals | The submitted proofs do not satisfy the threshold with distinct members. | Collect valid approvals from enough different members. |
+| Stale nonce or expired plan | Another operation consumed the nonce or the approval window passed. | Prepare a new operation and collect fresh approvals. |
+| Member signer mismatch | The signer type or public key differs from its request. | Send each request to its matching member signer. |
+| Unsupported preparation | The operation is a swap, lookup-table custom transaction, or hosted recovery. | Use a supported operation or the appropriate direct protocol integration. |
 
 ## SDK example
 

@@ -31,6 +31,14 @@ select **New template**, enter the fields above, and save the policy ID.
 Recovery-guardian setup in that form is currently unavailable; see
 [Guardian recovery](/developer-sdk/use-cases/guardian-recovery).
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Template lookup is denied or missing | The policy ID is unavailable to the server API key. | Check the ID and resource access using Fetch template. |
+| Initial authority missing at creation | The template expects the application to supply its key. | Set initialUser / initial_user when preparing the wallet. |
+| Additional role absent after creation | Stored additional users are not provisioned by template-based creation. | Add each role after wallet creation confirms, then inspect its permissions. |
+
 ## SDK example
 
 Template creation is a portal action. Use the saved policy ID with the SDK to

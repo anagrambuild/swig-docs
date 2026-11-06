@@ -59,6 +59,14 @@ network. The API key's organization must own the Swig config.
 Continuation tokens remain scoped to the original organization, network, and
 wallet. Stop paging when the response has no next token.
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Wallet access denied | The API key's organization does not own the Swig config. | Use the owning organization's key and correct network. |
+| Invalid continuation token | The token is malformed or does not match its organization, network, and wallet. | Restart pagination or use the original query scope. |
+| API quota exhausted | The applicable request allowance has reached its admission cap. | Check Pricing & quotas before retrying. |
+
 ## SDK example
 
 <CodeGroup>

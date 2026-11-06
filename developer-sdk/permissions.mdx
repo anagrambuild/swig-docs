@@ -100,6 +100,14 @@ The hosted add-role surface does not expose `ReplaceAuthority`, `ProgramScope`,
 SDK integration when those permissions are needed. Role reads may include
 permissions outside this creation surface.
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Unsupported action | The requested grant is outside the hosted add-role surface. | Use one of the listed actions or a compatible Protocol SDK integration. |
+| Program invocation rejected | The role lacks permission for the invoked program. | Grant the appropriate program access in addition to the asset allowance. |
+| Spend rejected | The amount, destination, mint, or slot window exceeds the role grant. | Check the remaining allowance and exact destination/account units. |
+
 ## SDK example
 
 These actions allow System Program invocation and a total spend of 1,000,000

@@ -32,7 +32,15 @@ same recipient. Session, passkey, EVM, and ParticipantSet requesters are unsuppo
 | :--- | :--- |
 | Public-key string | Configured rent recipient |
 | `null` | Valid config with no recipient set |
-| Error | Missing, malformed, unsupported, or unavailable account state |
+
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Recipient already set | The on-chain recipient cannot be changed, even to the same key. | Read the current recipient and use that confirmed value. |
+| Requester not allowed | The setter requires direct Ed25519 with All or CloseSwigAuthority. | Choose an eligible role; ManageAuthority alone is insufficient. |
+| Invalid recipient | The address is zero, the Swig config, or its wallet-address PDA. | Supply a valid separate rent-recipient account. |
+| Account read failed | State is missing, malformed, unsupported, or unavailable. | Check the config and network. Only a valid unset config returns null. |
 
 ## SDK example
 

@@ -53,6 +53,14 @@ where the mint is a `Pubkey`. Country and currency collections are typed vectors
 Provider environment is separate from Solana network. Sandbox orders still settle
 on mainnet. Use the server client from [Client setup](/developer-sdk/integration-paths).
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Missing or invalid configuration | The Ramp configuration or provider environment is unavailable to the caller. | Use the configuration ID and sandbox/production environment belonging to your organization. |
+| Invalid options input | A supplied country or currency value is empty or invalid. | Omit optional filters or supply supported nonempty values. |
+| Provider unavailable or request timed out | The options request could not complete. | Retry the read according to your client policy; each admitted retry counts. |
+
 ## SDK example
 
 <CodeGroup>

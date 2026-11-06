@@ -56,8 +56,16 @@ transaction is fully signed. Embedded secp256k1/secp256r1 requests are separate
 from native Ed25519 requirements in the serialized transaction.
 
 Rust's `TransactionSigner` consumes a `PreparedTransaction` and returns a
-`VersionedTransaction`. All embedded requests must match that signer. It rejects
-pending participant approvals and existing outer signatures when patching is needed.
+`VersionedTransaction`. All embedded requests must match that signer.
+
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Authority or public-key mismatch | The signer does not match an embedded request. | Select the signer matching the original preparation. |
+| Pending participant approvals | Rust native transaction signing receives an uncompiled approval plan. | Collect and compile participant approvals first. |
+| Outer signatures already present | Embedded data still needs patching, which changes the signed message. | Resolve embedded signatures first, then collect outer Solana signatures. |
+| Missing native signature | An empty embedded-request list was mistaken for a fully signed transaction. | Inspect the serialized required signer set and fill each required slot. |
 
 ## SDK example
 

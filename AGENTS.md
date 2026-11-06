@@ -40,7 +40,10 @@ Use these H2 sections in this order:
 4. **Output**, for reads: describe the returned fields or values in a table.
    Write-only pages need no output section; explain the prepared result briefly
    beside the example when needed.
-5. **SDK example**: concrete code using the configured clients. Use H3 headings
+5. **Errors**: table of the failure, cause, and corrective action. Use exact
+   error names/status codes only when verified against the SDK or API. Move
+   error-handling paragraphs into this table.
+6. **SDK example**: concrete code using the configured clients. Use H3 headings
    for distinct operations within a page, with the same operation shown in
    language tabs.
 
@@ -58,8 +61,10 @@ Use these H2 sections in this exact order:
 2. **Returned result**: table of actual SDK fields, types, and meanings.
 3. **Input parameters**: table of required and optional inputs, defaults, units,
    supported values, and filters.
-4. **SDK example**: a concrete query using the supported language clients.
-5. **SDK returned structure**: a code block showing the matching result shape.
+4. **Errors**: table of failure, cause, and corrective action; distinguish
+   request validation, access, quota, and dependency failures where applicable.
+5. **SDK example**: a concrete query using the supported language clients.
+6. **SDK returned structure**: a code block showing the matching result shape.
 
 Lead with the Developer SDK. Link transport details to the REST reference.
 Label illustrative output, preserve exact field names and integer encodings,

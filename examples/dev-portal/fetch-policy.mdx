@@ -40,6 +40,13 @@ configuration needed to provision those roles in your application. Saved actions
 use stored names and shapes; map them to typed [permission](/developer-sdk/permissions)
 inputs when adding a role rather than forwarding them unchanged.
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| 401 or 403 | The API key is invalid or lacks access. | Check the server key and its resource access. |
+| 404 | The policy ID is not found or is not visible to the caller. | Confirm the saved policy ID and organization access. |
+
 ## SDK example
 
 Use the server client from [Client setup](/developer-sdk/integration-paths).
@@ -54,7 +61,6 @@ policy = await swig.wallets.get_policy(policy_id)
 ```
 </CodeGroup>
 
-For `401` or `403`, check the API key and its access. For `404`, check the policy
-ID and its visibility to the caller. Pass the ID into [Create a wallet](/developer-sdk/create-wallets)
+Pass the ID into [Create a wallet](/developer-sdk/create-wallets)
 when ready. Use the [role list](/developer-sdk/add-roles-and-permissions#confirm-the-role)
 to inspect permissions already on-chain.

@@ -77,10 +77,18 @@ The balance read returns the following fields. Python uses snake_case attributes
 | `balanceSol` / `balance_sol` | number | SOL balance for display |
 
 Rust returns `PaymasterBalance` with a `Pubkey` address and `u64` lamport balance.
-It has no `configured` field: absence returns
-`GetPaymasterBalanceError::NotConfigured`.
+It has no `configured` field.
 Each admitted balance call consumes one API request, including retries and
 admitted errors. Reading funding does not spend the sponsorship budget.
+
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| API paymaster not configured | TypeScript/Python return configured=false; Rust returns GetPaymasterBalanceError::NotConfigured. | Create an API paymaster for this network. IdP funding is a separate balance. |
+| Insufficient funding or spending limit reached | The paymaster cannot cover this request within its configured limits. | Check its balance and limits in the Developer Portal. |
+| Missing signature or incorrect fee payer | The transaction is not ready for this paymaster to sponsor. | Prepare with the API paymaster address and complete all other required signatures. |
+| Idempotency conflict or lost response | The outcome of this attempt needs reconciliation. | Keep the original transaction and key; resolve the attempt before starting a replacement. |
 
 ## SDK example
 
@@ -92,12 +100,18 @@ separate `WalletClient` and `PaymasterClient` instances on the same network.
 <CodeGroup>
 
 ```typescript TypeScript
-const balance = await swig.paymaster.getBalance({ network: 'mainnet' });
+const balance = await swig.paymaster.getBalance({
+  network: 'mainnet',
+  kind: 'api',
+});
+if (!balance.configured) throw new Error('API paymaster is not configured');
 // balance.configured, balance.address, balance.balanceLamports, balance.balanceSol
 ```
 
 ```python Python
-balance = await swig.paymaster.get_balance(network="mainnet")
+balance = await swig.paymaster.get_balance(network="mainnet", kind="api")
+if not balance.configured:
+    raise RuntimeError("API paymaster is not configured")
 # balance.configured, balance.address, balance.balance_lamports, balance.balance_sol
 ```
 

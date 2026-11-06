@@ -52,6 +52,14 @@ your server. These queries require no wallet-authority signature.
 | `swigConfigAddress` / `swig_config_address` | Yes | Swig **config address**; a string in TypeScript/Python and a `Pubkey` in Rust |
 | `network` | Client setting | Configure the client for `mainnet` or `devnet`; Rust uses `Network::Mainnet` or `Network::Devnet` |
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Authentication or access denied | The server API key cannot access the wallet query. | Check the key, organization, and wallet config address. |
+| Invalid wallet or network | The supplied config does not resolve on the selected network. | Use the Swig config address and its matching client network. |
+| API quota exhausted | The applicable request allowance has reached its admission cap. | Check Pricing & quotas; retries also consume admitted requests. |
+
 ## SDK example
 
 Use `swig` from client setup in TypeScript/Python, or the `wallet` client in Rust.

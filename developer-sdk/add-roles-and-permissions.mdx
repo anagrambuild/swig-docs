@@ -43,6 +43,14 @@ after confirmation to verify the grant. Saved policy metadata is separate.
 Rust returns native typed authority and permission values through its role-list
 result. Use the returned role ID when preparing an operation for a participant set.
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Requester cannot add the role | Its authority type or management permission is unsupported. | Use an existing Ed25519 or secp256r1 administrator with manageAuthority or all. |
+| Invalid new-role input | The action list is empty or the new authority is malformed. | Supply at least one supported action and a valid public authority. |
+| New authority is not usable yet | Preparation alone has not installed the role. | Sign, submit, and confirm the add-role transaction before using it. |
+
 ## SDK example
 
 ### Add a scoped SOL-transfer role

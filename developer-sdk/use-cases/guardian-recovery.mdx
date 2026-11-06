@@ -64,6 +64,14 @@ not need the lost key or broad management access to perform replacement. It can
 choose the key that inherits the role's power, so protect it accordingly.
 A delay or cancellation mechanism requires a separate recovery policy.
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| No surviving recovery path | No authorized signer can configure or exercise the required delegation. | Configure scoped recovery while an administrator is available; a new key alone cannot restore access. |
+| Replacement not authorized | The guardian lacks ReplaceAuthority for the exact target role. | Use the previously configured recovery role for that wallet and role ID. |
+| Hosted preparation unavailable | The Developer SDK has no working scoped-replacement method. | Use a compatible protocol integration; compatibility types are not a recovery flow. |
+
 ## SDK example
 
 The Developer SDK does not currently expose scoped replacement permission or a

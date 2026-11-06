@@ -50,6 +50,14 @@ TypeScript/Python use address strings. Rust uses `Pubkey` for Ed25519 and
 compressed 33-byte SEC1 keys for secp256k1/secp256r1. An application supplies
 passkey or EVM public keys; credential creation remains in your signing layer.
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Missing network or initial authority | Creation has no resolved network or the template needs an authority. | Set the client network and supply the required initial authority. |
+| Invalid public key | The key cannot be decoded or is invalid for its curve. | Use the correct authority type; Rust secp256 keys must be compressed 33-byte SEC1 keys. |
+| Unsupported creation plan in Rust | The response contains zero or multiple transactions. | Use the TypeScript/Python ordered-plan flow for a multi-transaction creation. |
+
 ## SDK example
 
 The example creates an inline Ed25519 wallet. Use the configured `swig` client
@@ -100,7 +108,7 @@ For a saved template, supply `policyId` / `policy_id`; in Rust, use
 
 TypeScript/Python return wallet addresses and an ordered `transactions` list.
 Sign and submit every transaction in that order. Rust returns `WalletCreation`
-with one `transaction` and rejects zero or multiple returned transactions.
+with one `transaction`.
 
 Complete embedded signature requests and inspect each transaction's required
 Solana signers, including its fee payer. An empty signature-request list can

@@ -51,6 +51,15 @@ captures the hold and reduces its remaining amount; zero is valid.
 | `locks[].expirySlot` / `expiry_slot` | Expiry slot as an exact decimal string |
 | `locks[].active` | True while unexpired with a nonzero remaining amount |
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Missing lock-management permission | The requester lacks ManageAuthorizationLocks, even if it has All. | Grant the scoped permission through a compatible Protocol SDK integration. |
+| Invalid amount or expiry | An integer is out of range, expiry is ambiguous, or duration exceeds the role bound. | Use exact base units and exactly one permitted duration or expiry slot. |
+| Active hold cannot be released | The requester is not the holder of that active lock. | Use the holder role; eligible managing roles may prune inactive records. |
+| Hosted method unavailable | The installed SDK/backend does not include the linked lock changes. | Use matching supported builds or the Protocol SDK recipe. |
+
 ## SDK example
 
 These examples target the SDK changes linked above. Use server-side clients

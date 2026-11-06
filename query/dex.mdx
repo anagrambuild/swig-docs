@@ -72,6 +72,14 @@ Filters combine with AND. Protocol, action type, and vault must match the same
 action; each returned transaction still includes all its indexed DEX actions.
 Pass the cursor unchanged with the same wallet, network, and filters.
 
+## Errors
+
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Invalid filter or cursor | A filter value is unsupported or pagination input is malformed. | Use the listed values and return the previous cursor with the same filters. |
+| Transaction detail not found | The requested signature has no matching indexed DEX record for the wallet. | Check the config, network, signature, and supported index coverage. |
+| 429 / RESOURCE_EXHAUSTED | The organization has reached its monthly DEX query cap. | Wait for reset or use a plan with a higher DEX quota; API overage does not extend it. |
+
 ## SDK example
 
 <CodeGroup>
