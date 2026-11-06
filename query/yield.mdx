@@ -1,0 +1,48 @@
+---
+title: "Query Yield"
+sidebarTitle: "Read yield data"
+description: "Read validator rates, reward estimates, staking positions, and rewards."
+---
+
+Query native SOL staking for a Swig config owned by your API key's organization.
+Every route below requires `network=NETWORK_MAINNET` or `network=NETWORK_DEVNET`.
+
+## What you can query
+
+All routes start with `/api/yield/{swig_config_address}`.
+
+| Data | Read route | Result |
+| :--- | :--- | :--- |
+| Validators and rates | `GET …/options` | Allowlisted validators, deposit availability, estimated net APR, commission, and rate timestamp |
+| Reward estimate | `GET …/estimate` | Projected rewards for a validator, principal, and horizon |
+| Positions | `GET …/positions` | Indexed position state and balance, rent, earning, and withdrawable amounts |
+| Totals | `GET …/summary` | Position balance excluding rent (including compounded rewards), indexed withdrawable amounts, and recorded reward totals |
+| Reward history | `GET …/rewards` | Recorded reward credits by position and time |
+
+## Filters and freshness
+
+- Estimates take `validatorVoteAddress`, positive `principalLamports`, and
+  `horizonDays` from 1 to 365. The rate is an estimate, not a guaranteed return.
+- A validator's rate may be absent when current network data cannot produce it.
+- Positions and rewards accept `pageSize` and `pageToken`: 50 entries by default,
+  at most 200. Continue with `nextPageToken`; tokens remain scoped to the original
+  organization, network, and Swig.
+- Positions sort by address; rewards sort oldest first by credit time. Position
+  reads expose `lastUpdatedAt` so you can identify the age of indexed data.
+- `totalPositionLamports` already includes compounded rewards. Do not add the
+  recorded reward total to it when calculating the current position value.
+- Indexed withdrawable amounts can include rent. The separate withdrawal
+  preparation currently keeps the rent reserve; use its `withdrawalLamports`
+  when displaying what a prepared withdrawal will return.
+
+## Quota
+
+Each admitted call or page consumes **one API request**, including retries and
+admitted errors. Yield reads share the API-request allowance with wallet reads
+and other metered operations; they do not use DEX queries. See
+[pricing and quotas](/query#api-requests).
+
+## Reference and SDK examples
+
+- [Yield REST fields and pagination](/developer-api/yield#options-and-estimates)
+- [Yield SDK guide](/developer-sdk/yield)

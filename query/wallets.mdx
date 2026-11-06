@@ -1,0 +1,47 @@
+---
+title: "Read Wallet State"
+sidebarTitle: "Read wallets"
+description: "Read token movements, roles, policies, and the rent recipient."
+---
+
+Use these reads to explain token movements and inspect
+wallet configuration. Send your server API key and use the Swig **config address**
+in wallet routes.
+
+## What you can query
+
+| Data | Endpoint | Result |
+| :--- | :--- | :--- |
+| Token movements | `GET /wallet/swig/{swig_config_address}/token-transactions` | Recent wallet-relative inflows and outflows, including sub-account attribution |
+| Roles | `GET /wallet/swig/{swig_config_address}/roles` | Role IDs, authorities, and permission actions |
+| Policy | `GET /wallet/policies/{policy_id}` | A policy visible to your API-key organization |
+| Rent recipient | `GET /transaction/wallet/{swig_address}/rent-claimer` | The configured V2 rent recipient, when present |
+
+## Filters and results
+
+- Set `network=NETWORK_MAINNET` or `network=NETWORK_DEVNET` on wallet and
+  rent-recipient reads. Policy lookup takes its ID, without a network.
+- Token history accepts `limit`: the default is 25 and the maximum is 100.
+  It returns recent entries without a continuation cursor.
+- Use decimal-string `amountRaw` for exact token arithmetic. Display amounts and
+  USD values serve presentation; token movements are relative to the wallet,
+  while [DEX actions](/query/dex) describe individual venue operations.
+- Token-history and role reads use recorded wallet data. The
+  rent-recipient endpoint reads finalized chain state; an absent recipient on a
+  valid config differs from an account or RPC error.
+
+## Quota
+
+Each admitted call consumes **one API request**, including a retry or a call
+that later returns an error. These reads share the plan's API-request allowance
+with other metered operations; they do not use DEX queries. See
+[pricing and quotas](/query#pricing-and-included-usage).
+
+## Reference and SDK examples
+
+- [Wallet REST fields](/developer-api/wallets)
+- [Read balances](/query/balances) for holdings and USD values
+- [Wallet-read SDK examples](/developer-sdk/wallet-reads)
+- [Rent-recipient REST fields](/developer-api/transactions#read-the-recipient)
+- [Rent-claimer SDK examples](/developer-sdk/rent-claimers)
+- [Public wallet lookup and status](/query/public) for client-side wallet discovery

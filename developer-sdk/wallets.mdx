@@ -1,0 +1,54 @@
+---
+title: "Wallet Operations"
+sidebarTitle: "Wallet operations"
+description: "Create wallets, assign access, sign operations, and manage wallet configuration."
+---
+
+A Swig wallet gives each authority a role with specific permissions. Your server
+prepares an operation, the appropriate authority signs it, and your application
+submits it and checks confirmation.
+
+## Choose an interaction
+
+| What you want to do | Guide |
+| :--- | :--- |
+| Create a wallet with an initial authority and permissions | [Create wallets](/developer-sdk/create-wallets) |
+| Reuse saved wallet-creation settings | [Create a policy template](/examples/dev-portal/create-policy) and [read it](/examples/dev-portal/fetch-policy) |
+| Decide which actions an authority may perform | [Permissions](/developer-sdk/permissions) |
+| Give another authority access to an existing wallet | [Add roles](/developer-sdk/add-roles-and-permissions) |
+| Inspect current authorities and permission actions | [Query wallets](/query/wallets) |
+| Configure a scoped authorization lock | [Authorization locks](/developer-sdk/authorization-locks) |
+| Sign with an application key, passkey, or EVM wallet | [Signers](/developer-sdk/signers) |
+| Require M-of-N participant approvals | [Participant Sets](/developer-sdk/participant-sets) |
+| Prepare custom program instructions | [Custom transactions](/developer-sdk/custom-execution) |
+| Choose the V2 wallet's rent recipient | [Rent claimers](/developer-sdk/rent-claimers) |
+| Plan scoped authority recovery | [Guardian recovery](/developer-sdk/use-cases/guardian-recovery) |
+
+Authorization-lock and recovery guides describe their current release and
+integration requirements. Follow those boundaries when selecting a flow.
+
+## Policies, roles, and signing
+
+- A **policy template** is saved creation configuration in the Developer Portal.
+  Reading or editing a template does not change an existing wallet's roles.
+- A **role** binds an authority to permissions on the wallet. Choose the minimum
+  actions and limits that authority needs.
+- An **API key** authenticates hosted requests. The wallet authority separately
+  authorizes the prepared operation through a signature or approval proofs.
+- A **signer** belongs to your application. Keep private keys in the runtime
+  responsible for signing.
+
+## Follow the transaction lifecycle
+
+1. Read the state needed to choose the wallet, role, and operation.
+2. Prepare the unsigned transaction with the Developer SDK.
+3. Inspect the prepared operation and collect the required signatures.
+4. [Submit or sponsor](/developer-sdk/sponsor-and-submit) the signed transaction.
+5. Check chain confirmation, then read the resulting wallet state.
+
+Submission acceptance is separate from chain confirmation. Keep confirmation
+tracking in your application, and follow the operation's idempotency rules when
+retrying.
+
+For holdings and activity, use [Query](/query). For funding, transfers, swaps,
+staking, and sponsorship, use [Finance](/developer-sdk/finance).

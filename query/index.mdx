@@ -1,0 +1,90 @@
+---
+title: "Swig Query"
+sidebarTitle: "Overview, pricing & quotas"
+description: "Read wallet data, DEX activity, yield, ramp orders, and paymaster balances through Swig's hosted APIs."
+---
+
+Swig Query brings the hosted read APIs together. Choose the data your application
+needs, call the existing REST endpoint or Developer SDK, and account for the
+allowance that endpoint uses.
+
+## What you can query
+
+| Section | Available data | Usage allowance |
+| :--- | :--- | :--- |
+| [Wallet state](/query/wallets) | Token movements, roles, policies, rent recipient | API requests |
+| [Balances](/query/balances) | Native SOL and token holdings, total USD value | API requests |
+| [DEX activity](/query/dex) | Indexed trades and liquidity actions, individual transactions, latest positions | DEX queries |
+| [Yield](/query/yield) | Validators and rates, reward estimates, positions, totals, recorded rewards | API requests |
+| [Ramp](/query/ramp) | Supported countries and assets, buy/sell quotes, order status | API requests |
+| [Paymasters](/query/paymasters) | API and IdP paymaster configuration and SOL balances | API requests |
+| [Public wallet and identity reads](/query/public) | Wallet lookup/status and identity verification keys | Public-route rules described in that guide |
+
+## Pricing and included usage
+
+These are the standard Swig subscription plans. Query access uses your existing
+organization subscription.
+
+| Plan | Monthly price (USD) | Included API requests | DEX queries per calendar month | API-request overage |
+| :--- | ---: | ---: | ---: | :--- |
+| Free | $0 | 50,000 | 10,000 | Hard cap; upgrade to continue |
+| Pro | $39 | 100,000 | 2,000,000 | $2.50 per 1,000 additional requests |
+| Ultra | $399 | 250,000 | 10,000,000 | $2.25 per 1,000 additional requests |
+| Enterprise | Custom | 500,000+ | 10,000,000 | From $2.00 per 1,000 additional requests |
+
+Enterprise API-request allowances and pricing depend on your agreement. The DEX
+query cap is separate. Check your organization's plan and billing period in the
+[Developer Portal](https://dashboard.onswig.com); see
+[subscription management](/examples/dev-portal/subscriptions-billing) to change plans.
+
+### API requests
+
+- Wallet, yield, ramp, rent-recipient, and paymaster reads each consume one API
+  request. Paginated reads consume one request per page.
+- This allowance is shared with other metered API operations, such as transaction
+  preparation and sponsorship, and attributed IdP requests. It is not reserved
+  for reads.
+- Free organizations stop at 50,000 requests in a UTC calendar month. Paid plans
+  continue beyond their included requests with the API-request overage above.
+- Subscription invoices follow your billing period. The Free admission cap
+  resets at 00:00 UTC on the first day of each calendar month.
+
+### DEX queries
+
+- Each DEX transaction-list, transaction-detail, or position-list call consumes
+  one DEX query and does not consume the API-request allowance.
+- The quota is shared by the organization's API keys and networks. It resets
+  at 00:00 UTC on the first day of each calendar month.
+- Every plan has a hard DEX cap. At the cap, requests return HTTP `429`
+  (`RESOURCE_EXHAUSTED`); API-request overage does not buy more DEX queries.
+- Use a plan with a larger quota or wait for the next calendar month. Contact
+  Swig if your required volume exceeds the published plans.
+
+### What counts
+
+Usage is counted when an authenticated request is admitted, before the operation
+finishes. Retries, empty results, and admitted requests that later return errors
+such as `400` or `404` still count. A rejected API key or exhausted quota does
+not add an admitted request. Each returned row is not a separate charge.
+
+For example, reading token balances once and three pages of DEX history uses
+**one API request and three DEX queries**. Retrying one DEX page adds one DEX query.
+
+## Make your first query
+
+1. [Create an API key](/examples/dev-portal/create-api-key) for your organization.
+2. Keep it on your trusted server and send it as a bearer token.
+3. Choose a query guide above and use its network, filters, and pagination rules.
+
+```bash
+curl "https://api.onswig.com/wallet/swig/<swig-config-address>/token-balances?network=NETWORK_MAINNET" \
+  -H "Authorization: Bearer $SWIG_API_KEY"
+```
+
+This call consumes one API request. Replace the config-address placeholder with
+your Swig config address. The public wallet and identity routes use their own
+client boundary and do not require this server API key.
+
+For SDK setup, use [Client setup](/developer-sdk/integration-paths). For exact
+request and response fields, follow each guide's REST reference. Indexed data
+can lag chain state; each guide explains the available freshness signals.

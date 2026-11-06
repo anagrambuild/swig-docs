@@ -1,0 +1,41 @@
+---
+title: "Query Paymasters"
+sidebarTitle: "Read paymasters"
+description: "Read paymaster configuration, funding balances, and API-key context."
+---
+
+Check your organization's paymaster funding before preparing sponsored
+transactions. These reads use a server API key.
+
+## What you can query
+
+| Data | Endpoint | Result |
+| :--- | :--- | :--- |
+| Paymaster balance | `GET /paymaster/balance` | Whether a paymaster is configured, its kind, ID, address, label, and SOL balance |
+| API-key context | `GET /paymaster/test` | A test response identifying the API key and organization |
+
+## Select the paymaster
+
+- Set `kind=PAYMASTER_KIND_API` or `kind=PAYMASTER_KIND_IDP` explicitly.
+- This API takes lowercase `network=mainnet` or `network=devnet`. An empty network
+  defaults to mainnet.
+- Use `configured` to distinguish an absent paymaster from a configured paymaster
+  with a zero balance. `balanceLamports` is the exact decimal-string amount;
+  `balanceSol` is its SOL representation.
+
+```bash
+curl "https://api.onswig.com/paymaster/balance?network=mainnet&kind=PAYMASTER_KIND_API" \
+  -H "Authorization: Bearer $SWIG_API_KEY"
+```
+
+## Quota
+
+Each admitted balance or test call consumes **one API request**, including retries
+and admitted errors. Reading a balance does not sponsor a transaction or consume
+a sponsorship spending budget. The request allowance is shared with other metered
+operations; see [pricing and quotas](/query#api-requests).
+
+## Reference and SDK examples
+
+- [Paymaster REST fields](/developer-api/paymaster#get-balance)
+- [Paymaster SDK reads and sponsorship](/developer-sdk/sponsor-and-submit)

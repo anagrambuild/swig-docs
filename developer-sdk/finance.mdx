@@ -1,0 +1,42 @@
+---
+title: "Finance"
+sidebarTitle: "Finance overview"
+description: "Fund wallets, transfer and swap assets, earn yield, and sponsor transaction fees."
+---
+
+Choose a flow by what should happen to the funds. Wallet permissions and
+application-owned signing still apply to operations that move assets.
+
+## Choose a flow
+
+| Goal | Guide | What to expect |
+| :--- | :--- | :--- |
+| Buy crypto with fiat or sell crypto for fiat | [Ramping](/developer-sdk/ramp) | Discover supported routes, request a quote, create an order, and follow its status |
+| Send SOL or tokens | [Transfers](/developer-sdk/transfers-and-swaps) | Prepare a transfer for an authorized wallet role to sign |
+| Exchange assets or combine operations | [Swaps and batches](/developer-sdk/swaps-and-batches) | Prepare a Jupiter swap or grouped wallet operations |
+| Stake SOL and manage the position | [Yield](/developer-sdk/yield) | Choose a validator, deposit, deactivate, and withdraw when the stake is available |
+| Pay transaction fees for users | [Paymaster](/examples/dev-portal/paymaster-overview) | Fund a paymaster, configure limits, and sponsor application-signed transactions |
+| Pay for an HTTP resource | [x402 payments](/developer-sdk/x402) | Read a payment requirement, prepare and sign a payment, then retry the resource request |
+
+## Understand the costs
+
+- **Hosted API usage:** metered requests share your organization's allowance.
+  See [pricing and quotas](/query#pricing-and-included-usage).
+- **Transaction fees:** the transaction's fee payer or paymaster funds chain
+  execution. Keep the paymaster funded for the network you use.
+- **Ramp and swap quotes:** inspect amounts, provider fees, and slippage in the
+  selected flow before collecting authorization.
+- **Staking:** validator rates and reward estimates are estimates. Native stake
+  activation and deactivation affect when funds can earn rewards or be withdrawn.
+
+## Track the result
+
+Use the identifier returned by each flow to follow its outcome. A submitted
+transaction needs chain confirmation; a ramp order has its own status lifecycle.
+
+- Check [wallet balances](/query/balances) and [token movements](/query/wallets).
+- Inspect [DEX activity](/query/dex) and [yield positions and rewards](/query/yield).
+- Follow [ramp orders](/query/ramp) and monitor [paymaster balances](/query/paymasters).
+
+Indexed query results can lag chain state. Use the freshness signals described
+by each query guide when showing results to users.
