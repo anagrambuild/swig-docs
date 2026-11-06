@@ -3,8 +3,8 @@ title: "Read Wallet State"
 sidebarTitle: "Read Wallet State"
 ---
 
-Every wallet read is an API-key `GET` against the wallet handle you already
-have. Reads follow the client's retry policy, so they are safe to repeat.
+Every wallet read is an API-key `GET`. Reads follow the client's retry policy,
+so they are safe to repeat.
 
 ## Start from a wallet handle
 
@@ -25,6 +25,9 @@ wallet = swig.wallets.use(swig_config_address)
 
 Reads do not need a `requesterAuthority` / `requester_authority`. Only
 preparation calls do.
+
+In Rust, use the `wallet` client from
+[Choose a Language](/developer-sdk/integration-paths#rust).
 
 ## Balances
 
@@ -55,16 +58,33 @@ for balance in tokens.balances:
 print(tokens.total_usd_value)
 ```
 
+```rust Rust
+let usd = wallet.get_usd_balance(&swig_config_address).await?;
+
+let balances = wallet.list_token_balances(&swig_config_address).await?;
+if let Some(sol) = &balances.sol_balance {
+    println!("SOL lamports: {}", sol.lamports);
+}
+for (mint, token) in &balances.token_balances {
+    println!("{mint}: {} {} base units", token.amount_raw, token.symbol);
+}
+```
+
 </CodeGroup>
 
-Each balance carries `mintAddress` / `mint_address`, `tokenProgram` /
+In TypeScript and Python, each balance carries `mintAddress` / `mint_address`, `tokenProgram` /
 `token_program`, `tokenSymbol`, `tokenName`, `decimals`, `amountRaw` /
 `amount_raw`, `uiAmount` / `ui_amount`, `usdPrice` / `usd_price`, and
 `usdValue` / `usd_value`, and `assetKind` / `asset_kind`. The SDK normalizes
 the asset discriminator to `token`, `native-sol`, or `unspecified`.
 
-Use `amountRaw` / `amount_raw` for arithmetic. It is the exact integer amount as
-a string; `uiAmount` / `ui_amount` is a display convenience.
+In TypeScript and Python, use `amountRaw` / `amount_raw` for arithmetic. It is
+the exact integer amount as a string; `uiAmount` / `ui_amount` is a display
+convenience.
+
+In Rust, `sol_balance` holds native SOL and `token_balances` is keyed by mint.
+Use `lamports` and `amount_raw` (`u64`) for arithmetic. `ui_amount` and USD
+values (`f64`) are for display.
 
 ## Token activity
 
@@ -97,15 +117,38 @@ for transaction in activity.transactions:
     )
 ```
 
+```rust Rust
+use swig_developer_sdk::{AssetTransfer, ListSwigTokenTransactionsArgs};
+
+let activity = wallet
+    .list_token_transactions(ListSwigTokenTransactionsArgs {
+        swig_config_address,
+        limit: Some(25),
+    })
+    .await?;
+
+for transaction in &activity.transactions {
+    match &transaction.transfer {
+        AssetTransfer::Sol { lamports, .. } => println!("SOL: {lamports}"),
+        AssetTransfer::Token { mint_address, amount_raw, .. } => {
+            println!("{mint_address}: {amount_raw}");
+        }
+    }
+}
+```
+
 </CodeGroup>
 
-Each entry also carries `slot`, optional `blockTime` / `block_time`,
-`ownerAddress` / `owner_address`, `tokenAccountAddress` /
-`token_account_address`, `isSubaccount` / `is_subaccount`, and the same
-amount, USD, and normalized asset-kind fields as a balance.
+Each entry carries `slot`, optional `blockTime` / `block_time`,
+`ownerAddress` / `owner_address`, and `isSubaccount` / `is_subaccount`.
+TypeScript and Python include `tokenAccountAddress` / `token_account_address`
+and the balance amount, USD, and normalized asset-kind fields directly on the
+entry. Rust groups asset-specific fields under `transfer` (`AssetTransfer`).
 
 `limit` is optional. Omit it for the backend default of 25. Values above 100
 are capped at 100.
+
+Rust reports direction as `TransactionDirection::{Inflow, Outflow}`.
 
 ## Roles
 
@@ -136,7 +179,22 @@ for role in result.roles:
         print(action.action_index, action.action_code, action.action_data)
 ```
 
+```rust Rust
+use swig_developer_sdk::SwigRolePermission;
+
+let result = wallet.list_roles(&swig_config_address).await?;
+for role in &result.roles {
+    for action in &role.actions {
+        if let SwigRolePermission::SolLimit { amount } = &action.permission {
+            println!("Role {} has {amount} lamports remaining", role.role_id);
+        }
+    }
+}
+```
+
 </CodeGroup>
+
+TypeScript and Python expose these role fields:
 
 | Field | Meaning |
 | :--- | :--- |
@@ -147,10 +205,15 @@ for role in result.roles:
 | `actionCode` / `action_code` | protocol action discriminant |
 | `actionData` / `action_data` | raw per-action payload |
 
-`actionData` / `action_data` is a raw object whose shape depends on the action.
+TypeScript's `actionData` and Python's `action_data` are raw objects whose shape
+depends on the action.
 Read it against the protocol's
 [permissions model](/protocol/concepts-and-permissions) rather than assuming
 fixed keys.
+
+Rust decodes each role into `SwigRoleAuthority` and each action into
+`SwigRolePermission`. Read current allowance fields from those variants.
+Unsupported or malformed role data returns `ListRolesError::InvalidResponse`.
 
 Common uses:
 
@@ -170,7 +233,8 @@ const rentClaimer = await wallet.getRentClaimer({ network: 'mainnet' });
 
 The network may also come from the wallet handle or client. Errors are not
 treated as an unset recipient. See [Rent Claimers](/developer-sdk/rent-claimers)
-for setup and the separate setter. Python support is pending.
+for setup and the separate setter. This read is unavailable in Python and
+Rust `0.1.0`.
 
 ## DEX activity
 
@@ -191,10 +255,17 @@ const policy = await swig.wallets.getPolicy(policyId);
 policy = await swig.wallets.get_policy(policy_id)
 ```
 
+```rust Rust
+let policy = wallet.get_policy(&policy_id).await?;
+```
+
 </CodeGroup>
 
 See [Read Policy Templates](/examples/dev-portal/fetch-policy) for policy response
 fields and how to use the saved configuration.
+
+Rust reports an unknown policy as `GetPolicyError::PolicyNotFound`.
+Propagate other read errors rather than returning an empty balance or role list.
 
 ## Underlying routes
 
@@ -207,7 +278,6 @@ fields and how to use the saved configuration.
 | Rent claimer | `GET /transaction/wallet/{swig_address}/rent-claimer?network=NETWORK_MAINNET` |
 | Policy | `GET /wallet/policies/{policy_id}` |
 
-These are API-key routes and must be called from a trusted server. If your
-product needs to display the data elsewhere, return a validated, authorized
-view model through your own application API. Do not import the Developer SDK's
-API client or server entrypoint into that application runtime.
+Call these API-key routes from a trusted server. Use your application API to
+return validated data that the user is authorized to see. Keep the Developer
+SDK client on the server.

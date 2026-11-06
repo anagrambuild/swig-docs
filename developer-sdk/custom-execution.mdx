@@ -3,20 +3,9 @@ title: "Build Custom Transactions"
 sidebarTitle: "Custom Transactions"
 ---
 
-The built-in helpers cover common flows. Use `wallet.buildTransaction(...)` or
-`wallet.build_transaction(...)` when you still want hosted preparation but need
-your own instruction set.
-
-## What it does
-
-The custom transaction builder prepares a transaction for an existing Swig
-wallet from a list of Solana instructions you provide.
-
-Use it when:
-
-- the transfer and swap helpers are not enough
-- you already know the exact instruction bundle you want to run
-- you still want the backend to prepare the final wallet transaction
+Use custom transactions to prepare your own Solana instructions for an
+existing Swig wallet. The backend builds the final transaction when the
+transfer and swap helpers do not cover your operation.
 
 ## Example
 
@@ -66,11 +55,41 @@ prepared = await wallet.build_transaction(
 )
 ```
 
+```rust Rust
+use swig_developer_sdk::{AccountMeta, Instruction, PrepareTransactionArgs};
+
+let prepared = wallet
+    .prepare_transaction(PrepareTransactionArgs {
+        swig_config_address,
+        fee_payer,
+        requester_authority: requester_authority.clone(),
+        instructions: vec![Instruction {
+            program_id: target_program_id,
+            accounts: vec![
+                AccountMeta::new(writable_account, false),
+                AccountMeta::new_readonly(readonly_account, false),
+            ],
+            data: instruction_data,
+        }],
+        address_lookup_table_accounts: vec![lookup_table_address],
+    })
+    .await?;
+```
+
 </CodeGroup>
 
 The SDK normalizes the instruction input and sends it to
 `POST /transaction/prepare/custom`. The API returns the prepared transaction
 for your application-owned signing and submission flow.
+
+Rust accepts raw instruction bytes and handles wire encoding. Supply at least
+one instruction and distinct lookup-table addresses. Supported requesters are
+Ed25519, secp256r1, and ParticipantSet. ParticipantSet requesters require an
+empty `address_lookup_table_accounts` list.
+
+Instruction accounts marked as signers must be the derived Swig wallet address,
+the fee payer, or the Ed25519 requester. Invalid inputs fail preparation before
+signing.
 
 ## What still applies
 

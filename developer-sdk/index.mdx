@@ -4,7 +4,7 @@ sidebarTitle: "Overview"
 description: "Prepare wallet operations, read wallet state, and submit signed transactions from a trusted server."
 ---
 
-The Swig Developer SDK is a server-side toolkit for TypeScript and Python.
+The Swig Developer SDK is a server-side toolkit for TypeScript, Python, and Rust.
 It authenticates to Swig's hosted API, prepares wallet operations as unsigned
 transactions, reads wallet state, and submits transactions your application
 has signed.
@@ -21,6 +21,10 @@ bun add @swig-wallet/developer-sdk
 pip install swig-developer-sdk
 ```
 
+```bash Rust
+cargo add swig-developer-sdk@0.1.0
+```
+
 </CodeGroup>
 
 Package `@swig-wallet/developer-sdk`, version `0.12.0`, includes
@@ -32,7 +36,10 @@ Published package `swig-developer-sdk`, version `0.11.0`, includes general role
 creation, ParticipantSet support, and
 [DEX activity reads](/developer-sdk/dex-activity). Requires Python 3.10 or later.
 
-Both packages live in
+Rust `0.1.0` requires Rust 1.87 or later. See
+[Rust setup](/developer-sdk/integration-paths#rust) for client configuration.
+
+All three SDKs live in
 [anagrambuild/swig-developer-sdk](https://github.com/anagrambuild/swig-developer-sdk)
 and default to `https://api.onswig.com`.
 
@@ -60,8 +67,7 @@ appropriate authority's signature or approval proofs.
 - DEX transaction history and latest-position reads
 - fiat ramp order operations, buying and selling
 - sponsorship of application-signed transactions and mainnet bundles
-- optional signing helpers that combine application-provided signatures with
-  prepared transactions
+- local signing helpers for prepared transactions and participant approvals
 
 ### Your application
 
@@ -72,9 +78,10 @@ appropriate authority's signature or approval proofs.
 - confirmation and finality tracking after submission
 
 The server SDK returns unsigned prepared transactions and signature-request
-metadata. Your application obtains the signature. The optional signing helpers
-can assemble that signature into the prepared transaction without receiving an
-API key or private key.
+metadata. Your application authorizes signing. TypeScript and Python helpers
+use application callbacks. Rust also provides native signers that hold
+application-supplied local keys. Signing helpers need no API key and make no
+hosted request. Keep private keys in the runtime that owns signing.
 
 ## Configure wallet access
 
