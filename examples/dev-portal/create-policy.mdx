@@ -1,99 +1,81 @@
 ---
-title: "Policy Templates"
-sidebarTitle: "Policy templates"
-description: "Save wallet-creation templates in the Developer Portal."
+title: "Policy template"
+sidebarTitle: "Policy template"
+description: "Save reusable configuration for new Swig wallets."
 ---
 
-A policy template stores reusable configuration for creating wallets. It does
-not set or update permissions directly on an existing wallet. The Developer
-Portal lists these under **Wallet templates**.
+## Introduction
 
-Each template defines an initial wallet user and can store additional users
-with their own allowed actions. Pass its policy ID when you
-[Create a wallet](/developer-sdk/create-wallets).
+A policy template stores the initial authority and actions used when creating a
+wallet. Use it when your application creates many wallets with the same setup.
+The Developer Portal calls this **Wallet templates**.
 
-An [API key](/examples/dev-portal/create-api-key) authenticates your server's
-requests. The template supplies wallet configuration; your application still
-signs and submits the prepared transactions.
+A template is saved configuration. Editing it does not change permissions on
+an existing wallet; use [Role](/developer-sdk/add-roles-and-permissions) for that.
 
-## Initial user and additional users
+## Input
 
-The portal's initial wallet user receives **full root access** (`All`). Choose
-an authority you trust to administer the wallet. The portal form does not
-provide a spending-limit editor for this initial user.
+| Field | Required | Description |
+| :--- | :--- | :--- |
+| Name | Yes | Identifies the template |
+| Description | No | Explains its purpose |
+| Initial authority | Yes, now or at wallet creation | Choose the public-key type; save a key or let the application supply it later |
+| Additional user | No | Public key and at least one allowed action; provision this role separately after wallet creation |
 
-Additional wallet users have separate authorities and allowed actions. Use
-[Permissions](/developer-sdk/permissions) to understand those grants. The
-reference describes the Developer SDK's complete action list; the portal
-provides a smaller set of controls for common configurations.
+The portal gives the initial user full root access (`All`). Its form does not
+provide an initial-user spending-limit editor. Additional users saved in the
+template are **not automatically added** by Developer SDK wallet creation.
 
-<Note>
-  The Developer SDK's template-based wallet creation prepares the initial user.
-  Additional users saved in the template are not automatically added by this
-  flow. After wallet creation confirms, use [Add a role](/developer-sdk/add-roles-and-permissions)
-  for each additional authority and verify its on-chain actions.
-</Note>
+Open **Wallet templates** in the [Developer Portal](https://dashboard.onswig.com),
+select **New template**, enter the fields above, and save the policy ID.
+Recovery-guardian setup in that form is currently unavailable; see
+[Guardian recovery](/developer-sdk/use-cases/guardian-recovery).
 
-## Create a template
+## Errors
 
-Open **Wallet templates** in your project in the
-[Developer Portal](https://dashboard.onswig.com) and select **New template**.
+| Failure | Cause | What to do |
+| :--- | :--- | :--- |
+| Template lookup is denied or missing | The policy ID is unavailable to the server API key. | Check the ID and resource access using Fetch template. |
+| Initial authority missing at creation | The template expects the application to supply its key. | Set initialUser / initial_user when preparing the wallet. |
+| Additional role absent after creation | Stored additional users are not provisioned by template-based creation. | Add each role after wallet creation confirms, then inspect its permissions. |
 
-<Steps>
-  <Step title="Name the template and set the initial user">
-    Enter a template name and an optional description. Choose how to provide
-    the initial user's public key:
+## SDK example
 
-    - **Provided at wallet creation:** your application supplies the authority
-      through `initialUser` in TypeScript or `initial_user` in Python.
-    - **Set a key now:** choose the key type and save a public key in the
-      template. This authority is reused for wallets created from it.
+Template creation is a portal action. Use the saved policy ID with the SDK to
+prepare a wallet. This example assumes the template asks for an Ed25519 initial
+user. Omit that authority when the template already supplies it.
 
-    Both choices give the initial user full root access.
-  </Step>
-  <Step title="Review recovery availability">
-    The portal currently marks **Enable recovery guardian** as **Coming soon**
-    and disables it. See [Guardian recovery](/developer-sdk/use-cases/guardian-recovery)
-    for scoped key replacement and the additional integration required for
-    single-guardian and multiple-approval recovery.
-  </Step>
-  <Step title="Save other wallet users if needed">
-    Additional users must have a public key set in the template. Choose each
-    user's key type, public key, and allowed actions. Each additional user
-    needs at least one action.
+<CodeGroup>
+```typescript TypeScript
+const created = await swig.wallets.create({
+  feePayer,
+  policyId,
+  initialUser: { ed25519: { publicKey: userPublicKey } },
+});
+```
 
-    These entries are saved in the template. Provision them separately with
-    the Developer SDK's add-role flow after creating the wallet.
+```python Python
+created = await swig.wallets.create(
+    fee_payer=fee_payer,
+    policy_id=policy_id,
+    initial_user={"ed25519": {"publicKey": user_public_key}},
+)
+```
 
-    For spending limits or program access, review the selected fields against
-    [Permissions](/developer-sdk/permissions). The portal's SOL amount input
-    uses SOL; the SDK's action inputs use lamports.
-  </Step>
-  <Step title="Review and create">
-    Check the initial user's root access and each additional user's authority
-    and actions, then select **Create template**. Save the resulting policy
-    ID for your server integration.
-  </Step>
-</Steps>
+```rust Rust
+use swig_developer_sdk::{PrepareCreateWalletArgs, WalletAuthority};
 
-## Add a role with a spending limit
+let created = wallet.prepare_create_wallet(PrepareCreateWalletArgs {
+    fee_payer,
+    policy_id: Some(policy_id),
+    initial_user: Some(WalletAuthority::Ed25519 {
+        public_key: user_public_key,
+    }),
+}).await?;
+```
+</CodeGroup>
 
-For a concrete limited-transfer example, create the wallet, then follow
-[Add a role](/developer-sdk/add-roles-and-permissions#add-a-scoped-sol-transfer-role).
-That example gives a separate authority access to the System Program and a
-total allowance of 1,000,000 lamports. It grants only `program` and `solLimit`
-to the new role; the wallet's initial root authority keeps its existing power.
-
-After submitting the add-role transaction, read the wallet's roles to verify
-that the new authority has the intended actions. A template's stored metadata
-and a wallet's confirmed on-chain roles are separate records.
-
-## Read and use a template
-
-Use [Read Policy Templates](/examples/dev-portal/fetch-policy) to inspect saved template
-metadata. Use [Create a wallet](/developer-sdk/create-wallets) to prepare a wallet
-from the policy ID, then sign and submit its transactions.
-
-To change access on an existing wallet, use the wallet's authority-management
-operations, such as [Add a role](/developer-sdk/add-roles-and-permissions).
-Editing or deleting a saved template does not rewrite roles already on-chain.
+Use the clients from [Client setup](/developer-sdk/integration-paths).
+[Sign and submit the creation plan](/developer-sdk/create-wallets), then add each
+additional role and verify its confirmed permissions. To inspect saved template
+metadata, use [Fetch template](/examples/dev-portal/fetch-policy).

@@ -1,0 +1,9 @@
+/* Place the copy control above text diagrams instead of reserving horizontal space. */
+#content .code-block:has(pre[language="text"]) {
+  --code-padding-right: 0px;
+  --fade-width: 0px;
+}
+
+pre[language="text"] > code {
+  padding-top: 1.75rem;
+}
