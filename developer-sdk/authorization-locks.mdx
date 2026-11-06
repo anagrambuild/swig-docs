@@ -1,7 +1,6 @@
 ---
 title: "Authorization lock"
 sidebarTitle: "Authorization lock"
-description: "Reserve SOL or tokens for an authorized role, then inspect or release the hold."
 ---
 
 ## Introduction
@@ -15,6 +14,135 @@ signing, and submission. Hosted support remains under review in
 [TypeScript/Python PR #66](https://github.com/anagrambuild/swig-developer-sdk/pull/66)
 and [Rust PR #79](https://github.com/anagrambuild/swig-developer-sdk/pull/79), and
 requires matching backend routes and the authorization-lock program.
+
+## SDK examples
+
+### Choose the wallet
+
+These examples target the unpublished SDK changes linked above. Use a configured client and the role that will hold or release the lock.
+
+<CodeGroup>
+
+```typescript TypeScript
+const wallet = swig.wallets.use(swigConfigAddress, {
+  requesterAuthority: { ed25519: { publicKey: requesterPublicKey } },
+});
+```
+
+```python Python
+wallet = swig.wallets.use(
+    swig_config_address,
+    requester_authority={"ed25519": {"public_key": requester_public_key}},
+)
+```
+
+</CodeGroup>
+
+### Reserve SOL
+
+Prepare a temporary lamport hold for the acting role.
+
+<CodeGroup>
+
+```typescript TypeScript
+const prepared = await wallet.addAuthorizationLock({
+  feePayer, amount: '1000000', durationSlots: 150,
+});
+```
+
+```python Python
+prepared = await wallet.add_authorization_lock(
+    fee_payer=fee_payer, amount=1_000_000, duration_slots=150,
+)
+```
+
+```rust Rust
+use swig_developer_sdk::{AuthorizationLockExpiry, PrepareAddAuthorizationLockArgs};
+
+let prepared = wallet.prepare_add_authorization_lock(PrepareAddAuthorizationLockArgs {
+    swig_config_address, fee_payer,
+    requester_authority: requester_authority.clone(),
+    mint: None, amount: 1_000_000,
+    expiry: AuthorizationLockExpiry::DurationSlots(150),
+}).await?;
+```
+
+</CodeGroup>
+
+### Reserve a token
+
+Choose a mint to reserve base units in the wallet’s associated token account. An absolute expiry is an alternative to a relative duration.
+
+<CodeGroup>
+
+```typescript TypeScript
+const prepared = await wallet.addAuthorizationLock({
+  feePayer, mint, amount: '10000000', expirySlot,
+});
+```
+
+```python Python
+prepared = await wallet.add_authorization_lock(
+    fee_payer=fee_payer, mint=mint, amount=10_000_000, expiry_slot=expiry_slot,
+)
+```
+
+```rust Rust
+let prepared = wallet.prepare_add_authorization_lock(PrepareAddAuthorizationLockArgs {
+    swig_config_address, fee_payer,
+    requester_authority: requester_authority.clone(),
+    mint: Some(mint), amount: 10_000_000,
+    expiry: AuthorizationLockExpiry::ExpirySlot(expiry_slot),
+}).await?;
+```
+
+</CodeGroup>
+
+### List holds
+
+Inspect remaining amounts after confirmation. Include inactive records when you need to reconcile or prune them.
+
+<CodeGroup>
+
+```typescript TypeScript
+const holds = await wallet.getAuthorizationLocks({ includeExpired: true });
+```
+
+```python Python
+holds = await wallet.get_authorization_locks(include_expired=True)
+```
+
+```rust Rust
+let holds = wallet.get_authorization_locks(&swig_config_address, true).await?;
+```
+
+</CodeGroup>
+
+### Release or prune a hold
+
+The holder releases its active hold. Eligible managing roles may prune expired or fully captured records.
+
+<CodeGroup>
+
+```typescript TypeScript
+const prepared = await wallet.removeAuthorizationLock({ feePayer, lockId });
+```
+
+```python Python
+prepared = await wallet.remove_authorization_lock(fee_payer=fee_payer, lock_id=lock_id)
+```
+
+```rust Rust
+use swig_developer_sdk::PrepareRemoveAuthorizationLockArgs;
+
+let prepared = wallet.prepare_remove_authorization_lock(PrepareRemoveAuthorizationLockArgs {
+    swig_config_address, fee_payer, requester_authority, lock_id,
+}).await?;
+```
+
+</CodeGroup>
+
+Add/remove calls return unsigned transactions. Complete participant approval when required, then [sign](/developer-sdk/signers), submit, and confirm before querying again.
 
 ## Input
 
@@ -37,6 +165,8 @@ Only the holder can release an active hold. The holder or an eligible managing
 role can prune expired or fully captured records. Normal spending by the holder
 captures the hold and reduces its remaining amount; zero is valid.
 
+TypeScript accepts exact decimal strings or bigint for large values. Python validates amounts/slots as unsigned 64-bit integers and lock IDs as unsigned 32-bit integers. Rust uses `u64` amounts/slots, `u32` IDs, and native addresses.
+
 ## Output
 
 | Read field | Meaning |
@@ -53,133 +183,9 @@ captures the hold and reduces its remaining amount; zero is valid.
 
 ## Errors
 
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Missing lock-management permission | The requester lacks ManageAuthorizationLocks, even if it has All. | Grant the scoped permission through a compatible Protocol SDK integration. |
-| Invalid amount or expiry | An integer is out of range, expiry is ambiguous, or duration exceeds the role bound. | Use exact base units and exactly one permitted duration or expiry slot. |
-| Active hold cannot be released | The requester is not the holder of that active lock. | Use the holder role; eligible managing roles may prune inactive records. |
-| Hosted method unavailable | The installed SDK/backend does not include the linked lock changes. | Use matching supported builds or the Protocol SDK recipe. |
-
-## SDK example
-
-These examples target the SDK changes linked above. Use server-side clients
-from [Client setup](/developer-sdk/integration-paths). Preparation alone does
-not create or remove a hold; sign, submit, confirm, then query again.
-
-<Tabs>
-<Tab title="TypeScript">
-
-This function uses an existing server-side `SwigClient` and public addresses.
-The returned transaction is prepared, not submitted.
-
-```typescript
-import { SwigClient } from '@swig-wallet/developer-sdk';
-
-async function prepareHold(
-  swig: SwigClient,
-  configAddress: string,
-  requesterPublicKey: string,
-  feePayer: string,
-) {
-  const wallet = swig.wallets.use(configAddress, {
-    requesterAuthority: { ed25519: { publicKey: requesterPublicKey } },
-  });
-  const prepared = await wallet.addAuthorizationLock({
-    feePayer,
-    amount: '1000000',
-    durationSlots: 150,
-  });
-  const holds = await wallet.getAuthorizationLocks({ includeExpired: true });
-  return { prepared, holds };
-}
-```
-
-Use `wallet.removeAuthorizationLock({ feePayer, lockId })` to prepare release
-of an existing hold. Use decimal strings or `bigint` for amounts beyond
-JavaScript's safe integer range. Prepared lock kinds are
-`add-authorization-lock` and `remove-authorization-lock` (wire values 10 and 11).
-
-</Tab>
-<Tab title="Python">
-
-```python
-from swig_developer_sdk import AuthorizationLocksResult, PreparedTransaction, SwigClient
-
-async def prepare_hold(
-    swig: SwigClient,
-    config_address: str,
-    requester_public_key: str,
-    fee_payer: str,
-) -> tuple[PreparedTransaction, AuthorizationLocksResult]:
-    wallet = swig.wallets.use(
-        config_address,
-        requester_authority={"ed25519": {"public_key": requester_public_key}},
-    )
-    prepared = await wallet.add_authorization_lock(
-        fee_payer=fee_payer,
-        amount=1_000_000,
-        duration_slots=150,
-    )
-    holds = await wallet.get_authorization_locks(include_expired=True)
-    return prepared, holds
-```
-
-Use `wallet.remove_authorization_lock(fee_payer=fee_payer, lock_id=lock_id)`
-to prepare release. The SDK validates amounts and expiry values as unsigned
-64-bit integers and lock IDs as unsigned 32-bit integers.
-
-</Tab>
-<Tab title="Rust">
-
-```rust
-use solana_pubkey::Pubkey;
-use swig_developer_sdk::{
-    AuthorizationLockError, AuthorizationLockExpiry,
-    PrepareAddAuthorizationLockArgs, PrepareRemoveAuthorizationLockArgs,
-    PreparedTransaction, WalletAuthority, WalletClient,
-};
-
-async fn prepare_hold(
-    client: &WalletClient,
-    swig_config_address: Pubkey,
-    fee_payer: Pubkey,
-    requester_authority: WalletAuthority,
-) -> Result<PreparedTransaction, AuthorizationLockError> {
-    client.prepare_add_authorization_lock(PrepareAddAuthorizationLockArgs {
-        swig_config_address,
-        fee_payer,
-        requester_authority,
-        mint: None,
-        amount: 1_000_000,
-        expiry: AuthorizationLockExpiry::DurationSlots(150),
-    }).await
-}
-
-async fn prepare_release(
-    client: &WalletClient,
-    swig_config_address: Pubkey,
-    fee_payer: Pubkey,
-    requester_authority: WalletAuthority,
-    lock_id: u32,
-) -> Result<PreparedTransaction, AuthorizationLockError> {
-    client.prepare_remove_authorization_lock(PrepareRemoveAuthorizationLockArgs {
-        swig_config_address, fee_payer, requester_authority, lock_id,
-    }).await
-}
-```
-
-Read with `client.get_authorization_locks(&swig_config_address, true).await?`.
-The boolean includes expired and fully captured records. Rust returns typed
-`u64` amounts and slots, `u32` IDs, and `Pubkey` addresses.
-
-`AuthorizationLockExpiry::ExpirySlot(slot)` chooses an absolute expiry instead.
-The native secp256k1 and raw secp256r1 transaction signers handle both lock
-instructions. ParticipantSet requesters use the existing approval compilation
-flow before signing the compiled transaction.
-
-</Tab>
-</Tabs>
-
-Complete [participant approval](/developer-sdk/participant-sets) when requested,
-then [sign](/developer-sdk/signers) and submit directly or through
-[Paymaster](/developer-sdk/sponsor-and-submit).
+| Error | Meaning |
+| :--- | :--- |
+| Missing lock-management permission | The requester lacks ManageAuthorizationLocks, even if it has All. Grant the scoped permission through a compatible Protocol SDK integration. |
+| Invalid amount or expiry | An integer is out of range, expiry is ambiguous, or duration exceeds the role bound. Use exact base units and exactly one permitted duration or expiry slot. |
+| Active hold cannot be released | The requester is not the holder of that active lock. Use the holder role; eligible managing roles may prune inactive records. |
+| Hosted method unavailable | The installed SDK/backend does not include the linked lock changes. Use matching supported builds or the Protocol SDK recipe. |

@@ -1,5 +1,5 @@
 ---
-title: "Pricing and Quotas"
+title: "Pricing and quotas"
 sidebarTitle: "Pricing & quotas"
 description: "Compare monthly plans, included usage, and API quotas."
 ---
@@ -23,11 +23,11 @@ query cap is separate. Check your organization's plan and billing period in the
 
 ### API requests
 
-- Wallet, yield, ramp, rent-recipient, and paymaster reads each consume one API
-  request. Paginated reads consume one request per page.
+- Wallet, yield, ramp, rent-recipient, and paymaster queries each consume one API
+  request. Paginated queries consume one request per page.
 - This allowance is shared with other metered API operations, such as transaction
   preparation and sponsorship, and attributed IdP requests. It is not reserved
-  for reads.
+  for queries.
 - Free organizations stop at 50,000 requests in a UTC calendar month. Paid plans
   continue beyond their included requests with the API-request overage above.
 - Subscription invoices follow your billing period. The Free admission cap
@@ -51,7 +51,7 @@ finishes. Retries, empty results, and admitted requests that later return errors
 such as `400` or `404` still count. A rejected API key or exhausted quota does
 not add an admitted request. Each returned row is not a separate charge.
 
-For example, reading token balances once and three pages of DEX history uses
+For example, querying token balances once and three pages of DEX history uses
 **one API request and three DEX queries**. Retrying one DEX page adds one DEX query.
 
 ## What you can query
@@ -89,3 +89,11 @@ let result = wallet.list_token_balances(&swig_config_address).await?;
 
 This call consumes one API request. Indexed data can lag chain state; each guide
 explains its freshness signals. Track transaction confirmation separately.
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| API admission cap | Free usage reached its UTC calendar-month allowance; paid API overage follows the plan. |
+| 429 / RESOURCE_EXHAUSTED | The separate monthly DEX query cap is exhausted. API overage does not extend it. |
+| Authentication rejected | The request is not admitted and does not add usage. |

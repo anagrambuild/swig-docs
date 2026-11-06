@@ -14,64 +14,7 @@ determine what they may do.
 Each set belongs to one Swig config. Members can use Ed25519, secp256r1/passkeys,
 or secp256k1. Approvals bind the same operation and shared nonce.
 
-## Flow
-
-```text
-+------------------------+
-| Create set and confirm |
-+------------------------+
-            |
-            v
-+------------------------+
-| Add role and confirm   |
-+------------------------+
-            |
-            v
-+------------------------+
-| Prepare one operation  |
-+------------------------+
-            |
-            v
-+------------------------+
-| Collect approvals      |
-+------------------------+
-            |
-            v
-+------------------------+
-| Compile, sign, submit  |
-+------------------------+
-```
-
-## Input
-
-| Step | Parameter | Description |
-| :--- | :--- | :--- |
-| Create | Wallet config, network, fee payer | Existing wallet and public fee-payer address |
-| Create | `members` | Public authorities of the selected members |
-| Create | `threshold` | Number of distinct approvals required; the example uses 2 of 2 |
-| Create | `setId` / `set_id` | Optional set identifier |
-| Add role | Set address and `actions` | Give the set a role using an existing Ed25519 or secp256r1 administrator |
-| Prepare | Set requester and operation inputs | Use the assigned role ID in Rust; retain the returned approval plan |
-| Approve | Member request and matching signer | Send each member its own challenge with the operation visible |
-| Compile | Original preparation and approvals | Supply distinct, valid approvals meeting the threshold |
-
-Serialize operations per set. Concurrent plans share the next nonce; once one
-lands, prepare and approve the others again.
-
-Supported flows include SOL/token transfers, transfer batches, and custom
-instructions without lookup tables. Swaps and lookup-table transactions need a
-direct requester. Hosted recovery preparation is not supported.
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Insufficient or duplicate approvals | The submitted proofs do not satisfy the threshold with distinct members. | Collect valid approvals from enough different members. |
-| Stale nonce or expired plan | Another operation consumed the nonce or the approval window passed. | Prepare a new operation and collect fresh approvals. |
-| Member signer mismatch | The signer type or public key differs from its request. | Send each request to its matching member signer. |
-| Unsupported preparation | The operation is a swap, lookup-table custom transaction, or hosted recovery. | Use a supported operation or the appropriate direct protocol integration. |
-
-## SDK example
+## SDK examples
 
 Use [Client setup](/developer-sdk/integration-paths). The examples use two Ed25519
 members. `signAndSubmit` / `sign_and_submit` is your application's helper; it signs,
@@ -405,3 +348,43 @@ Add remaining [Solana signatures](/developer-sdk/signers#ed25519-and-application
 after compilation, then submit before `authorizationExpirationSlot` /
 `authorization_expiration_slot`. Use [Paymaster](/developer-sdk/sponsor-and-submit)
 for sponsorship. Keep approvals with their original plan and nonce.
+
+## Flow
+
+```text
+Prepared operation
+  ├─ Member approval
+  ├─ Member approval
+  └─ Threshold reached
+      └─ Compile approvals
+          └─ Sign and submit
+```
+
+## Input
+
+| Step | Parameter | Description |
+| :--- | :--- | :--- |
+| Create | Wallet config, network, fee payer | Existing wallet and public fee-payer address |
+| Create | `members` | Public authorities of the selected members |
+| Create | `threshold` | Number of distinct approvals required; the example uses 2 of 2 |
+| Create | `setId` / `set_id` | Optional set identifier |
+| Add role | Set address and `actions` | Give the set a role using an existing Ed25519 or secp256r1 administrator |
+| Prepare | Set requester and operation inputs | Use the assigned role ID in Rust; retain the returned approval plan |
+| Approve | Member request and matching signer | Send each member its own challenge with the operation visible |
+| Compile | Original preparation and approvals | Supply distinct, valid approvals meeting the threshold |
+
+Serialize operations per set. Concurrent plans share the next nonce; once one
+lands, prepare and approve the others again.
+
+Supported flows include SOL/token transfers, transfer batches, and custom
+instructions without lookup tables. Swaps and lookup-table transactions need a
+direct requester. Hosted recovery preparation is not supported.
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Insufficient or duplicate approvals | The submitted proofs do not satisfy the threshold with distinct members. Collect valid approvals from enough different members. |
+| Stale nonce or expired plan | Another operation consumed the nonce or the approval window passed. Prepare a new operation and collect fresh approvals. |
+| Member signer mismatch | The signer type or public key differs from its request. Send each request to its matching member signer. |
+| Unsupported preparation | The operation is a swap, lookup-table custom transaction, or hosted recovery. Use a supported operation or the appropriate direct protocol integration. |

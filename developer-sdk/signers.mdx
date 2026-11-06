@@ -15,59 +15,7 @@ TypeScript's `/signers` entrypoint and Python's helpers use application callback
 Rust's native signers hold local keys through `Arc`. These helpers make no hosted
 API calls. Inspect transaction intent, permissions, and freshness before signing.
 
-## Flow
-
-```text
-+------------------------+
-| Compile approvals      |
-+------------------------+
-            |
-            v
-+------------------------+
-| Fill embedded          |
-| signature              |
-+------------------------+
-            |
-            v
-+------------------------+
-| Add Solana signature   |
-+------------------------+
-            |
-            v
-+------------------------+
-| Submit and confirm     |
-+------------------------+
-```
-
-Complete only the steps requested by the preparation. Changing instruction data
-after outer Solana signing invalidates those signatures.
-
-## Input
-
-| Parameter | Description |
-| :--- | :--- |
-| Prepared transaction | Original result from wallet preparation, including signature requests and any participant approval plan |
-| Signer | Must match the requester authority and public key used during preparation |
-| Application approval | Validate the wallet, operation, recipient, amount, and expiry before asking for a signature |
-| Fee-payer signature | Add after the message is final; a paymaster can supply its own signature during sponsorship |
-
-An empty `signatureRequests` / `signature_requests` list does **not** mean the
-transaction is fully signed. Embedded secp256k1/secp256r1 requests are separate
-from native Ed25519 requirements in the serialized transaction.
-
-Rust's `TransactionSigner` consumes a `PreparedTransaction` and returns a
-`VersionedTransaction`. All embedded requests must match that signer.
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Authority or public-key mismatch | The signer does not match an embedded request. | Select the signer matching the original preparation. |
-| Pending participant approvals | Rust native transaction signing receives an uncompiled approval plan. | Collect and compile participant approvals first. |
-| Outer signatures already present | Embedded data still needs patching, which changes the signed message. | Resolve embedded signatures first, then collect outer Solana signatures. |
-| Missing native signature | An empty embedded-request list was mistaken for a fully signed transaction. | Inspect the serialized required signer set and fill each required slot. |
-
-## SDK example
+## SDK examples
 
 ### Ed25519 and application-defined signers
 
@@ -181,7 +129,8 @@ let transaction = signer.sign_prepared_transaction(prepared).await?;
 
 ### Secp256k1 and EVM wallets
 
-TypeScript/Python use an EIP-1193 provider's `personal_sign`. Rust uses raw
+TypeScript/Python use an application-supplied EIP-1193 provider's `personal_sign`.
+`eip1193Provider` / `eip1193_provider` is the connected wallet provider. Rust uses raw
 secp256k1 authority signing, which differs from the EIP-191 format used by a
 [participant signer](/developer-sdk/participant-sets#collect-member-approvals).
 
@@ -194,7 +143,7 @@ import {
 } from '@swig-wallet/developer-sdk/signers';
 
 const evmSigner = createSecp256k1EvmSigningFn({
-  provider: window.ethereum,
+  provider: eip1193Provider,
   address: evmAddress,
 });
 
@@ -235,3 +184,68 @@ Return the signed transaction through an authenticated application route, then
 submit through your RPC provider or [Paymaster](/developer-sdk/sponsor-and-submit).
 Track confirmation separately. Keep the API key, private keys, and credential
 material inside their owning trust boundaries.
+
+
+### Sign an ordered preparation plan
+
+Resolve the embedded requests in every transaction using the same registered signer callbacks. The helper preserves order and stops on failure.
+
+<CodeGroup>
+
+```typescript TypeScript
+import { signPreparedSwigTransactions } from '@swig-wallet/developer-sdk/signers';
+
+const signedPlan = await signPreparedSwigTransactions(created.transactions, {
+  secp256r1: passkeySigner,
+});
+```
+
+```python Python
+from swig_developer_sdk import sign_prepared_swig_transactions
+
+signed_plan = await sign_prepared_swig_transactions(
+    created.transactions, secp256r1=passkey_signer,
+)
+```
+
+</CodeGroup>
+
+Complete each transaction’s required native Solana signatures after embedded signing, then submit in the original order. These helpers do not submit or confirm the plan.
+
+## Flow
+
+```text
+Prepared transaction
+  ├─ Embedded signatures
+  └─ Solana signatures
+      └─ Submit
+          └─ Confirm
+```
+
+Complete only the steps requested by the preparation. Changing instruction data
+after outer Solana signing invalidates those signatures.
+
+## Input
+
+| Parameter | Description |
+| :--- | :--- |
+| Prepared transaction | Original result from wallet preparation, including signature requests and any participant approval plan |
+| Signer | Must match the requester authority and public key used during preparation |
+| Application approval | Validate the wallet, operation, recipient, amount, and expiry before asking for a signature |
+| Fee-payer signature | Add after the message is final; a paymaster can supply its own signature during sponsorship |
+
+An empty `signatureRequests` / `signature_requests` list does **not** mean the
+transaction is fully signed. Embedded secp256k1/secp256r1 requests are separate
+from native Ed25519 requirements in the serialized transaction.
+
+Rust's `TransactionSigner` consumes a `PreparedTransaction` and returns a
+`VersionedTransaction`. All embedded requests must match that signer.
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Authority or public-key mismatch | The signer does not match an embedded request. Select the signer matching the original preparation. |
+| Pending participant approvals | Rust native transaction signing receives an uncompiled approval plan. Collect and compile participant approvals first. |
+| Outer signatures already present | Embedded data still needs patching, which changes the signed message. Resolve embedded signatures first, then collect outer Solana signatures. |
+| Missing native signature | An empty embedded-request list was mistaken for a fully signed transaction. Inspect the serialized required signer set and fill each required slot. |

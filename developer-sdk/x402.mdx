@@ -1,97 +1,32 @@
 ---
-title: "Pay for x402 Resources"
-sidebarTitle: "x402 payments"
+title: "x402"
+sidebarTitle: "x402"
 ---
 
-Use a Swig wallet to pay for APIs and other HTTP resources that return
-`402 Payment Required`. Pass the response to the Developer SDK to prepare a
-payment transaction. Your application authorizes and signs the payment, then
-sends the original request again with a `PAYMENT-SIGNATURE` header. The resource
-provider's facilitator verifies and settles the payment.
+## Introduction
 
-## How the payment flow works
+x402 lets a Swig wallet pay for an HTTP resource that returns `402 Payment
+Required`. Use it for paid APIs and services whose facilitator supports Swig
+smart-wallet verification. The SDK prepares the payment; the resource provider’s
+facilitator verifies and settles it after the paid retry.
 
-```mermaid
-sequenceDiagram
-    participant D as Developer application
-    participant K as Developer SDK
-    participant S as Swig API
-    participant R as Resource provider
-    participant F as Facilitator
-    participant C as Solana
+Use the configured clients from [Client setup](/developer-sdk/integration-paths).
+`signTransaction` / `sign_transaction` is your application’s signing callback.
+Approve the exact recipient, mint, amount, and network before signing.
 
-    D->>R: Request protected resource
-    R-->>D: 402 + PAYMENT-REQUIRED
-    D->>K: prepareFromResponse(response)
-    K->>S: Prepare payment transaction
-    S-->>K: Prepared transaction + acceptedIndex
-    K-->>D: Preparation result
-    Note over D: Authorize and sign transaction
-    D->>K: createX402Payment(...)
-    K-->>D: PAYMENT-SIGNATURE header
-    D->>R: Retry with PAYMENT-SIGNATURE
-    R->>F: Verify and settle payment
-    F->>C: Submit transaction
-    C-->>F: Confirmation
-    F-->>R: Settlement result
-    R-->>D: Protected resource + PAYMENT-RESPONSE
-```
+## SDK examples
 
-The Swig API prepares the payment transaction but does not submit or settle it.
-Send the payment header back to the resource provider for facilitator
-settlement. This flow does not use the Swig paymaster.
+### Pay for a resource
 
-## Before you begin
-
-You need:
-
-- a configured `SwigClient` (or `WalletClient` in Rust) and an existing Swig wallet
-- an Ed25519 or secp256r1 authority assigned to a role permitted to invoke the
-  token program and spend the selected mint
-- an x402 version 2 resource offering the `exact` payment scheme on the wallet's
-  Solana mainnet or devnet network
-- the wallet's canonical associated token account, already created and funded
-  with enough of the requested token
-- the recipient's canonical associated token account, already created for the
-  `payTo` owner and mint
-- a legacy SPL Token mint or a Token-2022 mint with no extensions; Token-2022
-  token accounts may have no extensions or only `ImmutableOwner`
-- a facilitator that supports Swig smart-wallet verification
-
-Other Token-2022 mint and token-account extensions are not supported.
-
-For passkey payments, the facilitator must also permit Solana's secp256r1
-signature-verification program.
-
-## Pay for a resource
-
-These examples use an Ed25519 requester and an application-provided signing
-callback. Approve the recipient, mint, amount, and network, then review the
-prepared transaction and its freshness. Sign only application-owned slots.
-The transaction must use the selected offer's fee payer, which must differ
-from the requester. Leave that signature empty for facilitator settlement.
-
-TypeScript and Python callbacks receive the base64 transaction and prepared
-record and return signed base64. Rust's callback takes `&PreparedTransaction`
-and returns `VersionedTransaction`. See [Signers](/developer-sdk/signers).
-
-The paid retry uses the original URL, method, body, and headers plus
-`PAYMENT-SIGNATURE`. The Rust resource client has no Swig API key and disables
-redirects.
+This GET example preserves the resource URL and sends a payment header after signing. Keep the original method, body, and headers for other request types.
 
 <CodeGroup>
 
 ```typescript TypeScript
 import {
-  SwigClient,
   createX402Payment,
 } from '@swig-wallet/developer-sdk';
 import { signPreparedTransaction } from '@swig-wallet/developer-sdk/signers';
-
-const swig = new SwigClient({
-  apiKey: process.env.SWIG_API_KEY!,
-  network: 'devnet',
-});
 
 const wallet = swig.wallets.use({
   swigConfigAddress,
@@ -101,7 +36,7 @@ const wallet = swig.wallets.use({
   },
 });
 
-const challenge = await fetch(resourceUrl);
+const challenge = await fetch(resourceUrl, { redirect: 'manual' });
 const prepared = await wallet.x402.prepareFromResponse(challenge);
 
 const signed = await signPreparedTransaction(
@@ -113,6 +48,7 @@ const payment = createX402Payment(prepared, signed);
 
 const paidResponse = await fetch(resourceUrl, {
   headers: payment.paymentSignatureHeaders,
+  redirect: 'manual',
 });
 
 if (!paidResponse.ok) {
@@ -125,17 +61,11 @@ const paymentResponse = paidResponse.headers.get('PAYMENT-RESPONSE');
 
 ```python Python
 import asyncio
-import os
 
 import httpx
 
-from swig_developer_sdk import SwigClient, create_x402_payment
+from swig_developer_sdk import create_x402_payment
 from swig_developer_sdk.signers import sign_prepared_transaction
-
-swig = SwigClient(
-    api_key=os.environ["SWIG_API_KEY"],
-    network="devnet",
-)
 
 wallet = swig.wallets.use(
     swig_config_address,
@@ -145,7 +75,7 @@ wallet = swig.wallets.use(
 )
 
 async def main() -> None:
-    async with httpx.AsyncClient() as http:
+    async with httpx.AsyncClient(follow_redirects=False) as http:
         challenge = await http.get(resource_url)
         prepared = await wallet.x402.prepare_from_response(challenge)
 
@@ -218,31 +148,9 @@ let paid_response = response.error_for_status()?;
 
 </CodeGroup>
 
-For secp256r1, follow [Signers](/developer-sdk/signers), then add the required
-application-owned outer signatures. Build the payment from the signed
-transaction and the exact preparation that produced it. Rust uses that
-preparation's `payment_required` and `accepted_index`.
+### Choose a payment offer
 
-A missing, failed, or redirected paid response can follow settlement.
-Reconcile that payment with the resource service before paying again. The SDK
-does not reconcile it automatically.
-
-Redirects need a newly approved destination and its own challenge. Never
-forward the existing payment header. Keep payment headers and signed
-transactions out of logs.
-
-## Choose a payment offer
-
-Each entry in the challenge's `accepts` array is a payment offer. When the index
-is omitted, Swig selects the first supported offer using the `exact` scheme on
-the wallet's Solana network. The result preserves that offer's position in the
-original `accepts` array.
-
-Rust's `parse_payment_required` requires HTTP 402 and one valid
-`PAYMENT-REQUIRED` header. It preserves offer positions, including unsupported
-offers.
-
-Pass an index when your application has already chosen an offer:
+Select an explicit zero-based offer index when the customer has approved that offer. Omit it to select the first supported offer on the wallet’s network.
 
 <CodeGroup>
 
@@ -276,16 +184,32 @@ let prepared = wallet
 
 </CodeGroup>
 
-An explicit index must identify a supported `exact` offer on the wallet's
-Solana network. Swig returns an error instead of falling back to another offer
-when the selected offer is incompatible.
+## Flow
 
-Automatic selection skips ineligible offers. Compatibility checks leave
-purchase authorization to your application.
+```text
+Request resource
+  └─ Receive 402 challenge
+      └─ Approve and sign
+          └─ Paid retry
+              └─ Settlement
+```
 
-## Understand the prepared result
+## Input
 
-`prepareFromResponse()` / `prepare_from_response()` returns the fields below.
+| Input | Requirement |
+| :--- | :--- |
+| Wallet and requester | Existing wallet with an Ed25519 or secp256r1 role allowed to invoke the token program and spend the mint. |
+| Challenge | x402 version 2 with the `exact` scheme on the wallet’s Solana mainnet/devnet network. Preserve the original `accepts` indexes. |
+| `acceptedIndex` / `accepted_index` | Optional index of the approved offer. An incompatible explicit choice errors rather than silently selecting another. |
+| Token accounts | Already-created canonical ATAs for the wallet and recipient. Wallet ATA must hold enough tokens. |
+| Token support | Legacy SPL Token or Token-2022 mint without extensions; token-account extensions may be absent or only `ImmutableOwner`. |
+| Fee payer | Use the offer’s fee payer, different from the requester. Leave its signature empty for facilitator settlement; sign only application-owned slots. |
+| Facilitator | Must support Swig verification; passkey payments also require its support for the secp256r1 verification program. |
+| Paid request | Original request plus `PAYMENT-SIGNATURE`. Disable redirects so payment headers are not forwarded to another destination. |
+
+## Output
+
+`prepareFromResponse()` / `prepare_from_response()` returns these fields.
 Rust's `prepare_x402_payment` returns them as `X402PaymentPreparation`:
 
 | Field | Description |
@@ -294,7 +218,7 @@ Rust's `prepare_x402_payment` returns them as `X402PaymentPreparation`:
 | `paymentRequired` / `payment_required` | The validated x402 payment challenge used during preparation |
 | `acceptedIndex` / `accepted_index` | The selected offer's position in the original `accepts` array |
 
-Rust's `prepare_x402_payment` sends its POST once.
+Rust's `prepare_x402_payment` sends its POST once. This flow does not use the Swig paymaster.
 
 After signing, `createX402Payment()` / `create_x402_payment()` returns:
 
@@ -308,30 +232,13 @@ and encoded size limits (1,232 transaction bytes and 8,000 header bytes). It
 does not verify signatures or transaction intent. The facilitator verifies and
 settles the payment when the paid request reaches the resource provider.
 
-## Run the complete example
+## Errors
 
-<Card
-  title="x402 Payment Example"
-  icon="code"
-  href="https://github.com/anagrambuild/swig-developer-sdk/tree/main/typescript/examples/x402"
->
-  Run a resource provider, facilitator, and Swig payer through the complete
-  challenge, preparation, signing, settlement, and paid-resource flow.
-</Card>
-
-## What to read next
-
-<CardGroup cols={1}>
-  <Card title="Signers" icon="signature" href="/developer-sdk/signers">
-    Connect application-owned Ed25519 keys or passkeys.
-  </Card>
-  <Card title="Add a role" icon="user-shield" href="/developer-sdk/add-roles-and-permissions">
-    Assign a requester authority to an existing Swig wallet.
-  </Card>
-  <Card title="Transfer SOL and Tokens" icon="arrow-right-arrow-left" href="/developer-sdk/transfers-and-swaps">
-    Prepare ordinary wallet transfers outside the x402 flow.
-  </Card>
-  <Card title="Transaction API" icon="code" href="/developer-api/transactions">
-    Integrate with Swig's transaction endpoints directly.
-  </Card>
-</CardGroup>
+| Error | Meaning |
+| :--- | :--- |
+| Invalid payment challenge | Expected HTTP 402 and a valid `PAYMENT-REQUIRED` header with supported version/scheme/network. |
+| Unsupported selected offer | The explicit index is out of range or names an incompatible offer. |
+| Account, permission, or token failure | Missing/unfunded ATA, unsupported Token-2022 extension, or insufficient role permission. |
+| Invalid signed payload | Transaction structure or encoded size is invalid. Rust limits transactions to 1,232 bytes and payment headers to 8,000 bytes. |
+| Failed or missing paid response | Settlement may already have happened. Reconcile with the resource service before paying again; the SDK does not reconcile automatically. |
+| Redirect | A different destination needs fresh approval and a new challenge. Preserve the previous payment outcome; do not forward its header. |

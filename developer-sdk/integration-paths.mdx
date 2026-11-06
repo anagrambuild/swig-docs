@@ -1,20 +1,31 @@
 ---
-title: "Set Up Your Client"
+title: "Client setup"
 sidebarTitle: "Client setup"
 ---
 
-TypeScript, Python, and Rust expose a prepare-first server model. Choose the
-language that owns your trusted application runtime.
+## Introduction
 
-## Choose your language
+A configured client authenticates hosted requests and selects the Solana network.
+Use one in the server runtime that owns your integration. Query methods return
+data; preparation methods return transactions for your application to sign.
+Install the latest package from the [Developer SDK homepage](/).
+
+## Examples
+
+### Initialize clients
+
+Create and reuse the clients in your server runtime.
 
 <CodeGroup>
 
 ```typescript TypeScript
 import { SwigClient } from '@swig-wallet/developer-sdk';
 
+const apiKey = process.env.SWIG_API_KEY;
+if (!apiKey) throw new Error('SWIG_API_KEY is required');
+
 const swig = new SwigClient({
-  apiKey: process.env.SWIG_API_KEY!,
+  apiKey,
   network: 'devnet',
 });
 ```
@@ -41,59 +52,126 @@ let paymaster = PaymasterClient::new(config.clone())?;
 
 </CodeGroup>
 
-## Package entry points
+### Bind an existing wallet
 
-<Tabs>
-<Tab title="TypeScript">
+Binding a handle makes no hosted request. The config address identifies the wallet; add a requester only when preparing a write.
 
-Install from npm with `bun add @swig-wallet/developer-sdk`. Import the API-key
-client from the package root. Application-owned signing helpers are available
-from `@swig-wallet/developer-sdk/signers`.
+<CodeGroup>
 
-</Tab>
-<Tab title="Python">
+```typescript TypeScript
+const wallet = swig.wallets.use(swigConfigAddress, {
+  requesterAuthority: { ed25519: { publicKey: requesterPublicKey } },
+});
+```
 
-Install from PyPI with `pip install swig-developer-sdk`. Python exposes signing
-helpers from the package root.
+```python Python
+wallet = swig.wallets.use(
+    swig_config_address,
+    requester_authority={"ed25519": {"public_key": requester_public_key}},
+)
+```
 
-</Tab>
-<Tab title="Rust">
+</CodeGroup>
 
-Install from crates.io with `cargo add swig-developer-sdk`.
-Requires Rust 1.87 or later. In `Cargo.toml`, set `package.rust-version` to
-`"1.87"` and `workspace.resolver` to `"3"` for compatible dependency resolution.
-Commit `Cargo.lock` and add the crates imported by your chosen examples.
+### Bind an IdP session
 
-Reuse the clients and run task snippets in an async, `Result`-returning
-function with a runtime such as Tokio. Rust uses native Solana `Pubkey`
-addresses and `VersionedTransaction` values.
+After your application verifies its [IdP session](/idp-sdk/sessions-and-security), use its addresses and requester to bind a wallet handle. This helper does not authenticate the session.
 
-The network comes from `ClientConfig`. Use `Network::Mainnet` for mainnet
-operations and the same network for your confirmation RPC.
-Authorize operations before signing. See [Signers](/developer-sdk/signers)
-for local signing and [Ramp](/developer-sdk/ramp#required-configuration)
-for Ramp client configuration.
+<CodeGroup>
 
-</Tab>
-</Tabs>
+```typescript TypeScript
+const wallet = swig.wallets.fromIdpSession(session, { network: 'mainnet' });
+```
 
-## Comparison
+```python Python
+wallet = swig.wallets.from_idp_session(session, network="mainnet")
+```
 
-| Capability | TypeScript | Python | Rust |
-| :--- | :--- | :--- | :--- |
-| Wallet preparation | yes | yes | `WalletClient` |
-| Wallet reads | yes | yes | `WalletClient` |
-| Ramp | yes | yes | `RampClient` |
-| Custom transactions | yes | yes | native `Instruction` inputs |
-| Sponsorship | yes | yes | `PaymasterClient` |
-| Local signing | `/signers` callbacks | package-root callbacks | native keys and signing traits |
+</CodeGroup>
 
-The task pages describe supported operations and language-specific limits.
-Rust has no hosted guardian-recovery or rent-claimer methods.
-Your application owns its HTTP routes, authentication, authorization,
-validation, and response format.
 
-## Next steps
+### Manage the Python client lifetime
 
-Create an [API key](/examples/dev-portal/create-api-key), then
-[prepare your first wallet](/developer-sdk/create-wallets).
+Use a context manager for a bounded task, or call `aclose()` during application shutdown. Wallet handles share their parent client’s lifetime.
+
+<CodeGroup>
+
+```python Python
+import os
+from swig_developer_sdk import SwigClient
+
+async with SwigClient(
+    api_key=os.environ["SWIG_API_KEY"], network="devnet",
+) as swig:
+    wallet = swig.wallets.use(swig_config_address)
+    balances = await wallet.list_token_balances()
+```
+
+</CodeGroup>
+
+
+### Configure eligible retries
+
+Set retry limits when your application needs a different policy. Operation-specific exclusions still apply, such as Ramp transfer preparation/submission.
+
+<CodeGroup>
+
+```typescript TypeScript
+const swig = new SwigClient({
+  apiKey,
+  network: 'devnet',
+  retryOptions: { maxRetries: 2, retryDelay: 500, backoffMultiplier: 2 },
+});
+```
+
+```python Python
+from swig_developer_sdk import RetryOptions, SwigClient
+
+swig = SwigClient(
+    api_key=api_key,
+    network="devnet",
+    retry_options=RetryOptions(max_retries=2, retry_delay=0.5, backoff_multiplier=2),
+    timeout=5.0,
+)
+```
+
+</CodeGroup>
+
+TypeScript retry delays are milliseconds; Python retry delays and inactivity timeout are seconds. Every admitted retry counts toward the relevant usage allowance.
+
+## Input
+
+| Input | Requirement |
+| :--- | :--- |
+| API key | Supply `SWIG_API_KEY` through your server’s configuration. See [API key](/examples/dev-portal/create-api-key). |
+| Network | `mainnet` or `devnet`; Rust uses `Network::Mainnet` or `Network::Devnet`. Match your wallet and confirmation RPC. |
+| Addresses | TypeScript/Python use strings. Rust uses native `Pubkey` values. |
+| Signing | TypeScript helpers are in `/signers`; Python exports callbacks from its package; Rust uses native signing types. See [Signing](/developer-sdk/signers). |
+
+## Output
+
+| Capability | TypeScript / Python | Rust |
+| :--- | :--- | :--- |
+| Wallet creation, roles, balances, history, policy | `swig.wallets` | `WalletClient` |
+| Paymaster balance / sponsorship | `swig.paymaster` / `swig.transactions` | `PaymasterClient` |
+| Participant set | `swig.participantSets` / `swig.participant_sets` | `WalletClient` |
+| Ramp | `swig.ramp` | `RampClient` |
+| DEX | `swig.dex` | Unavailable |
+| Yield | `swig.yield` / `swig.yields` | Unavailable |
+| Rent claimer | TypeScript only | Unavailable |
+
+### Rust
+
+Use Rust 1.87 or later. Set `package.rust-version = "1.87"` and
+`workspace.resolver = "3"` in `Cargo.toml`; commit `Cargo.lock`. Run snippets
+inside an async, `Result`-returning function with a runtime such as Tokio.
+Add the crates directly imported by your examples. Ramp uses its own
+[client configuration](/developer-sdk/ramp#required-configuration).
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Missing API key | Client construction needs the server credential; do not replace missing configuration with an empty string. |
+| Network mismatch | Wallet state and prepared transactions belong to the selected network. |
+| Unsupported operation | A method absent from the installed language package needs the supported language or a compatible direct protocol integration. |

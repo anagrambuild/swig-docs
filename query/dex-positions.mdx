@@ -1,0 +1,188 @@
+---
+title: "DEX position"
+sidebarTitle: "Position"
+---
+
+## Introduction
+
+This dataset contains the latest indexed state of a Swig vault’s liquidity
+positions, including disabled sub-accounts. Use it to display open liquidity and
+closed positions. Current account-state coverage is Raydium CLMM.
+
+TypeScript and Python expose `swig.dex.positions`; Rust has no DEX client.
+Each admitted call/page consumes one DEX query, separate from API usage.
+See [Pricing & quotas](/query#dex-queries).
+
+## SDK examples
+
+### List latest positions
+
+List current liquidity-position snapshots. Check the status before accessing an open position’s pool and state.
+
+<CodeGroup>
+
+```typescript TypeScript
+const { positions } = await swig.dex.positions.list({
+  swigConfigAddress,
+  network: 'mainnet',
+  positionStatus: 'open',
+});
+
+for (const position of positions) {
+  if (position.status === 'open') {
+    console.log(
+      position.dexPositionAddress,
+      position.dexPoolAddress,
+      position.state.liquidityRaw,
+    );
+  }
+}
+```
+
+```python Python
+from swig_developer_sdk import DexOpenPosition
+
+result = await swig.dex.positions.list(
+    swig_config_address=swig_config_address,
+    network="mainnet",
+    position_status="open",
+)
+
+for position in result.positions:
+    if isinstance(position, DexOpenPosition):
+        print(
+            position.dex_position_address,
+            position.dex_pool_address,
+            position.state.liquidity_raw,
+        )
+```
+
+</CodeGroup>
+
+#### SDK returned structure
+
+Illustrative output; Python shows the dataclass as JSON.
+
+<CodeGroup>
+
+```json TypeScript
+{
+  "positions": [
+    {
+      "swigConfigAddress": "SWIG_CONFIG",
+      "swigVaultAddress": "WALLET_ADDRESS",
+      "protocol": "raydium-clmm",
+      "dexPositionAddress": "POSITION_ADDRESS",
+      "updatedSlot": 450000000,
+      "sourceTransactionSignature": "TRANSACTION_SIGNATURE",
+      "status": "open",
+      "dexPoolAddress": "POOL_ADDRESS",
+      "state": {
+        "type": "raydium-clmm",
+        "liquidityRaw": "1000000000",
+        "tickLowerIndex": -100,
+        "tickUpperIndex": 100,
+        "tokenFeesOwed0": "0",
+        "tokenFeesOwed1": "0",
+        "rewardAmountsOwed": [
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    }
+  ]
+}
+```
+
+```json Python
+{
+  "positions": [
+    {
+      "swig_config_address": "SWIG_CONFIG",
+      "swig_vault_address": "WALLET_ADDRESS",
+      "protocol": "raydium-clmm",
+      "dex_position_address": "POSITION_ADDRESS",
+      "updated_slot": 450000000,
+      "source_transaction_signature": "TRANSACTION_SIGNATURE",
+      "status": "open",
+      "dex_pool_address": "POOL_ADDRESS",
+      "state": {
+        "type": "raydium-clmm",
+        "liquidity_raw": "1000000000",
+        "tick_lower_index": -100,
+        "tick_upper_index": 100,
+        "token_fees_owed0": "0",
+        "token_fees_owed1": "0",
+        "reward_amounts_owed": [
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    }
+  ],
+  "next_cursor": null
+}
+```
+
+</CodeGroup>
+
+### Page through positions
+
+Position cursors identify the previous protocol and position address; they are different from transaction cursors.
+
+<CodeGroup>
+
+```typescript TypeScript
+const page = await swig.dex.positions.list({
+  swigConfigAddress, network: 'mainnet', pageSize: 25,
+});
+if (page.nextCursor) {
+  const nextPage = await swig.dex.positions.list({
+    swigConfigAddress, network: 'mainnet', pageSize: 25,
+    cursor: page.nextCursor,
+  });
+}
+```
+
+```python Python
+page = await swig.dex.positions.list(
+    swig_config_address=swig_config_address, network="mainnet", page_size=25,
+)
+if page.next_cursor is not None:
+    next_page = await swig.dex.positions.list(
+        swig_config_address=swig_config_address, network="mainnet", page_size=25,
+        cursor=page.next_cursor,
+    )
+```
+
+</CodeGroup>
+
+## Input parameters
+
+| Parameter | Requirement |
+| :--- | :--- |
+| Wallet config and network | Organization-owned active Swig config and its network. |
+| `pageSize` / `page_size` | 25 by default, capped at 100. |
+| `positionStatus` / `position_status` | Optional `open` or `closed`. |
+| `protocol`, `swigVaultAddress` / `swig_vault_address` | Optional venue/vault filters; combine with AND. |
+| `cursor` | Previous next cursor with the same scope/filters; protocol and position address identify its boundary. |
+
+## Returned result
+
+| Field | Meaning |
+| :--- | :--- |
+| `positions[]` | Latest indexed positions; open and closed are distinct variants. |
+| `swigConfigAddress`, `swigVaultAddress`, `protocol`, `dexPositionAddress` | Wallet, vault, venue, and position identity. |
+| `updatedSlot`, `sourceTransactionSignature` | Observed state slot and source transaction. |
+| `status` | Open includes pool and state. Closed means the account no longer exists and omits both. |
+| Open `dexPoolAddress`, `state` | Pool plus liquidity, tick range, token fees owed, and reward amounts owed as exact strings. |
+| Optional `nextCursor` | Last protocol and position address; absent at the end, null in Python JSON. |
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Invalid filter or cursor | A filter value is unsupported or pagination input is malformed. Use the listed values and return the previous cursor with the same filters. |
+| 429 / RESOURCE_EXHAUSTED | The organization has reached its monthly DEX query cap. Wait for reset or use a plan with a higher DEX quota; API overage does not extend it. |

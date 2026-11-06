@@ -1,7 +1,6 @@
 ---
 title: "Role"
 sidebarTitle: "Role"
-description: "Give an authority scoped access to a wallet and inspect its assigned role."
 ---
 
 ## Introduction
@@ -13,45 +12,7 @@ This lets an administrator grant a spending budget without sharing root access.
 Adding a role prepares a transaction. The existing administrator signs it;
 the new authority becomes usable after confirmation.
 
-## Input
-
-| Operation | Parameter | Description |
-| :--- | :--- | :--- |
-| Both | Wallet config address and network | Existing wallet, selected through the configured client |
-| Add | `requesterAuthority` / `requester_authority` | Existing Ed25519 or secp256r1 authority with `manageAuthority` or `all` |
-| Add | `feePayer` / `fee_payer` | Public key paying the fee |
-| Add | `authority` | New Ed25519, secp256k1, secp256r1, or ParticipantSet authority |
-| Add | `actions` | At least one typed [permission](/developer-sdk/permissions) |
-
-TypeScript/Python use public-key strings. Rust uses `Pubkey` for Ed25519 and
-compressed 33-byte SEC1 keys for secp256k1/secp256r1. A new ParticipantSet
-role takes the set address without a role ID (`role_id: None` in Rust).
-Swig assigns the new role ID.
-
-## Output
-
-TypeScript fields are shown below; Python uses snake_case names. Use the read
-after confirmation to verify the grant. Saved policy metadata is separate.
-
-| Field | Meaning |
-| :--- | :--- |
-| `swigConfigAddress`, `walletAddress` | Wallet configuration and asset-holding address |
-| `roles[].roleId` | Assigned role identifier |
-| `roles[].authorityType`, `authorityValue` | Encoded authority type and value |
-| `roles[].actions` | Action index, action code, and stored action data for each grant |
-
-Rust returns native typed authority and permission values through its role-list
-result. Use the returned role ID when preparing an operation for a participant set.
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Requester cannot add the role | Its authority type or management permission is unsupported. | Use an existing Ed25519 or secp256r1 administrator with manageAuthority or all. |
-| Invalid new-role input | The action list is empty or the new authority is malformed. | Supply at least one supported action and a valid public authority. |
-| New authority is not usable yet | Preparation alone has not installed the role. | Sign, submit, and confirm the add-role transaction before using it. |
-
-## SDK example
+## SDK examples
 
 ### Add a scoped SOL-transfer role
 
@@ -144,26 +105,81 @@ let prepared = wallet
 
 ### Confirm the role
 
-After the add-role transaction confirms, inspect the assigned authority and actions.
+Use the returned role data to display existing authority and allowance. Rust decodes permissions into typed variants.
 
 <CodeGroup>
 
 ```typescript TypeScript
-const { roles } = await wallet.roles.list();
-console.log(roles);
+const { swigConfigAddress, walletAddress, roles } = await wallet.listRoles();
+
+for (const role of roles) {
+  console.log(role.roleId, role.authorityType, role.authorityValue);
+
+  for (const action of role.actions) {
+    console.log(action.actionIndex, action.actionCode, action.actionData);
+  }
+}
 ```
 
 ```python Python
-roles_result = await wallet.roles.list()
-print(roles_result.roles)
+result = await wallet.list_roles()
+
+for role in result.roles:
+    print(role.role_id, role.authority_type, role.authority_value)
+
+    for action in role.actions:
+        print(action.action_index, action.action_code, action.action_data)
 ```
 
 ```rust Rust
-let roles_result = wallet.list_roles(&swig_config_address).await?;
+use swig_developer_sdk::SwigRolePermission;
+
+let result = wallet.list_roles(&swig_config_address).await?;
+for role in &result.roles {
+    for action in &role.actions {
+        if let SwigRolePermission::SolLimit { amount } = &action.permission {
+            println!("Role {} has {amount} lamports remaining", role.role_id);
+        }
+    }
+}
 ```
 
 </CodeGroup>
 
-Complete embedded signature requests and all required Solana transaction
-signatures before submission. See [Signing](/developer-sdk/signers) or
-[Participant set](/developer-sdk/participant-sets) for threshold approval.
+## Input
+
+| Operation | Parameter | Description |
+| :--- | :--- | :--- |
+| Both | Wallet config address and network | Existing wallet, selected through the configured client |
+| Add | `requesterAuthority` / `requester_authority` | Existing Ed25519 or secp256r1 authority with `manageAuthority` or `all` |
+| Add | `feePayer` / `fee_payer` | Public key paying the fee |
+| Add | `authority` | New Ed25519, secp256k1, secp256r1, or ParticipantSet authority |
+| Add | `actions` | At least one typed [permission](/developer-sdk/permissions) |
+
+TypeScript/Python use public-key strings. Rust uses `Pubkey` for Ed25519 and
+compressed 33-byte SEC1 keys for secp256k1/secp256r1. A new ParticipantSet
+role takes the set address without a role ID (`role_id: None` in Rust).
+Swig assigns the new role ID.
+
+## Output
+
+TypeScript fields are shown below; Python uses snake_case names. Use the read
+after confirmation to verify the grant. Saved policy metadata is separate.
+
+| Field | Meaning |
+| :--- | :--- |
+| `swigConfigAddress`, `walletAddress` | Wallet configuration and asset-holding address |
+| `roles[].roleId` | Assigned role identifier |
+| `roles[].authorityType`, `authorityValue` | Encoded authority type and value |
+| `roles[].actions` | Action index, action code, and stored action data for each grant |
+
+Rust returns native typed authority and permission values through its role-list
+result. Use the returned role ID when preparing an operation for a participant set.
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Requester cannot add the role | Its authority type or management permission is unsupported. Use an existing Ed25519 or secp256r1 administrator with manageAuthority or all. |
+| Invalid new-role input | The action list is empty or the new authority is malformed. Supply at least one supported action and a valid public authority. |
+| New authority is not usable yet | Preparation alone has not installed the role. Sign, submit, and confirm the add-role transaction before using it. |

@@ -13,30 +13,9 @@ cover. The acting role's program and asset permissions still apply.
 The backend prepares the transaction; your application reviews, signs, and
 submits it. Use the [Protocol SDK](/products-and-sdks) for direct instruction construction.
 
-## Input
+## SDK examples
 
-| Parameter | Required | Description |
-| :--- | :--- | :--- |
-| Wallet config address and network | Yes | Bind through the configured wallet client |
-| Requester authority | Yes | Ed25519, secp256r1, or ParticipantSet authority |
-| `feePayer` / `fee_payer` | Yes | Public key paying the transaction fee |
-| `instructions` | Yes | Nonempty ordered list of program IDs, account metadata, and instruction data |
-| Account metadata | For each instruction | Public key and signer/writable flags |
-| `addressLookupTableAccounts` / `address_lookup_table_accounts` | No | Distinct lookup-table addresses; must be empty for ParticipantSet requests |
-
-A signer account must be the derived Swig wallet address, fee payer, or
-Ed25519 requester. TypeScript accepts base64 instruction data; Python and Rust
-examples use bytes. Rust uses native `Instruction` and `AccountMeta` values.
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Invalid instruction input | The instruction list is empty or its account metadata is unsupported. | Supply instructions with valid program IDs, data, and permitted signer accounts. |
-| Unsupported lookup-table use | A ParticipantSet requester includes address lookup tables. | Keep the lookup-table list empty for that requester. |
-| Permission check fails | The operation exceeds the acting role's program or asset grants. | Inspect the target program, asset amount, and role permissions before signing. |
-
-## SDK example
+### Prepare custom instructions
 
 Use a wallet handle with its requester authority in TypeScript/Python, or
 `WalletClient` in Rust. See [Client setup](/developer-sdk/integration-paths).
@@ -113,3 +92,26 @@ let prepared = wallet
 Review the returned transaction and complete [Signing](/developer-sdk/signers).
 ParticipantSet operations first need [approval compilation](/developer-sdk/participant-sets).
 An empty embedded-signature list does not remove native Ed25519 signer requirements.
+
+## Input
+
+| Parameter | Required | Description |
+| :--- | :--- | :--- |
+| Wallet config address and network | Yes | Bind through the configured wallet client |
+| Requester authority | Yes | Ed25519, secp256r1, or ParticipantSet authority |
+| `feePayer` / `fee_payer` | Yes | Public key paying the transaction fee |
+| `instructions` | Yes | Nonempty ordered list of program IDs, account metadata, and instruction data |
+| Account metadata | For each instruction | Public key and signer/writable flags |
+| `addressLookupTableAccounts` / `address_lookup_table_accounts` | No | Distinct lookup-table addresses; must be empty for ParticipantSet requests |
+
+A signer account must be the derived Swig wallet address, fee payer, or
+Ed25519 requester. TypeScript accepts base64 instruction data; Python and Rust
+examples use bytes. Rust uses native `Instruction` and `AccountMeta` values.
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Invalid instruction input | The instruction list is empty or its account metadata is unsupported. Supply instructions with valid program IDs, data, and permitted signer accounts. |
+| Unsupported lookup-table use | A ParticipantSet requester includes address lookup tables. Keep the lookup-table list empty for that requester. |
+| Permission check fails | The operation exceeds the acting role's program or asset grants. Inspect the target program, asset amount, and role permissions before signing. |

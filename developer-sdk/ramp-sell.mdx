@@ -1,0 +1,187 @@
+---
+title: "Sell crypto"
+sidebarTitle: "Sell"
+---
+
+## Introduction
+
+Sell wallet crypto for fiat through provider checkout. Quote the amount,
+let the customer select a route, and create a sell order with a persisted request
+ID. After checkout supplies a deposit, continue with [Sell transfer](/developer-sdk/ramp-transfer).
+
+Use [Client setup](/developer-sdk/integration-paths) and the provider configuration. Sandbox is a provider environment, not a Solana devnet setting; sell transfers use mainnet even in sandbox.
+
+## SDK examples
+
+### Quote and create a sell
+
+Use a separate saved request ID for a sell. After quote selection, create checkout and let the customer complete its required steps.
+
+<CodeGroup>
+
+```typescript TypeScript
+const sellQuotes = await swig.ramp.getQuotes({
+  configurationId,
+  environment: 'sandbox',
+  location: { countryCode: 'US' },
+  order: {
+    type: 'sell',
+    sell: { asset: { type: 'token', mint: usdcMint }, baseUnits: 10_000_000n },
+    receiveFiatCurrencyCode: 'USD',
+  },
+});
+
+// selectedSellRoute is the customer-approved route from sellQuotes.
+const sellOrder = await swig.ramp.createOrder({
+  requestId: sellRequestId,
+  configurationId,
+  environment: 'sandbox',
+  context: {
+    customerId,
+    swigConfigAddress,
+    network: 'mainnet',
+    location: { countryCode: 'US' },
+  },
+  route: selectedSellRoute,
+  order: {
+    type: 'sell',
+    sell: { asset: { type: 'token', mint: usdcMint }, baseUnits: 10_000_000n },
+    receiveFiatCurrencyCode: 'USD',
+  },
+});
+```
+
+```python Python
+from swig_developer_sdk import (
+    CryptoAmountInput, RampLocation, RampOrderContext,
+    RampSellOrderRequest, SplTokenAsset,
+)
+
+sell_quotes = await swig.ramp.get_quotes(
+    configuration_id=configuration_id,
+    environment="sandbox",
+    location=RampLocation(country_code="US"),
+    order=RampSellOrderRequest(
+        sell=CryptoAmountInput(
+            asset=SplTokenAsset(mint=usdc_mint), base_units=10_000_000
+        ),
+        receive_fiat_currency_code="USD",
+    ),
+)
+
+# selected_sell_route is approved by the customer from sell_quotes.
+sell_order = await swig.ramp.create_order(
+    request_id=sell_request_id,
+    configuration_id=configuration_id,
+    environment="sandbox",
+    context=RampOrderContext(
+        customer_id=customer_id,
+        swig_config_address=swig_config_address,
+        network="mainnet",
+        location=RampLocation(country_code="US"),
+    ),
+    route=selected_sell_route,
+    order=RampSellOrderRequest(
+        sell=CryptoAmountInput(
+            asset=SplTokenAsset(mint=usdc_mint), base_units=10_000_000
+        ),
+        receive_fiat_currency_code="USD",
+    ),
+)
+```
+
+```rust Rust
+use swig_developer_sdk::{
+    CreateRampOrderArgs, CryptoAmount, CryptoAsset, GetRampQuotesArgs,
+    RampOrderRequest,
+};
+
+let sell_quotes = ramp
+    .get_quotes(GetRampQuotesArgs {
+        location: context.location.clone(),
+        order: RampOrderRequest::Sell {
+            sell: CryptoAmount {
+                asset: CryptoAsset::Token { mint: usdc_mint },
+                base_units: 10_000_000,
+            },
+            receive_fiat_currency_code: "USD".into(),
+        },
+    })
+    .await?;
+
+let sell_order = ramp
+    .create_order(CreateRampOrderArgs {
+        request_id,
+        context,
+        route: selected_route,
+        order: RampOrderRequest::Sell {
+            sell: CryptoAmount {
+                asset: CryptoAsset::Token { mint: usdc_mint },
+                base_units: 10_000_000,
+            },
+            receive_fiat_currency_code: "USD".into(),
+        },
+    })
+    .await?;
+```
+
+</CodeGroup>
+
+### Get the order status
+
+Refresh an order to track checkout, processing, settlement, or refund. A sell must reach `awaiting-transfer` and have deposit details before preparation.
+
+<CodeGroup>
+
+```typescript TypeScript
+const current = await swig.ramp.getOrder({ orderId: sellOrder.id });
+```
+
+```python Python
+current = await swig.ramp.get_order(order_id=sell_order.id)
+```
+
+```rust Rust
+let current = ramp.get_order(&order_id).await?;
+```
+
+</CodeGroup>
+
+## Flow
+
+```text
+Quote a sell
+  └─ Customer selects route
+      └─ Complete checkout
+          └─ Deposit ready
+              └─ Transfer
+```
+
+## Input
+
+| Operation | Input | Requirement |
+| :--- | :--- | :--- |
+| Options / quote / create | `configurationId`, `environment` | Provider configuration and `sandbox` or `production`. Rust supplies `RampConfig` at construction; existing-order reads may use a client without it. |
+| Quote | `location`, `order` | Country plus subdivision when needed. Buy: fiat spend and crypto receive. Sell: crypto amount and fiat receive currency. |
+| Amounts | `minorUnits`, `baseUnits` | Fiat minor units (USD cents) and crypto base units. Use the returned currency exponent and asset decimals. TypeScript supports exact decimal strings/bigint; Rust uses `u64`. |
+| Assets | `type`, optional `mint` | Native SOL is `{ type: "sol" }`; a token is `{ type: "token", mint }`. Python uses `NativeSolAsset` or `SplTokenAsset`. |
+| Create | `requestId`, `context`, `route`, `order` | Persist one request ID per order attempt. Context contains customer ID, wallet config, location, and network. Reuse identical input on retries. |
+| Get order | `orderId` | Stored order ID. Poll non-final orders to refresh provider status; a settled order can later be refunded. |
+
+Rust uses the [configured Ramp client](/developer-sdk/ramp#required-configuration) with `Network::Mainnet`. `context` and `selected_route` are the approved customer context and sell quote route.
+
+## Output
+
+| Operation | Field | Meaning |
+| :--- | :--- | :--- |
+| Quote | `route`, `details` | Provider/payment method plus buy/sell priced amounts, fee, and exchange rate. |
+| Order | `id`, `type`, `status`, `createdAt`, `updatedAt`, `quote`, optional `launchUrl` | Stored checkout with its current priced amounts and lifecycle status. |
+| Sell order | Optional `deposit`, `transfer` | Provider deposit becomes available during checkout; transfer metadata appears after preparation. |
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Invalid configuration or amount | Configuration, environment, asset, amount scale, or location is invalid for the request. |
+| Idempotency conflict | A saved request ID was reused with different creation input. |
+| Provider or network failure | The provider, RPC, or transfer confirmation is unavailable; preserve attempt identifiers and signed bytes. |

@@ -1,125 +1,77 @@
 ---
 title: "Developer SDK"
 sidebarTitle: "Developer SDK"
-description: "Prepare wallet operations, read wallet state, and submit signed transactions from a trusted server."
 ---
 
-The Swig Developer SDK is a server-side toolkit for TypeScript, Python, and Rust.
-It authenticates to Swig's hosted API, prepares wallet operations as unsigned
-transactions, reads wallet state, and submits transactions your application
-has signed.
+## Introduction
 
-## Choose your language
+The Developer SDK connects your server to Swig’s hosted wallet services. Use it
+to create wallets, assign permissions, query balances and activity, and prepare
+financial operations. TypeScript, Python, and Rust clients share a preparation
+model: your application authorizes, signs, and confirms transactions.
+
+## Examples
+
+### Install the SDK
+
+Install the latest published package for your server language.
 
 <CodeGroup>
-
 ```bash TypeScript
 bun add @swig-wallet/developer-sdk
 ```
-
 ```bash Python
-pip install swig-developer-sdk
+pip install --upgrade swig-developer-sdk
 ```
-
 ```bash Rust
 cargo add swig-developer-sdk
+```
+</CodeGroup>
+
+### Query an existing wallet
+
+With a configured client and the wallet’s configuration address, fetch its holdings.
+
+<CodeGroup>
+
+```typescript TypeScript
+const wallet = swig.wallets.use(swigConfigAddress);
+const balances = await wallet.listTokenBalances();
+```
+
+```python Python
+wallet = swig.wallets.use(swig_config_address)
+balances = await wallet.list_token_balances()
+```
+
+```rust Rust
+let balances = wallet.list_token_balances(&swig_config_address).await?;
 ```
 
 </CodeGroup>
 
-The TypeScript package `@swig-wallet/developer-sdk` includes
-general role creation, ParticipantSet support, the unified ramp client,
-[rent-claimer reads and preparation](/developer-sdk/rent-claimers), and
-[DEX activity reads](/developer-sdk/dex-activity).
+## Input
 
-The Python package `swig-developer-sdk` includes general role
-creation, ParticipantSet support, and
-[DEX activity reads](/developer-sdk/dex-activity). Requires Python 3.10 or later.
+| Input | Purpose |
+| :--- | :--- |
+| [Client setup](/developer-sdk/integration-paths) | Initialize the server client and select the wallet’s network. |
+| [API key](/examples/dev-portal/create-api-key) | Authenticate hosted requests for your organization. |
+| Wallet authority | Authorize writes with a wallet key, passkey, or participant set. The API key is not a wallet signature. |
 
-The Rust SDK requires Rust 1.87 or later. See
-[Rust setup](/developer-sdk/integration-paths#rust) for client configuration.
+## Output
 
-All three SDKs live in
-[anagrambuild/swig-developer-sdk](https://github.com/anagrambuild/swig-developer-sdk)
-and default to `https://api.onswig.com`.
+| Section | What you can build |
+| :--- | :--- |
+| [Wallet](/developer-sdk/create-wallets) | Create wallets, assign roles and permissions, sign, and prepare custom instructions. |
+| [Query](/query/balances) | Balances, token activity, DEX history/positions, yield data, and Ramp data. |
+| [Finance](/developer-sdk/finance) | [Ramp](/developer-sdk/ramp), [Transfer](/developer-sdk/transfers-and-swaps), [Swap](/developer-sdk/swaps-and-batches), [Yield](/developer-sdk/yield), [Paymaster](/developer-sdk/sponsor-and-submit), and [x402](/developer-sdk/x402). |
+| [AI](/build-with-ai) | Connect an assistant to documentation or wallet MCP tools. |
+| [Additional resources](/products-and-sdks) | Choose direct Solana/EVM Protocol SDK or IdP integration. |
 
-## Get started
+## Errors
 
-Start with an SDK language and an API key for your trusted server. Then choose
-what each wallet role may do and how its authority will sign. An API key
-authenticates hosted API requests; wallet operations still require the
-appropriate authority's signature or approval proofs.
-
-1. [Set up your client](/developer-sdk/integration-paths) and [create an API key](/examples/dev-portal/create-api-key).
-2. [Choose permissions](/developer-sdk/permissions) and [create a wallet](/developer-sdk/create-wallets).
-3. [Prepare a transfer](/developer-sdk/transfers-and-swaps) and obtain the authority's signature.
-4. [Sponsor and submit](/developer-sdk/sponsor-and-submit) the signed transaction.
-
-## Integration responsibilities
-
-### SDK
-
-- API-key authentication and retry behavior
-- wallet creation and unsigned transaction preparation
-- transfers, swaps, grouped operations, and custom instructions
-- threshold ParticipantSet creation, role assignment, and approval compilation
-- wallet, role, paymaster, and ramp reads
-- DEX transaction history and latest-position reads
-- fiat ramp order operations, buying and selling
-- sponsorship of application-signed transactions and mainnet bundles
-- local signing helpers for prepared transactions and participant approvals
-
-### Your application
-
-- end-user authentication and authorization
-- frontend transport and user interfaces
-- wallet-provider, passkey, hardware-wallet, or custody integration
-- every private key and user authorization decision
-- confirmation and finality tracking after submission
-
-The server SDK returns unsigned prepared transactions and signature-request
-metadata. Your application authorizes signing. TypeScript and Python helpers
-use application callbacks. Rust also provides native signers that hold
-application-supplied local keys. Signing helpers need no API key and make no
-hosted request. Keep private keys in the runtime that owns signing.
-
-## Wallet
-
-Create wallets and control how they can be used:
-
-- **Setup:** [create a wallet](/developer-sdk/create-wallets) and configure [rent claimer](/developer-sdk/rent-claimers).
-- **Member:** [add a role](/developer-sdk/add-roles-and-permissions), connect a [signer](/developer-sdk/signers), or require multiple approvals with [participant set](/developer-sdk/participant-sets).
-- **Policy:** save [policy template](/examples/dev-portal/create-policy), choose [permission](/developer-sdk/permissions), and configure [guardian recovery](/developer-sdk/use-cases/guardian-recovery).
-- **Authorization lock:** [prepare and inspect holds](/developer-sdk/authorization-locks) on SOL or tokens.
-- **Custom transaction:** [prepare instructions](/developer-sdk/custom-execution) that fit the role's permissions.
-
-## Query
-
-Swig Query provides hosted wallet and market data. See
-[Pricing and quotas](/query) for included usage and the quota each endpoint consumes.
-
-- [Balance](/query/balances): native SOL, tokens, and total USD value.
-- [DEX activity](/query/dex): trades, liquidity actions, and latest positions.
-- [Yield](/query/yield) and [Ramp](/query/ramp).
-
-## Finance
-
-Use the [finance overview](/developer-sdk/finance) to choose a funding, payment,
-trading, or yield flow.
-
-- [Ramp funds on or off chain](/developer-sdk/ramp).
-- [Transfer SOL or tokens](/developer-sdk/transfers-and-swaps), [swap assets](/developer-sdk/swaps-and-batches), and [pay for x402 resources](/developer-sdk/x402).
-- [Earn yield through native staking](/developer-sdk/yield).
-- [Paymaster](/developer-sdk/sponsor-and-submit): check funding and sponsor signed transactions.
-
-## AI
-
-[Install MCP](/build-with-ai) to connect your assistant to Swig documentation
-or wallet tools.
-
-## Additional resources
-
-- [Solana Protocol SDK](/solana): compose wallet transactions directly in TypeScript or Rust.
-- [EVM Protocol SDK](/evm): use the source-available TypeScript, Rust, or Python integrations.
-- [IdP SDK](/idp-sdk): add browser or mobile sign-in and persist a Swig session.
-- [Compare SDKs](/products-and-sdks) to choose an integration.
+| Error | Meaning |
+| :--- | :--- |
+| Authentication failed | The configured API key is missing, invalid, expired, or revoked. |
+| Operation unavailable | Language support differs. Each guide shows supported languages and labels unpublished features. |
+| Usage cap reached | API and DEX allowances are separate; see [Pricing & quotas](/query). |

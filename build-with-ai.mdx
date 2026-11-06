@@ -1,44 +1,27 @@
 ---
 title: "Install MCP"
-description: "Connect your AI assistant to Swig documentation or wallet tools."
+sidebarTitle: "Install MCP"
 ---
 
-Choose the server for your task:
+## Introduction
 
-| Server | Use it to | Connection |
-| :--- | :--- | :--- |
-| Swig Docs MCP | Search documentation and find SDK examples | Hosted HTTP endpoint; no API key required |
-| Swig Wallet MCP | Configure Solana RPC, inspect wallets, and prepare wallet operations | Run the server locally from `swig-ts` |
+MCP gives an AI assistant tools and context for Swig. Use Docs MCP to find
+current integration guidance, or run Wallet MCP locally when the assistant needs
+to inspect wallets and prepare operations.
 
-## Connect to Swig Docs MCP
+## Examples
 
-Add a remote HTTP MCP server in your assistant's settings with this URL:
+### Connect Docs MCP
 
-```text
-https://build.onswig.com/mcp
-```
-
-For [Claude Code](https://code.claude.com/docs/en/mcp), run:
+Add the hosted documentation server to your assistant. For Claude Code:
 
 ```bash
 claude mcp add --transport http swig-docs https://build.onswig.com/mcp
 ```
 
-Open your assistant's MCP tools list and confirm that the Swig documentation
-search tools are available. Then try:
+### Build Wallet MCP
 
-```text
-Find the Swig Developer SDK guide for creating a wallet and explain the required steps.
-```
-
-The docs server supplies documentation context. Wallet operations use the
-separate wallet server below.
-
-## Connect to Swig Wallet MCP
-
-Use this server when your agent needs Solana wallet tools. Install
-[Bun](https://bun.sh/docs/installation) and Node.js, then build the
-[Swig TypeScript repository](https://github.com/anagrambuild/swig-ts):
+Install Bun and Node.js, then build the wallet tool server.
 
 ```bash
 git clone https://github.com/anagrambuild/swig-ts.git
@@ -47,8 +30,9 @@ bun install
 bun run build
 ```
 
-Add the local server to your MCP client. Replace the path with the absolute
-path to your checkout:
+### Connect Wallet MCP
+
+Add this entry to your MCP client, using the absolute path to the built checkout.
 
 ```json
 {
@@ -61,19 +45,35 @@ path to your checkout:
 }
 ```
 
-Restart or reconnect the MCP client, then confirm that `configure_rpc` and
-`fetch_swig_wallet` appear in its tools list. Configure the intended network
-before using wallet tools.
+### Verify the connection
 
-- Follow [Wallet MCP setup](/tutorials/mcp) for RPC configuration, agent keys,
-  and your first wallet.
-- Use [MCP server reference](/reference/mcp-server) for the tool list and
-  authenticated HTTP hosting.
-- Give an agent only the [role permissions](/developer-sdk/permissions)
-  required for its task, and review transaction actions before signing.
+Open the assistant’s tools list, then ask it to locate the wallet-creation guide.
 
-## Documentation files
+```text
+Find the Developer SDK wallet-creation guide.
+Show the inputs and supported signing options.
+```
 
-For tools that consume text directly, use
-[llms.txt](https://build.onswig.com/llms.txt) to discover pages or
-[llms-full.txt](https://build.onswig.com/llms-full.txt) for the combined docs.
+## Input
+
+| Server | Input |
+| :--- | :--- |
+| Docs MCP | Remote HTTP URL `https://build.onswig.com/mcp`; no API key. |
+| Wallet MCP | Local built entrypoint and the intended network’s RPC configuration. Start with [Wallet MCP setup](/tutorials/mcp). |
+| Wallet authority | Grant the agent only the [permissions](/developer-sdk/permissions) needed for its task; review prepared actions before signing. |
+
+## Output
+
+| Connection | Expected result |
+| :--- | :--- |
+| Docs MCP | Documentation search tools are available in the assistant. |
+| Wallet MCP | `configure_rpc` and `fetch_swig_wallet` appear; configure the network before wallet calls. |
+| Text-only integration | [llms.txt](https://build.onswig.com/llms.txt) lists pages; [llms-full.txt](https://build.onswig.com/llms-full.txt) contains the combined documentation. |
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Server not found | The local entrypoint path is incorrect or the package has not been built. |
+| Tools absent | The client has not reconnected after the server configuration changed. |
+| RPC or wallet query fails | The network/RPC setting is missing or does not match the wallet. |

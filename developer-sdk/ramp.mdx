@@ -1,126 +1,39 @@
 ---
-title: "Add and Withdraw Funds"
-sidebarTitle: "Ramp"
+title: "Buy crypto"
+sidebarTitle: "Buy"
 ---
 
-The ramp client builds a headless fiat on-ramp and off-ramp around a Swig
-wallet. Every ramp call runs on your server. Your application decides how to
-present quotes, the launch URL, and order state to a user.
+## Introduction
 
-`swig.ramp` covers both directions. Direction is carried by the buy or sell
-order you pass, so there is no separate on-ramp or off-ramp client.
+Buy crypto with fiat and deliver it to a Swig wallet. This flow covers route
+selection and order creation; the customer completes the provider checkout.
+[Query Ramp options](/query/ramp) first to populate supported country, currency,
+asset, and payment-method choices.
 
-Rust uses `RampClient` for the same workflow. Configure it below before using
-the examples.
+Use [Client setup](/developer-sdk/integration-paths) and the provider configuration. Sandbox is a provider environment, not a Solana devnet setting; sell transfers use mainnet even in sandbox.
 
-## Required configuration
+## SDK examples
 
-`getOptions` / `get_options`, `getQuotes` / `get_quotes`, and `createOrder` /
-`create_order` require both fields below.
+### Required configuration
 
-| Field | Value |
-| :--- | :--- |
-| `configurationId` / `configuration_id` | the organization's ramp configuration id |
-| `environment` | `sandbox` or `production` |
-
-`getOrder` / `get_order`, `prepareTransfer` / `prepare_transfer`, and
-`submitTransfer` / `submit_transfer` identify the stored order in the route and
-require neither field.
-
-In Rust, reuse `config` from [Rust setup](/developer-sdk/integration-paths#rust)
-and supply the ramp configuration when constructing the client:
-
-```rust
-use swig_developer_sdk::{RampClient, RampConfig, RampEnvironment};
-
-let ramp = RampClient::new(
-    config,
-    Some(RampConfig {
-        configuration_id,
-        environment: RampEnvironment::Sandbox,
-    }),
-)?;
-```
-
-These fields apply to options, quotes, and order creation. Pass `None` instead
-of `Some(RampConfig { ... })` when working only with existing orders.
-
-The provider environment is not a Solana cluster. A sandbox order still settles
-on mainnet.
-
-## Amounts and assets
-
-Amounts are integers in the smallest unit — `minorUnits` for fiat (cents for
-USD, whole yen for JPY) and `baseUnits` for crypto. They cross the wire as
-decimal strings so a value above 2^53 survives, and an amount finer than the
-currency's minor unit is refused rather than rounded. In TypeScript, use a
-`bigint` or decimal string above the safe-integer range; unsafe `number` values
-are rejected before the request is sent.
-
-Rust amounts use `u64`.
-
-Crypto is a two-case asset: native SOL, or an SPL mint.
+TypeScript and Python use the configured `swig` client. Rust binds the provider configuration to a separate client.
 
 <CodeGroup>
-
-```typescript TypeScript
-const sol = { type: 'sol' } as const;
-const usdc = { type: 'token', mint: usdcMint } as const;
-```
-
-```python Python
-sol = NativeSolAsset()
-usdc = SplTokenAsset(mint=usdc_mint)
-```
-
-</CodeGroup>
-
-## Read the options
-
-Read the options first, so currency, payment-method, and asset values come from
-the API rather than a hardcoded list. `decimals` and `exponent` are the scales
-you need to build a valid amount.
-
-<CodeGroup>
-
-```typescript TypeScript
-const options = await swig.ramp.getOptions({
-  configurationId,
-  environment: 'sandbox',
-  direction: 'buy',
-  countryCode: 'US',
-});
-```
-
-```python Python
-options = await swig.ramp.get_options(
-    configuration_id=configuration_id,
-    environment="sandbox",
-    direction="buy",
-    country_code="US",
-)
-```
 
 ```rust Rust
-use swig_developer_sdk::{GetRampOptionsArgs, RampDirection};
+use swig_developer_sdk::{RampClient, RampConfig, RampEnvironment};
 
-let options = ramp
-    .get_options(GetRampOptionsArgs {
-        direction: RampDirection::Buy,
-        country_code: Some("US".into()),
-        fiat_currency_code: None,
-    })
-    .await?;
+let ramp = RampClient::new(config, Some(RampConfig {
+    configuration_id,
+    environment: RampEnvironment::Sandbox,
+}))?;
 ```
 
 </CodeGroup>
 
-You get `countries` (each with `subdivisions`), `fiatCurrencies` /
-`fiat_currencies`, `paymentMethods` / `payment_methods`, and `assets`.
+### Quote a buy
 
-## Quote a route
-
-Use the customer's location and an asset returned by the options call.
+Get current buy offers for the selected asset, amount, and location.
 
 <CodeGroup>
 
@@ -138,6 +51,8 @@ const quotes = await swig.ramp.getQuotes({
 ```
 
 ```python Python
+from swig_developer_sdk import FiatAmountInput, RampBuyOrderRequest, RampLocation, SplTokenAsset
+
 quotes = await swig.ramp.get_quotes(
     configuration_id=configuration_id,
     environment="sandbox",
@@ -173,30 +88,17 @@ let quotes = ramp
 
 </CodeGroup>
 
-Each quote carries a `route` and a `details` arm holding the priced amounts, the
-total fee, and the exchange rate.
+An empty list means no offer is available. Present the returned `route` and `details` for selection; the next example uses the customer-approved `selectedRoute` / `selected_route`. Quotes have no ID and are re-priced at order creation.
 
-Handle an empty quote list before asking the customer to choose a route.
+### Create a buy order
 
-<Warning>
-  Quotes carry no identifier and must never be cached. Pass the chosen `route`
-  to order creation; it is re-priced there.
-</Warning>
-
-## Create an order
-
-`requestId` / `request_id` is your idempotency key and is unique within the
-configuration. Repeating it returns the stored order; repeating it with
-different inputs is refused. Mint it before the first attempt and reuse it
-across retries — the SDK retries this call for you on a transient failure.
-
-Use the customer's chosen route as `selected_route` in Rust.
+Create checkout using the selected quote route and the same amount, asset, and location. Supply a previously saved request ID.
 
 <CodeGroup>
 
 ```typescript TypeScript
 const order = await swig.ramp.createOrder({
-  requestId: crypto.randomUUID(),
+  requestId,
   configurationId,
   environment: 'sandbox',
   context: {
@@ -204,7 +106,7 @@ const order = await swig.ramp.createOrder({
     swigConfigAddress,
     location: { countryCode: 'US' },
   },
-  route: quotes[0].route,
+  route: selectedRoute,
   order: {
     type: 'buy',
     spend: { currencyCode: 'USD', minorUnits: 10_000n },
@@ -214,8 +116,10 @@ const order = await swig.ramp.createOrder({
 ```
 
 ```python Python
+from swig_developer_sdk import RampOrderContext
+
 order = await swig.ramp.create_order(
-    request_id=str(uuid.uuid4()),
+    request_id=request_id,
     configuration_id=configuration_id,
     environment="sandbox",
     context=RampOrderContext(
@@ -223,7 +127,7 @@ order = await swig.ramp.create_order(
         swig_config_address=swig_config_address,
         location=RampLocation(country_code="US"),
     ),
-    route=quotes[0].route,
+    route=selected_route,
     order=RampBuyOrderRequest(
         spend=FiatAmountInput(currency_code="USD", minor_units=10_000),
         receive=SplTokenAsset(mint=usdc_mint),
@@ -262,338 +166,40 @@ let order = ramp
 
 </CodeGroup>
 
-A buy sends the customer to `order.launchUrl` / `order.launch_url`.
+Give the returned launch URL only to the customer who owns the order. It is a private checkout session, not a loggable transaction identifier.
 
-Keep the same asset, amount, and location used to quote. Rust uses the network
-from `ClientConfig` and exposes the buy order through `RampOrder::Buy(order)`.
+## Flow
 
-<Warning>
-  A launch URL is a user-specific session URL. Hand it to the customer who owns
-  the order and keep it out of logs and analytics.
-</Warning>
-
-## Follow the order
-
-Poll the order until its status is final. A read of a non-final order also
-reconciles it against the provider, so polling is what advances it.
-
-<CodeGroup>
-
-```typescript TypeScript
-const current = await swig.ramp.getOrder({ orderId: order.id });
+```text
+Quote
+  └─ Customer selects route
+      └─ Create checkout
+          └─ Settle
 ```
 
-```python Python
-current = await swig.ramp.get_order(order_id=order.id)
-```
+## Input
 
-```rust Rust
-let current = ramp.get_order(&order_id).await?;
-```
+| Operation | Input | Requirement |
+| :--- | :--- | :--- |
+| Options / quote / create | `configurationId`, `environment` | Provider configuration and `sandbox` or `production`. Rust supplies `RampConfig` at construction; existing-order reads may use a client without it. |
+| Quote | `location`, `order` | Country plus subdivision when needed. Buy: fiat spend and crypto receive. Sell: crypto amount and fiat receive currency. |
+| Amounts | `minorUnits`, `baseUnits` | Fiat minor units (USD cents) and crypto base units. Use the returned currency exponent and asset decimals. TypeScript supports exact decimal strings/bigint; Rust uses `u64`. |
+| Assets | `type`, optional `mint` | Native SOL is `{ type: "sol" }`; a token is `{ type: "token", mint }`. Python uses `NativeSolAsset` or `SplTokenAsset`. |
+| Create | `requestId`, `context`, `route`, `order` | Persist one request ID per order attempt. Context contains customer ID, wallet config, location, and network. Reuse identical input on retries. |
 
-</CodeGroup>
+## Output
 
-A `settled` order can later become `refunded`. See the
-[Ramp API](/developer-api/ramp) for the full order lifecycle.
+| Operation | Field | Meaning |
+| :--- | :--- | :--- |
+| Quote | `route`, `details` | Provider/payment method plus buy/sell priced amounts, fee, and exchange rate. |
+| Order | `id`, `type`, `status`, `createdAt`, `updatedAt`, `quote`, optional `launchUrl` | Stored checkout with its current priced amounts and lifecycle status. |
 
-## Sell: create, check out, transfer
+Use [order status](/query/ramp#get-order-status) to follow settlement. Quotes are re-priced at order creation. Python uses snake_case; Rust returns native typed variants.
 
-Quote and create a separate sell order on mainnet, including for sandbox.
-TypeScript and Python use the order context's network ahead of the client
-default. In Rust, configure `RampClient` with `Network::Mainnet`.
+## Errors
 
-Use the customer's context, their chosen sell route, and a new saved request ID.
-
-<CodeGroup>
-
-```typescript TypeScript
-const sellQuotes = await swig.ramp.getQuotes({
-  configurationId,
-  environment: 'sandbox',
-  location: { countryCode: 'US' },
-  order: {
-    type: 'sell',
-    sell: { asset: { type: 'token', mint: usdcMint }, baseUnits: 10_000_000n },
-    receiveFiatCurrencyCode: 'USD',
-  },
-});
-
-const sellOrder = await swig.ramp.createOrder({
-  requestId: crypto.randomUUID(),
-  configurationId,
-  environment: 'sandbox',
-  context: {
-    customerId,
-    swigConfigAddress,
-    network: 'mainnet',
-    location: { countryCode: 'US' },
-  },
-  route: sellQuotes[0].route,
-  order: {
-    type: 'sell',
-    sell: { asset: { type: 'token', mint: usdcMint }, baseUnits: 10_000_000n },
-    receiveFiatCurrencyCode: 'USD',
-  },
-});
-```
-
-```python Python
-sell_quotes = await swig.ramp.get_quotes(
-    configuration_id=configuration_id,
-    environment="sandbox",
-    location=RampLocation(country_code="US"),
-    order=RampSellOrderRequest(
-        sell=CryptoAmountInput(
-            asset=SplTokenAsset(mint=usdc_mint), base_units=10_000_000
-        ),
-        receive_fiat_currency_code="USD",
-    ),
-)
-
-sell_order = await swig.ramp.create_order(
-    request_id=str(uuid.uuid4()),
-    configuration_id=configuration_id,
-    environment="sandbox",
-    context=RampOrderContext(
-        customer_id=customer_id,
-        swig_config_address=swig_config_address,
-        network="mainnet",
-        location=RampLocation(country_code="US"),
-    ),
-    route=sell_quotes[0].route,
-    order=RampSellOrderRequest(
-        sell=CryptoAmountInput(
-            asset=SplTokenAsset(mint=usdc_mint), base_units=10_000_000
-        ),
-        receive_fiat_currency_code="USD",
-    ),
-)
-```
-
-```rust Rust
-use swig_developer_sdk::{
-    CreateRampOrderArgs, CryptoAmount, CryptoAsset, GetRampQuotesArgs,
-    RampOrderRequest,
-};
-
-let sell_quotes = ramp
-    .get_quotes(GetRampQuotesArgs {
-        location: context.location.clone(),
-        order: RampOrderRequest::Sell {
-            sell: CryptoAmount {
-                asset: CryptoAsset::Token { mint: usdc_mint },
-                base_units: 10_000_000,
-            },
-            receive_fiat_currency_code: "USD".into(),
-        },
-    })
-    .await?;
-
-let sell_order = ramp
-    .create_order(CreateRampOrderArgs {
-        request_id,
-        context,
-        route: selected_route,
-        order: RampOrderRequest::Sell {
-            sell: CryptoAmount {
-                asset: CryptoAsset::Token { mint: usdc_mint },
-                base_units: 10_000_000,
-            },
-            receive_fiat_currency_code: "USD".into(),
-        },
-    })
-    .await?;
-```
-
-</CodeGroup>
-
-Send the customer to the sell order's launch URL. The provider assigns the
-deposit while they are in that checkout, so the transfer cannot be prepared
-until they have engaged with it.
-
-In Rust, access the sell order through `RampOrder::Sell(order)`.
-
-<Warning>
-  A launch URL is a user-specific session URL. Hand it to the customer who owns
-  the order and keep it out of logs and analytics.
-</Warning>
-
-Poll the order until it reaches `awaiting-transfer` and carries a deposit.
-Preparing earlier is refused with `the deposit address is not ready`.
-
-<CodeGroup>
-
-```typescript TypeScript
-const finished = ['settled', 'declined', 'cancelled', 'failed', 'refunded'];
-
-let current = await swig.ramp.getOrder({ orderId: sellOrder.id });
-while (current.type === 'sell' && !current.deposit) {
-  if (finished.includes(current.status)) {
-    throw new Error(`sell order ${current.status} before a deposit`);
-  }
-  await new Promise((resolve) => setTimeout(resolve, 5_000));
-  current = await swig.ramp.getOrder({ orderId: sellOrder.id });
-}
-```
-
-```python Python
-FINISHED = {"settled", "declined", "cancelled", "failed", "refunded"}
-
-current = await swig.ramp.get_order(order_id=sell_order.id)
-while isinstance(current, RampSellOrder) and current.deposit is None:
-    if current.status in FINISHED:
-        raise RuntimeError(f"sell order {current.status} before a deposit")
-    await asyncio.sleep(5)
-    current = await swig.ramp.get_order(order_id=sell_order.id)
-```
-
-</CodeGroup>
-
-Review the deposit and transaction against the approved order, then collect
-the requester and required outer signatures, including the fee payer's.
-Rust supports Ed25519 and secp256r1 requesters in mainnet legacy transactions
-without participant approvals.
-
-The Rust `sign_transaction` callback follows [Signers](/developer-sdk/signers):
-it takes `&PreparedTransaction` and returns a signed `VersionedTransaction`.
-
-Keep the transfer recoverable:
-
-- Preparation returns transaction bytes once. Order reads cannot recover them
-  if the response is lost.
-- Before submission, durably save the order ID, transfer ID, and exact signed
-  transaction.
-- `Prepared` needs the saved signed transaction (`Some(transaction)` in Rust).
-- `Submitted` can be resolved without bytes (`None` in Rust), using the same
-  order and transfer IDs.
-- `Landed` means confirmed or better. Follow the order's settlement status.
-- Prepare a replacement only after a failed or expired attempt, while the order
-  remains eligible. A lost response alone does not qualify.
-
-<CodeGroup>
-
-```typescript TypeScript
-import { signPreparedTransaction } from '@swig-wallet/developer-sdk/signers';
-
-const prepared = await swig.ramp.prepareTransfer({
-  orderId: sellOrder.id,
-  requesterAuthority: { ed25519: { publicKey: requester } },
-  feePayer,
-});
-
-const signed = await signPreparedTransaction(prepared.preparedTransaction, {
-  signTransaction,
-});
-
-const transfer = await swig.ramp.submitTransfer({
-  orderId: sellOrder.id,
-  transferId: prepared.transfer.transferId,
-  signedTransaction: signed.transaction,
-});
-```
-
-```python Python
-from swig_developer_sdk.signers import sign_prepared_transaction
-
-prepared = await swig.ramp.prepare_transfer(
-    order_id=sell_order.id,
-    requester_authority={"ed25519": {"publicKey": requester}},
-    fee_payer=fee_payer,
-)
-
-signed = await sign_prepared_transaction(
-    prepared.prepared_transaction,
-    sign_transaction=sign_transaction,
-)
-
-transfer = await swig.ramp.submit_transfer(
-    order_id=sell_order.id,
-    transfer_id=prepared.transfer.transfer_id,
-    signed_transaction=signed.transaction,
-)
-```
-
-```rust Rust
-use swig_developer_sdk::{
-    PrepareRampTransferArgs, SubmitRampTransferArgs, WalletAuthority,
-};
-
-let prepared = ramp
-    .prepare_transfer(PrepareRampTransferArgs {
-        order_id: order_id.clone(),
-        requester_authority: WalletAuthority::Ed25519 {
-            public_key: requester_public_key,
-        },
-        fee_payer,
-    })
-    .await?;
-
-let signed_transaction = sign_transaction(&prepared.prepared_transaction).await?;
-
-let transfer = ramp
-    .submit_transfer(SubmitRampTransferArgs {
-        order_id: order_id.clone(),
-        transfer_id: prepared.transfer.transfer_id.clone(),
-        signed_transaction: Some(signed_transaction),
-    })
-    .await?;
-```
-
-</CodeGroup>
-
-The transfer uses the provider's current deposit details, including any
-repricing. After an uncertain submission, read the same order and transfer to
-check its state. Resolve an already submitted attempt with the same IDs:
-
-<CodeGroup>
-
-```typescript TypeScript
-await swig.ramp.submitTransfer({
-  orderId: sellOrder.id,
-  transferId: prepared.transfer.transferId,
-});
-```
-
-```python Python
-await swig.ramp.submit_transfer(
-    order_id=sell_order.id,
-    transfer_id=prepared.transfer.transfer_id,
-)
-```
-
-```rust Rust
-use swig_developer_sdk::SubmitRampTransferArgs;
-
-let transfer = ramp
-    .submit_transfer(SubmitRampTransferArgs {
-        order_id,
-        transfer_id,
-        signed_transaction: None,
-    })
-    .await?;
-```
-
-</CodeGroup>
-
-Preparation and submission are not retried automatically. The API returns
-success after the transfer lands. Rust exposes the result as `RampTransfer`.
-Rust quote requests also send once.
-
-Keep signed transactions out of logs. See
-[Submit a transfer](/developer-api/ramp#submit-a-transfer) for detailed responses.
-
-## Routes behind the clients
-
-| Client method | Route |
+| Error | Meaning |
 | :--- | :--- |
-| `getOptions` / `get_options` | `GET /wallet/api/ramp/options` |
-| `getQuotes` / `get_quotes` | `POST /wallet/api/ramp/quotes` |
-| `createOrder` / `create_order` | `POST /wallet/api/ramp/orders` |
-| `getOrder` / `get_order` | `GET /wallet/api/ramp/orders/{order_id}` |
-| `prepareTransfer` / `prepare_transfer` | `POST /wallet/api/ramp/orders/{order_id}/transfer/prepare` |
-| `submitTransfer` / `submit_transfer` | `POST /wallet/api/ramp/orders/{order_id}/transfer/submit` |
-
-Your application owns the API key, the customer identifier it sends as
-`customerId`, and the signing key for a sell. Keep the API key on the server and
-out of any browser bundle. See the [Ramp API](/developer-api/ramp) for the raw
-REST contract.
+| Invalid configuration or amount | Configuration, environment, asset, amount scale, or location is invalid for the request. |
+| Idempotency conflict | A saved request ID was reused with different creation input. |
+| Provider or network failure | The provider, RPC, or transfer confirmation is unavailable; preserve attempt identifiers and signed bytes. |

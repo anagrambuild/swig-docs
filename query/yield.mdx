@@ -1,73 +1,21 @@
 ---
-title: "Yield data"
-sidebarTitle: "Yield"
-description: "Query native SOL staking positions, balances, and recorded state."
+title: "Yield position"
+sidebarTitle: "Position"
 ---
 
 ## Introduction
 
-This dataset contains native SOL staking positions indexed for a Swig wallet:
-their validator, lifecycle state, principal, rent, and withdrawable balance.
-Use it for staking dashboards, tracking cooldown, and displaying earning or
-withdrawable SOL.
+This dataset contains native stake positions and aggregate balances for a Swig
+wallet. Use it to show earning SOL, follow activation, and track cooldown.
+Indexed state can lag the chain; `lastUpdatedAt` identifies the latest observation.
 
-The example lists positions. TypeScript exposes `swig.yield`; Python exposes
-`swig.yields`. The same clients also provide
-[validator rates, reward estimates, totals, and reward history](/developer-sdk/yield#read-positions-rewards-and-estimates).
-For deposits, exits, and withdrawals, use the [Finance yield guide](/developer-sdk/yield).
+Use the configured TypeScript `swig.yield` or Python `swig.yields` client. Rust has no yield client. Each admitted call/page consumes one API request; see [Pricing & quotas](/query#api-requests).
 
-Position data can lag the chain. `lastUpdatedAt` identifies its latest recorded
-update. Each admitted call or page consumes **one API request**, including
-retries and admitted errors. See [pricing and quotas](/query#api-requests).
+## SDK examples
 
-## Returned result
+### List positions
 
-TypeScript field names are shown below; Python uses snake_case attributes.
-Lamport amounts are exact decimal strings in both SDKs.
-
-| Field | Type | Meaning |
-| :--- | :--- | :--- |
-| `positions` | array | Indexed positions, sorted by address |
-| `positions[].swigConfigAddress` | string | Wallet configuration account |
-| `positions[].walletAddress` | string | Wallet that controls the position |
-| `positions[].positionAddress` | string | Stake position account |
-| `positions[].validatorVoteAddress` | string, optional | Validator vote account, when known |
-| `positions[].state` | string | `activating`, `active`, `deactivating`, `inactive`, or `unspecified` |
-| `positions[].balanceLamports` | string | Full position balance, including rent |
-| `positions[].rentLamports` | string | Rent reserve |
-| `positions[].positionLamports` | string | Balance excluding rent; compounded rewards are already included |
-| `positions[].earningLamports` | string | Stake currently earning rewards |
-| `positions[].withdrawableLamports` | string | Indexed withdrawable amount; can include rent |
-| `nextPageToken` | string, optional | Continuation token; absent on the final page |
-| `lastUpdatedAt` | string, optional | Latest indexed update; absent before the first observation |
-
-The withdrawal preparation flow keeps the rent reserve. Use its
-`withdrawalLamports` to show the amount a prepared withdrawal will return.
-
-## Input parameters
-
-Start with [Client setup](/developer-sdk/integration-paths) and use your wallet's
-network. The API key's organization must own the Swig config.
-
-| TypeScript / Python | Required | Description |
-| :--- | :--- | :--- |
-| `swigConfigAddress` / `swig_config_address` | Yes | Wallet config address; TypeScript binds it with `forWallet` |
-| `network` | No | `mainnet` or `devnet`; defaults to the client's setting |
-| `pageSize` / `page_size` | No | 50 by default; maximum 200 |
-| `pageToken` / `page_token` | No | Previous `nextPageToken` / `next_page_token` |
-
-Continuation tokens remain scoped to the original organization, network, and
-wallet. Stop paging when the response has no next token.
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Wallet access denied | The API key's organization does not own the Swig config. | Use the owning organization's key and correct network. |
-| Invalid continuation token | The token is malformed or does not match its organization, network, and wallet. | Restart pagination or use the original query scope. |
-| API quota exhausted | The applicable request allowance has reached its admission cap. | Check Pricing & quotas before retrying. |
-
-## SDK example
+Query indexed stake accounts to show earning balances or track cooldown.
 
 <CodeGroup>
 ```typescript TypeScript
@@ -87,7 +35,7 @@ result = await swig.yields.list_positions(
 ```
 </CodeGroup>
 
-## SDK returned structure
+#### SDK returned structure
 
 Illustrative final-page output with placeholder addresses. Python returns
 `YieldPositionsPage` and `YieldPosition` dataclasses; its JSON view below uses
@@ -136,4 +84,105 @@ Illustrative final-page output with placeholder addresses. Python returns
 ```
 </CodeGroup>
 
-See the [yield API reference](/developer-api/yield) for the underlying transport.
+### Get the yield summary
+
+Fetch aggregate position, withdrawable, and recorded reward amounts.
+
+<CodeGroup>
+
+```typescript TypeScript
+const summary = await yieldClient.getSummary();
+```
+
+```python Python
+summary = await swig.yields.get_summary(swig_config_address=swig_config_address)
+```
+
+</CodeGroup>
+
+#### SDK returned structure
+
+Illustrative output; Python shows the dataclass as JSON.
+
+<CodeGroup>
+
+```json TypeScript
+{ "totalPositionLamports": "5000000000", "withdrawableLamports": "0", "recordedRewardsLamports": "10000000" }
+```
+
+```json Python
+{ "total_position_lamports": "5000000000", "withdrawable_lamports": "0", "recorded_rewards_lamports": "10000000" }
+```
+
+</CodeGroup>
+
+### Page through positions
+
+Keep the wallet and network unchanged, and stop when the next token is absent.
+
+<CodeGroup>
+
+```typescript TypeScript
+if (result.nextPageToken) {
+  const nextPage = await yieldClient.listPositions({
+    pageSize: 50, pageToken: result.nextPageToken,
+  });
+}
+```
+
+```python Python
+if result.next_page_token:
+    next_page = await swig.yields.list_positions(
+        swig_config_address=swig_config_address,
+        page_size=50, page_token=result.next_page_token,
+    )
+```
+
+</CodeGroup>
+
+## Input parameters
+
+| Parameter | Requirement |
+| :--- | :--- |
+| `swigConfigAddress` / `swig_config_address` | Wallet config owned by the API key’s organization. |
+| `network` | Wallet network; otherwise use the client setting. |
+| `pageSize` / `page_size` | 50 by default, maximum 200 for position/reward pages. |
+| `pageToken` / `page_token` | Previous continuation token for the same organization, wallet, network, and collection. |
+
+## Returned result
+
+TypeScript field names are shown below; Python uses snake_case attributes.
+Lamport amounts are exact decimal strings in both SDKs.
+
+| Field | Type | Meaning |
+| :--- | :--- | :--- |
+| `positions` | array | Indexed positions, sorted by address |
+| `positions[].swigConfigAddress` | string | Wallet configuration account |
+| `positions[].walletAddress` | string | Wallet that controls the position |
+| `positions[].positionAddress` | string | Stake position account |
+| `positions[].validatorVoteAddress` | string, optional | Validator vote account, when known |
+| `positions[].state` | string | `activating`, `active`, `deactivating`, `inactive`, or `unspecified` |
+| `positions[].balanceLamports` | string | Full position balance, including rent |
+| `positions[].rentLamports` | string | Rent reserve |
+| `positions[].positionLamports` | string | Balance excluding rent; compounded rewards are already included |
+| `positions[].earningLamports` | string | Stake currently earning rewards |
+| `positions[].withdrawableLamports` | string | Indexed withdrawable amount; can include rent |
+| `nextPageToken` | string, optional | Continuation token; absent on the final page |
+| `lastUpdatedAt` | string, optional | Latest indexed update; absent before the first observation |
+
+The withdrawal preparation flow keeps the rent reserve. Use its
+`withdrawalLamports` to show the amount a prepared withdrawal will return.
+
+| Summary field | Meaning |
+| :--- | :--- |
+| `totalPositionLamports` | Total position balance excluding rent; already includes compounded rewards. |
+| `withdrawableLamports` | Indexed withdrawable balance; may include rent. |
+| `recordedRewardsLamports` | Recorded credits; do not add them again to position balances. |
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Wallet access denied | The API key's organization does not own the Swig config. Use the owning organization's key and correct network. |
+| Invalid continuation token | The token is malformed or does not match its organization, network, and wallet. Restart pagination or use the original query scope. |
+| API quota exhausted | The applicable request allowance has reached its admission cap. Check Pricing & quotas before retrying. |

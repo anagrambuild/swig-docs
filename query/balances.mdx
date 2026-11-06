@@ -1,69 +1,23 @@
 ---
-title: "Wallet balance"
+title: "Balance"
 sidebarTitle: "Balance"
-description: "Get a wallet's SOL and token holdings, with amounts and USD valuations."
 ---
 
 ## Introduction
 
-This dataset contains the native SOL and token balances recorded for a Swig
-wallet, along with token metadata, prices, and total USD value. Use it to build
-portfolio views, show available holdings, or display a wallet's value.
+This dataset contains a Swig wallet’s recorded SOL/token holdings, USD valuation,
+and asset metadata. Use it for portfolios, available-balance displays,
+and portfolio totals. It can lag chain state; transaction confirmation is separate.
 
-The example uses `listTokenBalances` / `list_token_balances`. For only the USD
-total, use `getUsdBalance` / `get_usd_balance`; see the
-[balance methods](/developer-sdk/wallet-reads#balances).
+Each admitted call consumes **one API request**, including retries and admitted
+errors. See [Pricing & quotas](/query#api-requests). Use the configured clients
+from [Client setup](/developer-sdk/integration-paths).
 
-These queries use recorded data and can lag chain state. Track transaction
-confirmation separately. Each admitted call consumes **one API request**;
-retries and admitted errors also count. See [pricing and quotas](/query#api-requests).
+## SDK examples
 
-## Returned result
+### List balances
 
-TypeScript field names are shown below. Python uses snake_case names.
-
-| Field | Type | Meaning |
-| :--- | :--- | :--- |
-| `swigConfigAddress` | string | Swig configuration account queried |
-| `walletAddress` | string | Wallet address that holds the assets |
-| `balances` | array | Native SOL and token balance records |
-| `balances[].assetKind` | string, optional | `native-sol`, `token`, or `unspecified` |
-| `balances[].mintAddress` | string | Asset mint identifier |
-| `balances[].tokenProgram` | number | Token-program discriminator |
-| `balances[].tokenSymbol`, `tokenName` | string | Display symbol and name |
-| `balances[].decimals` | number | Decimal places used by the asset |
-| `balances[].amountRaw` | string | Exact amount in base units; use for arithmetic |
-| `balances[].uiAmount` | number | Amount scaled by decimals for display |
-| `balances[].usdPrice` | number | USD price per whole token |
-| `balances[].usdValue` | number | USD value of this holding |
-| `totalUsdValue` | number | Total USD value across the wallet's holdings |
-
-Rust returns `WalletBalanceSummary`: native SOL is in `sol_balance`, and
-`token_balances` is a map keyed by mint. Its exact amounts are `u64` values.
-The returned structures below show the language differences.
-
-## Input parameters
-
-Start with [Client setup](/developer-sdk/integration-paths). Keep the API key on
-your server. These queries require no wallet-authority signature.
-
-| Parameter | Required | Description |
-| :--- | :--- | :--- |
-| `swigConfigAddress` / `swig_config_address` | Yes | Swig **config address**; a string in TypeScript/Python and a `Pubkey` in Rust |
-| `network` | Client setting | Configure the client for `mainnet` or `devnet`; Rust uses `Network::Mainnet` or `Network::Devnet` |
-
-## Errors
-
-| Failure | Cause | What to do |
-| :--- | :--- | :--- |
-| Authentication or access denied | The server API key cannot access the wallet query. | Check the key, organization, and wallet config address. |
-| Invalid wallet or network | The supplied config does not resolve on the selected network. | Use the Swig config address and its matching client network. |
-| API quota exhausted | The applicable request allowance has reached its admission cap. | Check Pricing & quotas; retries also consume admitted requests. |
-
-## SDK example
-
-Use `swig` from client setup in TypeScript/Python, or the `wallet` client in Rust.
-Supply the configuration address of the wallet you want to query.
+Use the `swig` client in TypeScript/Python or `wallet: WalletClient` in Rust. These queries need no wallet-authority signature.
 
 <CodeGroup>
 ```typescript TypeScript
@@ -81,7 +35,7 @@ let result = wallet.list_token_balances(&swig_config_address).await?;
 ```
 </CodeGroup>
 
-## SDK returned structure
+#### SDK returned structure
 
 Illustrative output with placeholder addresses. Python returns a
 `ListSwigTokenBalancesResult` dataclass; its JSON view is shown below. Rust
@@ -167,4 +121,89 @@ pub struct WalletBalanceSummary {
 
 </CodeGroup>
 
-For transport-level details, see the [wallet API reference](/developer-api/wallets).
+### Get the USD total
+
+Fetch just the recorded valuation when a full holding list is unnecessary.
+
+<CodeGroup>
+
+```typescript TypeScript
+const total = await wallet.getUsdBalance();
+```
+
+```python Python
+total = await wallet.get_usd_balance()
+```
+
+```rust Rust
+let total = wallet.get_usd_balance(&swig_config_address).await?;
+```
+
+</CodeGroup>
+
+#### SDK returned structure
+
+Illustrative output; Python shows the dataclass as JSON.
+
+<CodeGroup>
+
+```json TypeScript
+{ "swigConfigAddress": "SWIG_CONFIG_ADDRESS", "walletAddress": "WALLET_ADDRESS", "usdValue": 10 }
+```
+
+```json Python
+{ "swig_config_address": "SWIG_CONFIG_ADDRESS", "wallet_address": "WALLET_ADDRESS", "usd_value": 10 }
+```
+
+```rust Rust
+pub struct SwigUsdBalance {
+    pub swig_config_address: solana_pubkey::Pubkey,
+    pub wallet_address: solana_pubkey::Pubkey,
+    pub usd_value: f64,
+}
+```
+
+</CodeGroup>
+
+## Input parameters
+
+Start with [Client setup](/developer-sdk/integration-paths). These queries require no wallet-authority signature.
+
+| Parameter | Required | Description |
+| :--- | :--- | :--- |
+| `swigConfigAddress` / `swig_config_address` | Yes | Swig **config address**; a string in TypeScript/Python and a `Pubkey` in Rust |
+| `network` | Client setting | Configure the client for `mainnet` or `devnet`; Rust uses `Network::Mainnet` or `Network::Devnet` |
+
+## Returned result
+
+TypeScript field names are shown below. Python uses snake_case names.
+
+| Field | Type | Meaning |
+| :--- | :--- | :--- |
+| `swigConfigAddress` | string | Swig configuration account queried |
+| `walletAddress` | string | Wallet address that holds the assets |
+| `balances` | array | Native SOL and token balance records |
+| `balances[].assetKind` | string, optional | `native-sol`, `token`, or `unspecified` |
+| `balances[].mintAddress` | string | Asset mint identifier |
+| `balances[].tokenProgram` | number | Token-program discriminator |
+| `balances[].tokenSymbol`, `tokenName` | string | Display symbol and name |
+| `balances[].decimals` | number | Decimal places used by the asset |
+| `balances[].amountRaw` | string | Exact amount in base units; use for arithmetic |
+| `balances[].uiAmount` | number | Amount scaled by decimals for display |
+| `balances[].usdPrice` | number | USD price per whole token |
+| `balances[].usdValue` | number | USD value of this holding |
+| `totalUsdValue` | number | Total USD value across the wallet's holdings |
+
+Rust returns `WalletBalanceSummary`: native SOL is in `sol_balance`, and
+`token_balances` is a map keyed by mint. Its exact amounts are `u64` values.
+The returned structures below show the language differences.
+
+`getUsdBalance` / `get_usd_balance` returns config address, wallet address, and `usdValue` / `usd_value`. For recent movements, use [Token activity](/query/token-activity).
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| Authentication or access denied | The server API key cannot access the wallet query. Check the key, organization, and wallet config address. |
+| Invalid wallet or network | The supplied config does not resolve on the selected network. Use the Swig config address and its matching client network. |
+| API quota exhausted | The applicable request allowance has reached its admission cap. Check Pricing & quotas; retries also consume admitted requests. |

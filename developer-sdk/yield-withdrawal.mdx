@@ -1,0 +1,146 @@
+---
+title: "Yield withdrawal"
+sidebarTitle: "Withdrawal"
+---
+
+## Introduction
+
+Exit a native staking position, wait for cooldown, then withdraw SOL to the Swig
+wallet. Use a full exit to close out the delegation, or a partial exit to keep
+part earning rewards. TypeScript and Python prepare these transactions.
+
+The acting role needs Stake program access and sufficient staking permission.
+Each example prepares a transaction; sign, submit, and confirm it before the
+next step. [Query positions](/query/yield) to check state between steps.
+
+## SDK examples
+
+### Exit a position
+
+TypeScript uses `yieldClient = swig.yield.forWallet({ swigConfigAddress, network: 'mainnet' })`;
+Python uses the configured `swig` client and `swig_config_address`.
+
+Prepare deactivation of the whole position. Withdrawal becomes available after cooldown.
+
+<CodeGroup>
+
+```typescript TypeScript
+const exit = await yieldClient.exit({
+  feePayer,
+  requesterAuthority: { ed25519: { publicKey: agentKey } },
+  positionAddress,
+  amount: 'all',
+});
+// exit.exitingPositionAddress is the position entering cooldown
+```
+
+```python Python
+exit = await swig.yields.exit(
+    swig_config_address=swig_config_address,
+    fee_payer=fee_payer,
+    requester_authority={"ed25519": {"public_key": agent_key}},
+    position_address=position_address,
+    amount="all",
+)
+```
+
+</CodeGroup>
+
+### Exit part of a position
+
+Split a fully active position and deactivate the split. Both parts must meet the network’s minimum delegation.
+
+<CodeGroup>
+
+```typescript TypeScript
+const partialExit = await yieldClient.exit({
+  feePayer,
+  requesterAuthority: { ed25519: { publicKey: agentKey } },
+  positionAddress,
+  amount: { lamports: 2_000_000_000n, positionSeed: exitSeed },
+});
+```
+
+```python Python
+from swig_developer_sdk import PartialYieldExit
+
+partial_exit = await swig.yields.exit(
+    swig_config_address=swig_config_address,
+    fee_payer=fee_payer,
+    requester_authority={"ed25519": {"public_key": agent_key}},
+    position_address=position_address,
+    amount=PartialYieldExit(lamports=2_000_000_000, position_seed=exit_seed),
+)
+```
+
+</CodeGroup>
+
+Submit and confirm `partialExit.transaction` / `partial_exit.transaction`. Track its `exitingPositionAddress` / `exiting_position_address` during cooldown.
+
+### Withdraw a position
+
+After the exiting position becomes inactive, return its SOL above the rent reserve to the wallet.
+
+<CodeGroup>
+
+```typescript TypeScript
+const withdrawal = await yieldClient.withdraw({
+  feePayer,
+  requesterAuthority: { ed25519: { publicKey: agentKey } },
+  positionAddress: exit.exitingPositionAddress,
+});
+// withdrawal.withdrawalLamports, withdrawal.destinationWalletAddress
+```
+
+```python Python
+withdrawal = await swig.yields.withdraw(
+    swig_config_address=swig_config_address,
+    fee_payer=fee_payer,
+    requester_authority={"ed25519": {"public_key": agent_key}},
+    position_address=exit.exiting_position_address,
+)
+```
+
+</CodeGroup>
+
+Sign, submit, and confirm `withdrawal.transaction`. The returned `withdrawalLamports` / `withdrawal_lamports` is the amount this transaction returns; the rent reserve remains in the stake account.
+
+## Flow
+
+```text
+Exit position
+  ├─ Full: deactivate
+  └─ Partial: split
+      └─ Deactivate
+Wait for cooldown
+  └─ Withdraw above rent
+```
+
+## Input
+
+| Operation | Input | Requirement |
+| :--- | :--- | :--- |
+| All | Wallet config and network | Use [Client setup](/developer-sdk/integration-paths). TypeScript uses `swig.yield`; Python uses `swig.yields`. Rust has no yield client. |
+| Write | `feePayer`, `requesterAuthority`, optional `roleId` | Public fee payer and authorized wallet authority. Python uses snake_case names. Omit role ID to select the lowest capable role. |
+| Exit | `positionAddress`, `amount` | Use `all`, or a lamport amount and fresh split seed for a fully active position. Fee payer funds split-account rent. |
+| Withdrawal | `positionAddress` | Inactive position with withdrawable balance. Use the exiting position address returned by full or partial exit. |
+
+## Output
+
+| Operation | Field | Meaning |
+| :--- | :--- | :--- |
+| Exit | `transaction`, `exitingPositionAddress`, `deactivatingLamports`, `additionalRentLamports` | Original or split position entering cooldown, plus any new rent. |
+| Withdrawal | `transaction`, `withdrawalLamports`, `destinationWalletAddress` | Exact planned return above rent to the Swig wallet. |
+
+TypeScript fields are shown; Python uses snake_case. Returned lamport amounts are exact decimal strings. Indexed withdrawable amounts may include rent, but the prepared withdrawal keeps the rent reserve.
+
+## Errors
+
+| Error | Meaning |
+| :--- | :--- |
+| `INVALID_ARGUMENT` | Malformed input, unsupported validator, or invalid amount/seed. |
+| `NOT_FOUND` | The wallet is not owned by the API key’s organization. |
+| `PERMISSION_DENIED` | The selected role lacks program access, stake permission, or remaining SOL allowance; role creation needs a managing authority. |
+| `FAILED_PRECONDITION` | Insufficient funds, stake lockup, or an incompatible position state, including withdrawal before cooldown completes. |
+| `ALREADY_EXISTS` | The deposit or split seed identifies an existing account. Reconcile the earlier submission before choosing another seed. |
+| `UNAVAILABLE` | RPC, rate, or index data is temporarily unavailable. |
