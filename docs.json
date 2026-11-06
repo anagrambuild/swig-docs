@@ -121,9 +121,9 @@
             "pages": [
               "solana/permissions/spending-limits",
               "solana/permissions/program-access",
-              "solana/permissions/administrative"
-            ],
-            "root": "solana/permissions"
+              "solana/permissions/administrative",
+              "solana/permissions/authorization-locks"
+            ]
           },
           {
             "group": "Transactions",
@@ -139,7 +139,6 @@
             "pages": [
               "solana/use-cases/transfers",
               "solana/use-cases/swaps",
-              "solana/use-cases/authorization-locks",
               "solana/use-cases/recovery"
             ]
           }
@@ -306,6 +305,14 @@
     {
       "source": "/examples/dev-portal/transaction-history",
       "destination": "/developer-sdk/sponsor-and-submit"
+    },
+    {
+      "source": "/solana/permissions",
+      "destination": "/solana/permissions/spending-limits"
+    },
+    {
+      "source": "/solana/use-cases/authorization-locks",
+      "destination": "/solana/permissions/authorization-locks"
     }
   ],
   "logo": {

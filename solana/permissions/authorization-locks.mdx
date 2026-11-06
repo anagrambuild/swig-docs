@@ -17,6 +17,14 @@ An authorization lock reserves part of a wallet's balance for a payment role unt
 3. Capture by spending through that same role; successful spending reduces the hold.
 4. Release the remainder or allow it to expire.
 
+## Permission
+
+| Permission | SDK builder | Capability |
+| --- | --- | --- |
+| `ManageAuthorizationLocks` | `manageAuthorizationLocks({ maxDurationSlots })` | Manage holds within the role's allowance and maximum duration |
+
+Pair this permission with the role's [spending limits](/solana/permissions/spending-limits). Even `All` requires it explicitly.
+
 ## Flow
 
 ```text
@@ -45,7 +53,6 @@ const actions = Actions.set()
   .get();
 ```
 
-- Even `All` requires explicit `ManageAuthorizationLocks` to place holds.
 - Existing holds reduce the amount available for another hold.
 - Other roles, including the owner, can spend only unreserved funds.
 

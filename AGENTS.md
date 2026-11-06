@@ -105,11 +105,12 @@ billing notes, or contributor test/deployment instructions. Keep material limits
 that change how an integrator can use the feature.
 
 For Solana, keep Overview at the product's top level, followed by Setup,
-Authorities, Permissions, Transactions, and Use cases. Group named permissions
-by Spending limits, Program access, and Administrative. Add a role and Remove a
-role are transaction actions. Use Ed25519, Secp256r1, Secp256k1, ProgramExec, and
+Authorities, Permissions, Transactions, and Use cases. Permissions is a plain
+sidebar section, without a landing page or clickable root. Its pages are
+Spending limits, Program access, Administrative, and Authorization locks. Add a
+role and Remove a role are transaction actions. Use Ed25519, Secp256r1, Secp256k1, ProgramExec, and
 Sessions as authority labels, without shorthand suffixes. Use cases cover
-Transfers, Swaps, Authorization locks, and Recovery. Do not reintroduce the
+Transfers, Swaps, and Recovery. Do not reintroduce the
 TypeScript quickstart, Guides group, or Participant set.
 
 ## Code and diagrams
