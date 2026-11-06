@@ -64,14 +64,7 @@
               "query/yield",
               "query/ramp",
               "query/paymasters",
-              "query/public",
-              {
-                "group": "SDK examples",
-                "pages": [
-                  "developer-sdk/wallet-reads",
-                  "developer-sdk/dex-activity"
-                ]
-              }
+              "query/public"
             ]
           },
           {
