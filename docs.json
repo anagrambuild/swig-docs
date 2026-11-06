@@ -20,7 +20,8 @@
             "pages": [
               "index",
               "developer-sdk/integration-paths",
-              "examples/dev-portal/create-api-key"
+              "examples/dev-portal/create-api-key",
+              "query/index"
             ]
           },
           {
@@ -48,7 +49,6 @@
           {
             "group": "Query",
             "pages": [
-              "query/index",
               "query/wallets",
               "query/balances",
               "query/dex",
