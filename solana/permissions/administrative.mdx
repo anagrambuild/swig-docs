@@ -1,0 +1,60 @@
+---
+title: "Administrative"
+description: "Manage roles, recovery, wallet lifecycle, authorization holds, and subaccounts."
+---
+
+## Introduction
+
+- **Use when:** a signer needs to administer wallet access or perform a specific management operation.
+- **For:** owners, trusted administrators, guardians, and delegated payment operators.
+
+## How it works
+
+1. Choose the operation the signer needs to perform.
+2. Grant its specific permission, scoped to a role or subaccount where supported.
+3. Use that role to authorize the corresponding transaction.
+4. Confirm the transaction and refetch the resulting wallet state.
+
+## Role and wallet management
+
+| Permission | SDK builder | Capability |
+| --- | --- | --- |
+| `All` | `all()` | Broad owner access to spending, execution, and role management |
+| `AllButManageAuthority` | `allButManageAuthority()` | Broad execution access without authority and subaccount management |
+| `ManageAuthority` | `manageAuthority()` | Add, remove, and update roles |
+| `ReplaceAuthority` | `replaceAuthority({ roleId })` | Replace one role's signer while keeping its type and permissions |
+| `CloseSwigAuthority` | `closeSwigAuthority()` | Authorize wallet and token-account closure, subject to lifecycle restrictions |
+| `ManageAuthorizationLocks` | `manageAuthorizationLocks({ maxDurationSlots })` | Place holds within the role's allowance and the maximum duration |
+
+- `ManageAuthority` lets its holder grant access to others; reserve it for trusted administrators.
+- `ReplaceAuthority` gives a guardian control over the replacement key for its target role.
+- `All` and `AllButManageAuthority` still need explicit `ManageAuthorizationLocks` to place holds.
+- Active holds constrain role removal, guardian replacement, and wallet closure.
+
+## Subaccount management
+
+| Permission | SDK builder | Capability |
+| --- | --- | --- |
+| `SubAccountV2Create` | `subAccountV2Create()` | Create V2 subaccounts |
+| `SubAccountV2All` | `subAccountV2All({ subAccountId })` | Sign, withdraw, and toggle one V2 subaccount |
+| `SubAccountV2Sign` | `subAccountV2Sign({ subAccountId })` | Sign as one V2 subaccount |
+| `SubAccountV2Withdraw` | `subAccountV2Withdraw({ subAccountId })` | Withdraw from one V2 subaccount |
+| `SubAccountV2Toggle` | `subAccountV2Toggle({ subAccountId })` | Enable or disable one V2 subaccount |
+| `SubAccount` | `subAccount()` | Legacy V1 subaccount control |
+
+Use builders compatible with the wallet's subaccount version. Reserved wallets
+use V2 subaccounts; Classic's legacy V1 subaccount helpers cannot operate them.
+The V2 permission constructors above do not turn those V1 operation helpers
+into V2 builders; use the Rust V2 APIs for that flow.
+
+## Example: a role administrator
+
+```typescript
+import { Actions } from "@swig-wallet/classic";
+
+const actions = Actions.set().manageAuthority().get();
+```
+
+- Attach this permission set with [Add a role](/solana/add-role).
+- The role can manage access; this action alone does not grant a spending budget.
+- For narrower delegation, use the [guardian recovery](/solana/use-cases/recovery) or [authorization lock](/solana/use-cases/authorization-locks) example.

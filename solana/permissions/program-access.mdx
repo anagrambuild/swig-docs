@@ -1,0 +1,46 @@
+---
+title: "Program access"
+description: "Choose which Solana programs a role may call."
+---
+
+## Introduction
+
+- **Use when:** a role needs to transfer, swap, or interact with a particular Solana application.
+- **For:** integrations that delegate wallet execution to an application signer or session key.
+
+## How it works
+
+1. Identify the programs invoked by the intended transaction.
+2. Grant the matching program permission on the role.
+3. Add the [spending limits](/solana/permissions/spending-limits) needed for the assets involved.
+4. Authorize the operation with that role through [Signing](/solana/transactions/signing).
+
+## Permissions
+
+| Permission | SDK builder | Access |
+| --- | --- | --- |
+| `Program` | `programLimit({ programId })` | One named program |
+| `ProgramScope` | `programScopeBasic({ programId, targetAccount })` | A program and a specific target account |
+| `ProgramCurated` | `programCurated()` | The deployed protocol's curated program set |
+| `ProgramAll` | `programAll()` | Unrestricted program invocation |
+
+- Prefer `Program` for a known integration and add each required program explicitly.
+- `ProgramScope`'s basic form scopes access; it does not add an amount limit.
+- `ProgramCurated` depends on the deployed program's list; use explicit IDs when the application needs a fixed allowlist.
+- `ProgramAll` is highly privileged. Use it only when arbitrary program invocation is intended.
+
+## Example: allow System Program transfers
+
+```typescript
+import { SystemProgram } from "@solana/web3.js";
+import { Actions } from "@swig-wallet/classic";
+
+const actions = Actions.set()
+  .programLimit({ programId: SystemProgram.programId })
+  .solLimit({ amount: 100_000_000n })
+  .get();
+```
+
+Pass `actions` to [Add a role](/solana/add-role). This grants System Program
+access and a total 0.1 SOL budget. For a routed swap, identify every required
+program and asset allowance before collecting the user's authorization.

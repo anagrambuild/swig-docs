@@ -51,6 +51,12 @@ protected target role ID. Verify the guardian's public key and scoped permission
 
 ## Replace the lost key
 
+Check the target role's authorization locks before requesting a replacement:
+
+- Guardian replacement is rejected while the target holds active locks.
+- Its holds must be fully captured, released, or expired first.
+- If the target's only signing key is lost, recovery may need to wait for expiry.
+
 Classic 3.0.0 exposes the permission builder above. The replacement instruction
 is available through Rust's `swig-interface` 3.0.0; Classic does not yet expose
 a high-level replacement instruction builder.
@@ -107,6 +113,7 @@ An r1 target requires a new compressed P-256 key; a k1 target requires a new
 k1 key. Replacement preserves the authority type. For a session target,
 replacement clears its session key and expiration, so open a fresh session.
 
-This permission grants replacement for the selected role only. It does not
-grant role management, change spending permissions, or impose a waiting period.
-Use a compatible Swig deployment before offering the flow to users.
+- The permission grants replacement for the selected role only.
+- It does not grant role management or change spending permissions.
+- It adds no separate recovery-delay policy; the active-lock restriction above still applies.
+- Use a compatible Swig deployment before offering the flow to users.

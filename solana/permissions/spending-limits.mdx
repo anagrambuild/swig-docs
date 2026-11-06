@@ -1,0 +1,62 @@
+---
+title: "Spending limits"
+description: "Limit SOL, token, and staking operations by amount, window, or destination."
+---
+
+## Introduction
+
+- **Use when:** a role should spend within a budget rather than have unrestricted access.
+- **For:** application signers, session keys, payment operators, and automated strategies.
+
+## How it works
+
+1. Choose the asset and amount in base units: lamports for SOL, mint base units for tokens.
+2. Choose a fixed budget or a recurring allowance measured in slots.
+3. Add a destination restriction when the role should pay only one recipient.
+4. Pair the limit with the [program access](/solana/permissions/program-access) needed for the operation.
+
+## SOL permissions
+
+| Permission | SDK builder | Allowance |
+| --- | --- | --- |
+| `SolLimit` | `solLimit({ amount })` | Total remaining SOL budget |
+| `SolRecurringLimit` | `solRecurringLimit({ recurringAmount, window })` | SOL budget renewed after a slot window |
+| `SolDestinationLimit` | `solDestinationLimit({ amount, destination })` | Total SOL budget for one recipient |
+| `SolRecurringDestinationLimit` | `solRecurringDestinationLimit({ recurringAmount, window, destination })` | Recurring SOL budget for one recipient |
+
+## Token permissions
+
+| Permission | SDK builder | Allowance |
+| --- | --- | --- |
+| `TokenLimit` | `tokenLimit({ mint, amount })` | Total budget for one mint |
+| `TokenRecurringLimit` | `tokenRecurringLimit({ mint, recurringAmount, window })` | Recurring budget for one mint |
+| `TokenDestinationLimit` | `tokenDestinationLimit({ mint, amount, destination })` | Total budget for one mint and recipient token account |
+| `TokenRecurringDestinationLimit` | `tokenRecurringDestinationLimit({ mint, recurringAmount, window, destination })` | Recurring budget for one mint and recipient token account |
+
+The token `destination` is the receiving **token account**, not its owner's wallet address.
+
+## Staking permissions
+
+| Permission | SDK builder | Allowance |
+| --- | --- | --- |
+| `StakeLimit` | `stakeLimit({ amount })` | Fixed staking budget |
+| `StakeRecurringLimit` | `stakeRecurringLimit({ recurringAmount, window })` | Recurring staking budget |
+| `StakeAll` | `stakeAll()` | Staking without an amount limit |
+
+## Example: a recurring SOL allowance
+
+```typescript
+import { SystemProgram } from "@solana/web3.js";
+import { Actions } from "@swig-wallet/classic";
+
+const actions = Actions.set()
+  .programLimit({ programId: SystemProgram.programId })
+  .solRecurringLimit({ recurringAmount: 100_000_000n, window: 1_000n })
+  .get();
+```
+
+- Grants up to 0.1 SOL per 1,000-slot window.
+- Pass `actions` to [Add a role](/solana/add-role).
+- A fixed limit is a remaining budget, not a per-transaction maximum.
+- Recurring windows use slots, so they do not guarantee a calendar interval.
+- Opening a new session does not reset the role's remaining spending budget.

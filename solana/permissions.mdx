@@ -1,13 +1,27 @@
 ---
-title: "Choose permissions"
+title: "Permissions"
 description: "Give each role the program access and spending limits its task needs."
 ---
 
-Permissions are attached to a role alongside its authority. The authority
-determines who signs; the permissions determine which operations that role
-can perform. Build a permission set with `Actions.set()` and finish with `.get()`.
+## Introduction
 
-## Limit a role to SOL transfers
+- **Use when:** you need to limit what a wallet role can do.
+- **For:** applications assigning access to owners, operators, guardians, or session keys.
+
+## How it works
+
+1. Choose the authority that will use the role.
+2. Build its permissions with `Actions.set()` and finish with `.get()`.
+3. Add the role with that authority and permission set.
+4. Use the role ID when authorizing transactions. Its permissions apply to each operation.
+
+## Permission groups
+
+- [Spending limits](/solana/permissions/spending-limits): SOL, token, and staking budgets, with recurring and destination restrictions.
+- [Program access](/solana/permissions/program-access): allowed programs and program scopes.
+- [Administrative](/solana/permissions/administrative): role management, key replacement, wallet closure, authorization locks, and subaccounts.
+
+## Example: a SOL transfer role
 
 ```typescript
 import { SystemProgram } from "@solana/web3.js";
@@ -19,32 +33,11 @@ const actions = Actions.set()
   .get();
 ```
 
-This allows calls to the System Program and a total spend of 0.1 SOL.
-Both permissions matter: program access allows the call, while the SOL limit
-bounds the funds that can leave the wallet. `solLimit` is a remaining budget,
-not a fresh allowance for every transaction.
+- `Program` allows calls to the System Program.
+- `SolLimit` allows a total spend of 0.1 SOL; successful spends reduce the remaining budget.
+- Both are required for this scoped transfer role.
 
 Pass `actions` to [add a role](/solana/add-role).
-
-## Choose the permission for the task
-
-| Task | Builder |
-| --- | --- |
-| Manage roles | `manageAuthority()` |
-| Owner access to spending and role management | `all()` |
-| Call a specific program | `programLimit({ programId })` |
-| Spend SOL within a total budget | `solLimit({ amount })` |
-| Spend a specific token within a total budget | `tokenLimit({ mint, amount })` |
-| Renew a SOL budget after a slot window | `solRecurringLimit({ recurringAmount, window })` |
-| Renew a token budget after a slot window | `tokenRecurringLimit({ mint, recurringAmount, window })` |
-| Restrict SOL to a recipient | `solDestinationLimit({ amount, destination })` |
-| Restrict tokens to a recipient token account | `tokenDestinationLimit({ mint, amount, destination })` |
-| Place authorization holds | `manageAuthorizationLocks({ maxDurationSlots })` |
-| Replace the signer of one role | `replaceAuthority({ roleId })` |
-
-SOL amounts are lamports; token amounts are base units for the mint.
-Recurring windows and authorization-lock durations are **slots**, not seconds.
-Choose a slot budget deliberately; it does not guarantee a fixed wall-clock interval.
 
 ## Keep delegation scoped
 

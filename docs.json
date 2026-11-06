@@ -107,11 +107,11 @@
         "product": "Solana Protocol",
         "icon": "layer-group",
         "description": "Build Solana wallet transactions directly in TypeScript or Rust.",
-        "groups": [
+        "pages": [
+          "solana/index",
           {
             "group": "Setup",
             "pages": [
-              "solana/index",
               "solana/create-wallet",
               "solana/reservation-addresses"
             ]
@@ -129,16 +129,19 @@
           {
             "group": "Permissions",
             "pages": [
-              "solana/permissions",
-              "solana/add-role",
-              "solana/remove-role"
-            ]
+              "solana/permissions/spending-limits",
+              "solana/permissions/program-access",
+              "solana/permissions/administrative"
+            ],
+            "root": "solana/permissions"
           },
           {
             "group": "Transactions",
             "pages": [
               "solana/transactions/signing",
-              "solana/transactions/sending"
+              "solana/transactions/sending",
+              "solana/add-role",
+              "solana/remove-role"
             ]
           },
           {
