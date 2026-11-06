@@ -87,16 +87,6 @@
             ]
           },
           {
-            "group": "Workspace",
-            "pages": [
-              "examples/dev-portal/overview",
-              "examples/dev-portal/projects",
-              "examples/dev-portal/create-project",
-              "examples/dev-portal/manage-members",
-              "examples/dev-portal/subscriptions-billing"
-            ]
-          },
-          {
             "group": "Reference",
             "pages": [
               {
