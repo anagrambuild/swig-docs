@@ -19,34 +19,29 @@ actions. A passkey role therefore receives another P-256 key. Older names were
 ## Flow
 
 ```text
-+----------------------------+
-| Administrator grants       |
-| recovery                   |
-+----------------------------+
-              |
-              v
-+----------------------------+
-| User creates a replacement |
-| key                        |
-+----------------------------+
-              |
-              v
-+----------------------------+
-| Guardian approves exact    |
-| key                        |
-+----------------------------+
-              |
-              v
-+----------------------------+
-| Replace the protected role |
-| key                        |
-+----------------------------+
-              |
-              v
-+----------------------------+
-| Confirm unchanged          |
-| permissions                |
-+----------------------------+
++------------------------+
+| Grant recovery         |
++------------------------+
+            |
+            v
++------------------------+
+| Create replacement key |
++------------------------+
+            |
+            v
++------------------------+
+| Guardian approves key  |
++------------------------+
+            |
+            v
++------------------------+
+| Replace role key       |
++------------------------+
+            |
+            v
++------------------------+
+| Confirm permissions    |
++------------------------+
 ```
 
 ## Input

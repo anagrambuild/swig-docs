@@ -84,7 +84,7 @@ API response unless the request was actually performed.
   constraint only when needed for compatibility and explain it beside the command.
 - Prefer a fenced `text` ASCII flow when a diagram helps. Read top to bottom,
   use consistent boxes and vertical arrows, and wrap labels inside the box.
-  Keep each line at most 30 characters so it fits the mobile content area.
+  Keep each line at most 26 characters so it fits the mobile content area.
 - Keep prose brief. Remove repeated prerequisites, promotional claims,
   unrelated features, and repeated next-step card lists. Keep long secondary
   examples collapsed when they are necessary for a complete contract.

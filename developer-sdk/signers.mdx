@@ -18,25 +18,25 @@ API calls. Inspect transaction intent, permissions, and freshness before signing
 ## Flow
 
 ```text
-+----------------------------+
-| Compile participant        |
-| approvals                  |
-+----------------------------+
-              |
-              v
-+----------------------------+
-| Fill embedded signatures   |
-+----------------------------+
-              |
-              v
-+----------------------------+
-| Add Solana signatures      |
-+----------------------------+
-              |
-              v
-+----------------------------+
-| Submit and confirm         |
-+----------------------------+
++------------------------+
+| Compile approvals      |
++------------------------+
+            |
+            v
++------------------------+
+| Fill embedded          |
+| signature              |
++------------------------+
+            |
+            v
++------------------------+
+| Add Solana signature   |
++------------------------+
+            |
+            v
++------------------------+
+| Submit and confirm     |
++------------------------+
 ```
 
 Complete only the steps requested by the preparation. Changing instruction data
