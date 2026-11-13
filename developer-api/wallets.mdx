@@ -3,7 +3,7 @@ title: "Wallet API"
 sidebarTitle: "Wallets"
 ---
 
-The Wallet API reads Swig wallet state. Most routes are API-key guarded; two
+The Wallet API reads Swig wallet state and manages saved wallet policy templates. Most routes are API-key guarded; two
 are the public client boundary used by wallet front ends.
 
 API-key reads consume the API-request allowance. See
@@ -17,6 +17,10 @@ and [public reads](/developer-api/identity) for lookup/status accounting.
 | `POST` | `/wallet/swig/lookup` | public client boundary |
 | `GET` | `/wallet/swig/status` | public client boundary |
 | `GET` | `/wallet/policies/{policy_id}` | API key |
+| `POST`, `GET` | `/wallet/api/role-templates` | API key |
+| `GET`, `PATCH` | `/wallet/api/role-templates/{filters.id}` | API key |
+| `POST`, `GET` | `/wallet/api/wallet-templates` | API key |
+| `GET`, `PATCH` | `/wallet/api/wallet-templates/{filters.id}` | API key |
 | `GET` | `/wallet/swig/{swig_config_address}/balance/usd` | API key |
 | `GET` | `/wallet/swig/{swig_config_address}/token-balances` | API key |
 | `GET` | `/wallet/swig/{swig_config_address}/token-transactions` | API key |
@@ -28,10 +32,96 @@ For the API-key routes, send:
 Authorization: Bearer sk_your_api_key
 ```
 
-All API-key runtime routes listed above are `GET` reads, so they are safe to
-retry. The public lookup boundary is a `POST`.
+Read operations are safe to retry. Policy creation is a write and has no
+idempotency key; reconcile an uncertain result before retrying. The public
+lookup boundary is also a `POST`.
 
 Developer-portal admin endpoints are intentionally omitted from this reference.
+
+## Role templates
+
+These operations are defined in `wallet/api_wallet.proto` on
+`wallet.v1.WalletService`. Organization and actor come from the verified project
+API key. See the [SDK examples](/examples/dev-portal/create-policy).
+
+| RPC | HTTP | Request | Response |
+| :--- | :--- | :--- | :--- |
+| `CreateRoleTemplate` | `POST /wallet/api/role-templates` | Complete role definition below | `{ "roleTemplateId": "..." }` |
+| `UpdateRoleTemplate` | `PATCH /wallet/api/role-templates/{filters.id}` | Complete replacement definition; path binds `filters.id` | `{ "roleTemplateId": "..." }` |
+| `GetRoleTemplate` | `GET /wallet/api/role-templates/{filters.id}` | Path binds required ID | `{ "roleTemplate": {...} }` |
+| `ListRoleTemplates` | `GET /wallet/api/role-templates` | No parameters | `{ "roleTemplates": [...] }` |
+
+```json
+{
+  "name": "User's key",
+  "permissions": [{ "type": "All" }]
+}
+```
+
+`name` and a nonempty `permissions` array are required. Omit `authority` for a TBD
+key, or supply one direct authority, for example
+`{ "ed25519": { "publicKey": "..." } }`; `secp256k1` and `secp256r1` are also
+supported. Use stored PascalCase permission types and exact decimal strings for
+amounts and recurring slot windows. The TypeScript SDK converts its typed inputs.
+
+Read resources contain `id`, `name`, `permissions`, `keySource`, and `authority`
+when stored. `keySource` is `WALLET_POLICY_KEY_SOURCE_AT_CREATION` or
+`WALLET_POLICY_KEY_SOURCE_STORED`. Updates keep the same role ID and immediately
+change what future wallet creations resolve.
+
+## Wallet templates
+
+| RPC | HTTP | Request | Response |
+| :--- | :--- | :--- | :--- |
+| `CreateWalletTemplate` | `POST /wallet/api/wallet-templates` | Complete wallet definition below | `{ "walletTemplateId": "..." }` |
+| `UpdateWalletTemplate` | `PATCH /wallet/api/wallet-templates/{filters.id}` | Complete replacement definition; path binds `filters.id` | `{ "walletTemplateId": "..." }` |
+| `GetWalletTemplate` | `GET /wallet/api/wallet-templates/{filters.id}` | Path binds required ID | `{ "walletTemplate": {...} }` |
+| `ListWalletTemplates` | `GET /wallet/api/wallet-templates` | No parameters | `{ "walletTemplates": [...] }` |
+
+```json
+{
+  "name": "Application wallet",
+  "description": "Phantom owner and application agent",
+  "initialRoleTemplateId": "owner-role-id",
+  "additionalRoleTemplateIds": ["agent-role-id"]
+}
+```
+
+| Field | Requirement | Meaning |
+| :--- | :--- | :--- |
+| `name` | Required | Nonempty display name |
+| `initialRoleTemplateId` | Required | Initial role owned by this project |
+| `additionalRoleTemplateIds` | Optional | Ordered distinct owned role IDs; excludes the initial role |
+| `description` | Optional | Description; defaults to empty |
+| `rentClaimer` | Optional | Nonzero canonical Solana public key |
+| `recovery` | Optional | `keySource`, optional `label`, Ed25519 `authority` when stored, and `delaySeconds` from 86400 through 2147483647 |
+
+A wallet resource contains `id`, `name`, `description`, `initialRole`,
+`additionalRoles`, and optional `rentClaimer` and `recovery`. It resolves the
+latest referenced roles in a single snapshot. Wallet membership updates do not
+edit shared roles. Neither role nor wallet template edits change existing
+on-chain wallets. There are no versions, network filters, or pagination.
+
+Both update RPCs replace the supplied definition. Omitted optional fields clear
+those settings. All RPCs use operation-specific request/response messages;
+shared resources are defined in `wallet/policy.proto`. Empty protobuf list fields
+may be omitted in ProtoJSON; the SDK returns empty arrays.
+
+Creation through `POST /transaction/wallet/create` uses the wallet template ID as
+`policyId`. Bind TBD roles with `roleAuthorities: [{ roleTemplateId, authority }]`
+or `initialUser` for the initial role. Supply `guardianAuthority` for TBD recovery.
+The response includes `templateSetup`: the resolved template, all `authorities`,
+and optional `guardianAuthority`. Additional roles and settings remain pending
+until their transactions are authorized and confirmed. See
+[template creation](/examples/dev-portal/create-policy#prepare-a-wallet-from-the-template).
+
+| Error | Meaning |
+| :--- | :--- |
+| Invalid input | Invalid name, authority, permissions, duplicate role references, or wallet settings. |
+| Unauthenticated / permission denied | Invalid project API key or unavailable project access. |
+| Not found | A requested or referenced template is unavailable in this project. |
+| Resource exhausted | Project API-request allowance exhausted. |
+| Internal / unavailable | Read or write failed. Reconcile an uncertain creation before retrying. |
 
 ## Get USD balance
 
@@ -132,8 +222,9 @@ A Swig's indexed DEX transactions and liquidity positions are read through the
 ## Get policy
 
 `GET /wallet/policies/{policy_id}` reads a policy visible to the API-key
-organization. Policy creation and policy administration are portal-admin flows,
-not API-key runtime endpoints.
+organization. This compatibility response retains the initial-role and guardian
+fields and includes `initialUserLabel` and `additionalUsers`. Prefer the template
+endpoints above for complete current layouts.
 
 ## Public client boundary
 

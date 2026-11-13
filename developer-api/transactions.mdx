@@ -223,6 +223,18 @@ sponsored submission.
 }
 ```
 
+For a composed wallet template, `policyId` is its wallet template ID. Additional
+TBD keys use `roleAuthorities: [{ "roleTemplateId": "...", "authority": {...} }]`;
+`initialUser` remains a shorthand for the initial role binding. A TBD recovery
+guardian uses `guardianAuthority`. Missing, duplicate or unknown bindings and
+changes to stored authorities are rejected.
+
+The response adds `templateSetup` with the resolved current `template`, all role
+`authorities`, and optional `guardianAuthority`. It records the configuration used
+for this preparation. Additional roles and wallet settings are pending work;
+authorize and confirm their SDK transactions after creation, then verify the
+result. See [policy templates](/examples/dev-portal/create-policy).
+
 ## Transfer SOL
 
 `POST /transaction/transfer/sol`

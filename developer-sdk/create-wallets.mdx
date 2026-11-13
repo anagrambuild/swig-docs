@@ -115,6 +115,18 @@ let created = wallet.prepare_create_wallet(PrepareCreateWalletArgs {
 ```
 </CodeGroup>
 
+For composed templates, TypeScript also accepts `roleAuthorities`, an array of
+`{ roleTemplateId, authority }` bindings for every additional TBD key. The server
+rejects missing or duplicate bindings and overrides of stored keys. Python and
+Rust retain the initial-role flow; use TypeScript for the complete composed
+[template workflow](/examples/dev-portal/create-policy).
+
+`created.templateSetup` contains the current template snapshot and resolved
+public keys. After creation confirms, apply its additional roles, rent claimer,
+and recovery settings through their SDK operations. Confirm each transaction
+before preparing the next and inspect the resulting wallet. Do not report the
+full template as applied merely because wallet creation confirmed.
+
 ### Reserve an address
 
 Derive the wallet's addresses from a root authority and an optional account index

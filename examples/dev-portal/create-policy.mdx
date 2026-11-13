@@ -1,104 +1,176 @@
 ---
 title: "Policy template"
 sidebarTitle: "Policy template"
-description: "Save reusable configuration for new Swig wallets."
+description: "Define reusable roles and compose wallet templates."
 ---
 
 ## Introduction
 
-A policy template stores the initial authority and actions used when creating a
-wallet. Use it when your application creates many wallets with the same setup.
-The Developer Portal calls this **Wallet templates**.
+A role template defines a name, explicit permissions, and a public authority that
+can be supplied now or at wallet creation. A wallet template references those
+roles and stores wallet settings such as the rent claimer and recovery guardian.
+Use templates to give new application wallets a consistent layout.
 
-A template is saved configuration. Editing it does not change permissions on
-an existing wallet; use [Role](/developer-sdk/add-roles-and-permissions) for that.
+Templates always contain the latest definition. Editing a shared role affects
+future creations from every wallet template that references it. Existing
+on-chain wallets keep their permissions. TypeScript supports template authoring;
+use the server client from [Client setup](/developer-sdk/integration-paths).
 
 ## SDK examples
 
-### Create a wallet from a template
+### Define role templates
 
-Template creation is a portal action. Use the saved policy ID with the SDK to
-prepare a wallet. This example assumes the template asks for an Ed25519 initial
-user. Omit that authority when the template already supplies it.
+Choose the network's USDC mint, allowed trading program, recipient, and recurring
+slot window for your application. This example explicitly grants full control to
+the user's key and limited permissions to the other roles.
 
-<CodeGroup>
 ```typescript TypeScript
-const created = await swig.wallets.create({
-  feePayer,
-  policyId,
-  initialUser: { ed25519: { publicKey: userPublicKey } },
+const owner = await swig.roleTemplates.create({
+  name: "User's key",
+  permissions: [{ type: "all" }],
+});
+const trader = await swig.roleTemplates.create({
+  name: "Trader",
+  permissions: [
+    { type: "program", programId: tradingProgramId },
+    { type: "tokenRecurringLimit", mint: usdcMint, recurringAmount: "100000000", window: windowSlots },
+    { type: "solRecurringLimit", recurringAmount: "1000000000", window: windowSlots },
+  ],
+});
+const helper = await swig.roleTemplates.create({
+  name: "AI helper",
+  authority: { ed25519: { publicKey: agentPublicKey } },
+  permissions: [
+    { type: "program", programId: tokenProgramId },
+    { type: "tokenRecurringDestinationLimit", mint: usdcMint, recurringAmount: "10000000", window: windowSlots, destination: recipientPublicKey },
+  ],
 });
 ```
 
-```python Python
-created = await swig.wallets.create(
-    fee_payer=fee_payer,
-    policy_id=policy_id,
-    initial_user={"ed25519": {"publicKey": user_public_key}},
-)
-```
+An omitted `authority` means TBD until creation. These amounts assume six-decimal
+USDC and use exact base units; `window` is slots, not a guaranteed 24-hour day.
+Keep private keys in your signer. Each call returns `{ roleTemplateId }` and
+saves configuration without creating an on-chain role.
 
-```rust Rust
-use swig_developer_sdk::{PrepareCreateWalletArgs, WalletAuthority};
+### Compose a wallet template
 
-let created = wallet.prepare_create_wallet(PrepareCreateWalletArgs {
-    fee_payer,
-    policy_id: Some(policy_id),
-    initial_user: Some(WalletAuthority::Ed25519 {
-        public_key: user_public_key,
-    }),
-}).await?;
-```
-</CodeGroup>
-
-Use the clients from [Client setup](/developer-sdk/integration-paths).
-[Sign and submit the creation plan](/developer-sdk/create-wallets), then add each
-additional role and verify its confirmed permissions. To inspect saved template
-metadata, use [Fetch template](/examples/dev-portal/fetch-policy).
-
-
-### Inspect the template
-
-Fetch saved metadata to verify the template selected by your application.
-
-<CodeGroup>
+Reference role IDs in their intended order. A shared role keeps the same ID when
+updated. The rent claimer receives reclaimed rent when supported wallet closure
+operations run.
 
 ```typescript TypeScript
-const template = await swig.wallets.getPolicy(policyId);
+const walletInput = {
+  name: "Phantom, trader and helper",
+  initialRoleTemplateId: owner.roleTemplateId,
+  additionalRoleTemplateIds: [trader.roleTemplateId, helper.roleTemplateId],
+  rentClaimer: rentRecipientPublicKey,
+} satisfies import("@swig-wallet/developer-sdk").WalletTemplateInput;
+
+const { walletTemplateId } = await swig.walletTemplates.create(walletInput);
 ```
 
-```python Python
-template = await swig.wallets.get_policy(policy_id)
+For recovery, add `recovery: { keySource: "atCreation", delaySeconds: 86400 }`,
+or use `keySource: "stored"` with an Ed25519 `authority` and the delay.
+
+### Update the current definition
+
+Updates replace the supplied template definition in place. Provide the complete
+intended fields; omitted optional settings are cleared. Changing a wallet's role
+references does not edit those shared role definitions.
+
+```typescript TypeScript
+await swig.roleTemplates.update(helper.roleTemplateId, {
+  name: "AI helper",
+  authority: { ed25519: { publicKey: agentPublicKey } },
+  permissions: [
+    { type: "program", programId: tokenProgramId },
+    { type: "tokenRecurringDestinationLimit", mint: usdcMint, recurringAmount: "5000000", window: windowSlots, destination: recipientPublicKey },
+  ],
+});
+await swig.walletTemplates.update(walletTemplateId, {
+  ...walletInput,
+  name: "Application wallet",
+});
 ```
 
-```rust Rust
-let template = wallet.get_policy(&policy_id).await?;
+### Prepare a wallet from the template
+
+After verifying the application's Phantom login challenge, bind its public key
+to the initial role. Supply every other TBD authority by its role template ID.
+Stored authorities cannot be overridden.
+
+```typescript TypeScript
+const created = await swig.wallets.create({
+  network,
+  feePayer,
+  policyId: walletTemplateId,
+  initialUser: { ed25519: { publicKey: phantomPublicKey } },
+  roleAuthorities: [
+    { roleTemplateId: trader.roleTemplateId, authority: { ed25519: { publicKey: traderPublicKey } } },
+  ],
+});
+const pendingSetup = created.templateSetup;
 ```
 
-</CodeGroup>
+The server resolves the current definitions once and returns that snapshot with
+its authority bindings in `templateSetup`. [Sign and confirm the creation
+transaction](/developer-sdk/create-wallets), then use that returned snapshot to
+[add the additional roles](/developer-sdk/add-roles-and-permissions),
+[set the rent claimer](/developer-sdk/rent-claimers), and complete
+[recovery setup](/developer-sdk/use-cases/guardian-recovery) when configured.
+Prepare and confirm each step in sequence. Verify the wallet's resulting roles
+and settings before reporting setup complete. On retry, inspect the existing
+wallet before adding roles again.
+
+## Flow
+
+```text
+Define named roles
+  └─ Compose wallet
+      └─ Bind TBD keys
+          └─ Create wallet
+              └─ Apply roles
+                  └─ Verify
+```
 
 ## Input
 
-| Field | Required | Description |
-| :--- | :--- | :--- |
-| Name | Yes | Identifies the template |
-| Description | No | Explains its purpose |
-| Initial authority | Yes, now or at wallet creation | Choose the public-key type; save a key or let the application supply it later |
-| Additional user | No | Public key and at least one allowed action; provision this role separately after wallet creation |
+| Operation | Parameter | Requirement | Type / meaning |
+| :--- | :--- | :--- | :--- |
+| Role create/update | `name`, `permissions` | Required | Name and nonempty typed permission array; no implicit grants |
+| Role create/update | `authority` | Optional | Direct Ed25519, Secp256k1, or Secp256r1 public authority; omit for TBD |
+| Wallet create/update | `name`, `initialRoleTemplateId` | Required | Name and owned initial role ID |
+| Wallet create/update | `additionalRoleTemplateIds` | Optional | Ordered distinct role IDs from the same project; defaults to empty |
+| Wallet create/update | `description`, `rentClaimer` | Optional | Description and nonzero Solana rent recipient |
+| Wallet create/update | `recovery` | Optional | Key source, optional label, Ed25519 authority when stored, and delay of 86400–2147483647 seconds |
+| Wallet creation | `policyId` | For template creation | Saved wallet template ID |
+| Wallet creation | `initialUser`, `roleAuthorities` | For TBD roles | Initial-role binding or bindings by stable role ID; no duplicate bindings |
+| Wallet creation | `recovery.guardianPubkey` | For TBD recovery | Guardian public key; saved delay remains authoritative |
 
-The portal gives the initial user full root access (`All`). Its form does not
-provide an initial-user spending-limit editor. Additional users saved in the
-template are **not automatically added** by Developer SDK wallet creation.
+Templates belong to the project API key and are shared across networks. Choose
+network-appropriate addresses. Completing a template with additional roles or
+settings requires an initial role with `all` or `manageAuthority` and an Ed25519 or Secp256r1
+authority. Rent claimer setup requires Ed25519 with `all`. Unsupported combinations are
+rejected before preparing wallet creation.
 
-Open **Wallet templates** in the [Developer Portal](https://dashboard.onswig.com),
-select **New template**, enter the fields above, and save the policy ID.
-Recovery-guardian setup in that form is currently unavailable; see
-[Guardian recovery](/developer-sdk/use-cases/guardian-recovery).
+## Output
+
+Role writes return `{ roleTemplateId }`; wallet-template writes return
+`{ walletTemplateId }`. Writes are not automatically retried. After an uncertain
+creation, [list templates](/examples/dev-portal/fetch-policy) and reconcile the
+complete definition before retrying.
+
+`wallets.create` returns prepared transactions and `templateSetup`, containing
+the resolved `template`, all role `authorities`, and optional `guardianAuthority`.
+These are pending setup instructions, not proof of applied permissions.
 
 ## Errors
 
 | Error | Meaning |
 | :--- | :--- |
-| Template lookup is denied or missing | The policy ID is unavailable to the server API key. Check the ID and resource access using Fetch template. |
-| Initial authority missing at creation | The template expects the application to supply its key. Set initialUser / initial_user when preparing the wallet. |
-| Additional role absent after creation | Stored additional users are not provisioned by template-based creation. Add each role after wallet creation confirms, then inspect its permissions. |
+| Invalid input | Missing name or permissions, invalid authority, duplicate role IDs, or invalid wallet settings. |
+| Project access unavailable | The normal project API key is invalid or disabled. |
+| Template not found | The ID does not exist in the authenticated project. |
+| Authority binding rejected | A TBD key is missing, a binding is duplicated or unknown, or a stored key would be overridden. |
+| Unsupported initial role | The root authority or permissions cannot apply the requested roles or settings. |
+| Setup incomplete | Creation confirmed but additional roles or settings still need their own authorized transactions and verification. |

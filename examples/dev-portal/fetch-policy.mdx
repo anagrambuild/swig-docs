@@ -1,30 +1,74 @@
 ---
 title: "Fetch template"
 sidebarTitle: "Fetch template"
-description: "Inspect saved wallet-creation policy metadata."
+description: "Read reusable role definitions and composed wallet layouts."
 ---
 
 ## Introduction
 
-A policy lookup returns the authority and action configuration saved for wallet
-creation. Use it to inspect a template before creating a wallet or displaying its
-setup in your application. It describes saved metadata, not a wallet's current
-on-chain permissions.
+Template reads return the current saved role definitions and wallet layouts for
+the authenticated project. Use them for an application's Policies section or to
+review a design before creating wallets. They do not describe permissions already
+applied to an on-chain wallet.
 
-TypeScript, Python, and Rust expose this lookup. Your API key must have access to the
-template; a wallet signature is not required.
+TypeScript exposes the role and wallet template clients. These reads require the
+normal project API key, have no pagination, and are independent of network.
 
 ## SDK examples
 
-### Fetch a saved template
+### List role and wallet templates
 
 Use the server client from [Client setup](/developer-sdk/integration-paths).
+
+```typescript TypeScript
+const roles = await swig.roleTemplates.list();
+const wallets = await swig.walletTemplates.list();
+```
+
+**SDK returned structure** (illustrative):
+
+```typescript
+// roles
+[{ id: "owner", name: "User's key", keySource: "atCreation", permissions: [{ type: "all" }] }]
+
+// wallets
+[{
+  id: "wallet-template",
+  name: "Application wallet",
+  description: "",
+  initialRole: { id: "owner", name: "User's key", keySource: "atCreation", permissions: [{ type: "all" }] },
+  additionalRoles: [],
+}]
+```
+
+Empty arrays mean no templates are saved. Failed reads raise errors. Wallet
+reads resolve referenced roles to their latest definitions in one database
+snapshot and preserve the saved role order.
+
+### Get one role or wallet template
+
+Fetch by the ID returned from [template creation](/examples/dev-portal/create-policy).
+
+```typescript TypeScript
+const role = await swig.roleTemplates.get(roleTemplateId);
+const wallet = await swig.walletTemplates.get(walletTemplateId);
+```
+
+**SDK returned structure**: `role` is one element of the role list above;
+`wallet` is one element of the wallet list above. Stored keys include
+`keySource: "stored"` and `authority`, such as
+`{ ed25519: { publicKey: agentPublicKey } }`. Permission objects are typed SDK
+`AddRoleAction` values and can be used when preparing role transactions.
+
+### Read a legacy policy
+
+Existing Python and Rust integrations retain the initial-role policy lookup.
+Use the new TypeScript template clients for the full composed layout.
 
 <CodeGroup>
 ```typescript TypeScript
 const policy = await swig.wallets.getPolicy(policyId);
 ```
-
 ```python Python
 policy = await swig.wallets.get_policy(policy_id)
 ```
@@ -33,71 +77,41 @@ let policy = wallet.get_policy(&policy_id).await?;
 ```
 </CodeGroup>
 
-Pass the ID into [Create a wallet](/developer-sdk/create-wallets)
-when ready. Use the [role list](/developer-sdk/add-roles-and-permissions#confirm-the-role)
-to inspect permissions already on-chain.
-
-
-### Inspect the saved actions
-
-Display the template’s saved grants before creation. On-chain grants are queried separately through the Role page.
-
-<CodeGroup>
-
-```typescript TypeScript
-for (const action of policy.actions ?? []) {
-  console.log(action);
-}
-```
-
-```python Python
-for action in policy.actions:
-    print(action)
-```
-
-```rust Rust
-for action in &policy.actions {
-    if let swig_developer_sdk::WalletPermission::SolLimit { amount } = action {
-        println!("Saved SOL allowance: {amount} lamports");
-    }
-}
-```
-
-</CodeGroup>
+**SDK returned structure**: existing policy fields include `id`, `name`,
+`description`, initial `authority` and `actions`, and recovery metadata. Legacy
+stored action names such as `SolLimit` differ from typed SDK inputs such as
+`solLimit`. Python and Rust keep their existing typed field sets.
 
 ## Input
 
-| Parameter | Required | Description |
-| :--- | :--- | :--- |
-| `policyId` / `policy_id` | Yes | ID saved when [creating the template](/examples/dev-portal/create-policy) |
-| API key | Client setting | Server credential with access to the template |
+| Operation | Parameter | Requirement | Meaning |
+| :--- | :--- | :--- | :--- |
+| `roleTemplates.get` | Role template ID | Required | Owned reusable role |
+| `walletTemplates.get` | Wallet template ID | Required | Owned wallet layout |
+| Both list methods | None | — | All current templates for the project |
+| All methods | API key | Client setting | Normal project credential kept in private server configuration |
 
 ## Output
 
-TypeScript names are shown below. Python exposes a `Policy` object with
-snake_case top-level fields.
-
 | Field | Type | Meaning |
 | :--- | :--- | :--- |
-| `id`, `name` | string | Template identifier and display name |
-| `description` | string or null | Saved description |
-| `authority` | object, null, or absent | Stored initial authority; your application supplies one when the template requires it |
-| `actions` | array, optional | Saved action data for the initial user |
-| `initialKeySource` | string, optional | Whether the initial key is stored or supplied at creation |
-| `guardianEnabled`, `guardianAuthority`, `guardianKeySource`, `guardianDelaySeconds` | Optional compatibility fields | Retained recovery metadata; presence does not establish an available recovery flow |
+| Role `id`, `name` | string | Stable identifier and current display name |
+| Role `permissions` | `AddRoleAction[]` | Current explicit grants; amounts and windows are exact decimal strings |
+| Role `keySource`, `authority` | Discriminated union | `atCreation` without authority, or `stored` with a direct public authority |
+| Wallet `id`, `name`, `description` | string | Wallet template metadata |
+| Wallet `initialRole`, `additionalRoles` | Role object / ordered array | Latest referenced role definitions |
+| Wallet `rentClaimer` | Optional string | Configured rent recipient |
+| Wallet `recovery` | Optional object | Guardian key source, authority when stored, label and delay in seconds |
 
-This lookup does not return additional users saved in the portal. Store the
-configuration needed to provision those roles in your application. Saved actions
-use stored names and shapes; map them to typed [permission](/developer-sdk/permissions)
-inputs when adding a role rather than forwarding them unchanged.
-
-Rust returns typed `WalletAuthority` and `WalletPermission` values. Its
-`description` is a string and guardian fields are concrete compatibility
-metadata. An unknown policy returns `GetPolicyError::PolicyNotFound`.
+Saved templates do not modify existing wallets. Read the
+[confirmed role layout](/developer-sdk/add-roles-and-permissions#confirm-the-role)
+and balances separately for on-chain status.
 
 ## Errors
 
 | Error | Meaning |
 | :--- | :--- |
-| 401 or 403 | The API key is invalid or lacks access. Check the server key and its resource access. |
-| 404 | The policy ID is not found or is not visible to the caller. Confirm the saved policy ID and organization access. |
+| Project access unavailable | Invalid or disabled project API key. |
+| Template not found | The requested ID is missing or belongs to another project. |
+| Invalid stored template | A required role, authority, permission, or setting cannot be decoded; the read fails instead of returning a partial layout. |
+| Read unavailable | Retry the read; do not display an empty policy list as a successful result. |
