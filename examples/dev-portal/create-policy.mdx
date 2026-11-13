@@ -20,8 +20,10 @@ use the server client from [Client setup](/developer-sdk/integration-paths).
 
 ### Define role templates
 
-Choose the network's USDC mint, allowed trading program, recipient, and recurring
-slot window for your application. This example explicitly grants full control to
+Choose the network's USDC mint, allowed trading program, recipient token account,
+and recurring slot window for your application. `recipientTokenAccount` is the
+recipient's USDC token-account address for that network and token program, not
+the recipient's wallet public key. This example explicitly grants full control to
 the user's key and limited permissions to the other roles.
 
 ```typescript TypeScript
@@ -42,7 +44,7 @@ const helper = await swig.roleTemplates.create({
   authority: { ed25519: { publicKey: agentPublicKey } },
   permissions: [
     { type: "program", programId: tokenProgramId },
-    { type: "tokenRecurringDestinationLimit", mint: usdcMint, recurringAmount: "10000000", window: windowSlots, destination: recipientPublicKey },
+    { type: "tokenRecurringDestinationLimit", mint: usdcMint, recurringAmount: "10000000", window: windowSlots, destination: recipientTokenAccount },
   ],
 });
 ```
@@ -84,7 +86,7 @@ await swig.roleTemplates.update(helper.roleTemplateId, {
   authority: { ed25519: { publicKey: agentPublicKey } },
   permissions: [
     { type: "program", programId: tokenProgramId },
-    { type: "tokenRecurringDestinationLimit", mint: usdcMint, recurringAmount: "5000000", window: windowSlots, destination: recipientPublicKey },
+    { type: "tokenRecurringDestinationLimit", mint: usdcMint, recurringAmount: "5000000", window: windowSlots, destination: recipientTokenAccount },
   ],
 });
 await swig.walletTemplates.update(walletTemplateId, {
@@ -116,8 +118,11 @@ The server resolves the current definitions once and returns that snapshot with
 its authority bindings in `templateSetup`. [Sign and confirm the creation
 transaction](/developer-sdk/create-wallets), then use that returned snapshot to
 [add the additional roles](/developer-sdk/add-roles-and-permissions),
-[set the rent claimer](/developer-sdk/rent-claimers), and complete
-[recovery setup](/developer-sdk/use-cases/guardian-recovery) when configured.
+[set the rent claimer](/developer-sdk/rent-claimers). Recovery settings are saved
+configuration: the hosted Developer SDK cannot currently complete recovery setup.
+See [Guardian recovery](/developer-sdk/use-cases/guardian-recovery) for the protocol
+integration requirements; do not report a recovery-configured wallet as fully set
+up until that separate integration is complete.
 Prepare and confirm each step in sequence. Verify the wallet's resulting roles
 and settings before reporting setup complete. On retry, inspect the existing
 wallet before adding roles again.
@@ -129,8 +134,8 @@ Define named roles
   └─ Compose wallet
       └─ Bind TBD keys
           └─ Create wallet
-              └─ Apply roles
-                  └─ Verify
+              └─ Roles
+                  └─ Check
 ```
 
 ## Input

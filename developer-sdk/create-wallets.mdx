@@ -122,10 +122,12 @@ Rust retain the initial-role flow; use TypeScript for the complete composed
 [template workflow](/examples/dev-portal/create-policy).
 
 `created.templateSetup` contains the current template snapshot and resolved
-public keys. After creation confirms, apply its additional roles, rent claimer,
-and recovery settings through their SDK operations. Confirm each transaction
-before preparing the next and inspect the resulting wallet. Do not report the
-full template as applied merely because wallet creation confirmed.
+public keys. After creation confirms, apply its additional roles and rent claimer
+through their SDK operations. Confirm each transaction before preparing the next
+and inspect the resulting wallet. Recovery settings remain pending: hosted recovery
+setup is not currently supported; see [Guardian recovery](/developer-sdk/use-cases/guardian-recovery)
+for the separate protocol integration. Do not report the full template as applied
+merely because wallet creation confirmed.
 
 ### Reserve an address
 
