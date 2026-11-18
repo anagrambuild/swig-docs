@@ -56,6 +56,7 @@ application-owned async helper following [Signing](/developer-sdk/signers).
 ```typescript TypeScript
 const submitted = await swig.transactions.sponsor({
   transaction: signedBase64Transaction,
+  externalId: 'order-42',
   network: 'mainnet',
   idempotencyKey,
 });
@@ -71,6 +72,7 @@ from swig_developer_sdk import SponsorSignedTransactionArgs
 submitted = await swig.transactions.sponsor(
     SponsorSignedTransactionArgs(
         transaction=signed_base64_transaction,
+        external_id="order-42",
         network="mainnet",
         idempotency_key=idempotency_key,
     )
@@ -98,10 +100,13 @@ let prepared = wallet
 let signed_transaction = sign_transaction(&prepared).await?;
 
 let submitted = paymaster
-    .sponsor(SponsorSignedTransactionArgs {
-        transaction: signed_transaction,
-        idempotency_key,
-    })
+    .sponsor_with_external_id(
+        SponsorSignedTransactionArgs {
+            transaction: signed_transaction,
+            idempotency_key,
+        },
+        Some("order-42".to_owned()),
+    )
     .await?;
 ```
 
@@ -213,6 +218,7 @@ Prepare with paymaster
 | Both | `network` | `mainnet` or `devnet`; use the same network for wallet and paymaster clients |
 | Balance | `kind` | `api` for transaction sponsorship; `idp` for IdP funding |
 | Sponsor | `transaction` | Signed base64 transaction in TypeScript/Python; native `VersionedTransaction` in Rust |
+| Sponsor one transaction | `externalId` / `external_id` | Optional string supplied by your application, such as an order ID. The paymaster accepts it as request metadata. |
 | Sponsor | `idempotencyKey` / `idempotency_key` | Stable key for this exact transaction; reuse it for retries |
 
 Use the API paymaster's returned address as `feePayer` / `fee_payer` during
