@@ -45,6 +45,24 @@ Use `getIdpBalance()` / `get_idp_balance()` for IdP funding. TypeScript/Python
 resolve network from the call, then client, then mainnet for paymaster calls.
 Rust always uses its configured network.
 
+### Sign without submitting
+
+Use the paymaster to add its fee-payer signature when your application will submit the transaction.
+
+<CodeGroup>
+
+```typescript TypeScript
+const { requestId, signedTransaction } = await swig.transactions.sign({
+  transaction: signedBase64Transaction,
+  network: 'mainnet',
+  externalId: 'order-42',
+});
+```
+
+</CodeGroup>
+
+The result includes the request ID and the signed transaction in base64. Your application can submit those bytes through its Solana RPC.
+
 ### Sponsor one transaction
 
 For TypeScript/Python, `signedBase64Transaction` / `signed_base64_transaction`
@@ -56,6 +74,7 @@ application-owned async helper following [Signing](/developer-sdk/signers).
 ```typescript TypeScript
 const submitted = await swig.transactions.sponsor({
   transaction: signedBase64Transaction,
+  externalId: 'order-42',
   network: 'mainnet',
   idempotencyKey,
 });
@@ -71,6 +90,7 @@ from swig_developer_sdk import SponsorSignedTransactionArgs
 submitted = await swig.transactions.sponsor(
     SponsorSignedTransactionArgs(
         transaction=signed_base64_transaction,
+        external_id="order-42",
         network="mainnet",
         idempotency_key=idempotency_key,
     )
@@ -98,10 +118,13 @@ let prepared = wallet
 let signed_transaction = sign_transaction(&prepared).await?;
 
 let submitted = paymaster
-    .sponsor(SponsorSignedTransactionArgs {
-        transaction: signed_transaction,
-        idempotency_key,
-    })
+    .sponsor_with_external_id(
+        SponsorSignedTransactionArgs {
+            transaction: signed_transaction,
+            idempotency_key,
+        },
+        Some("order-42".to_owned()),
+    )
     .await?;
 ```
 
@@ -212,7 +235,9 @@ Prepare with paymaster
 | :--- | :--- | :--- |
 | Both | `network` | `mainnet` or `devnet`; use the same network for wallet and paymaster clients |
 | Balance | `kind` | `api` for transaction sponsorship; `idp` for IdP funding |
+| Sign | `transaction` | Base64 transaction in TypeScript |
 | Sponsor | `transaction` | Signed base64 transaction in TypeScript/Python; native `VersionedTransaction` in Rust |
+| Sign or sponsor one transaction | `externalId` / `external_id` | Optional string supplied by your application, such as an order ID. The paymaster accepts it as request metadata. |
 | Sponsor | `idempotencyKey` / `idempotency_key` | Stable key for this exact transaction; reuse it for retries |
 
 Use the API paymaster's returned address as `feePayer` / `fee_payer` during

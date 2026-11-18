@@ -58,9 +58,12 @@ Response:
 
 `POST /paymaster/sign`
 
+Both sign and sponsor accept `external_id` as an optional string in the request body. You can omit it or supply an application identifier, such as an order ID.
+
 ```json
 {
   "base58_encoded_transaction": "BASE58_TRANSACTION",
+  "external_id": "order-42",
   "network": "devnet"
 }
 ```
@@ -81,6 +84,7 @@ Response:
 ```json
 {
   "base58_encoded_transaction": "BASE58_TRANSACTION",
+  "external_id": "order-42",
   "network": "devnet",
   "idempotencyKey": "sponsor:order_123"
 }
