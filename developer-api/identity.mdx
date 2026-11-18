@@ -5,9 +5,43 @@ sidebarTitle: "Identity"
 
 The Developer SDK registers a Devnet email wallet app using the project API key on your server. The end user verifies their email in the browser using the public IdP routes.
 
+## Project login providers
+
+Any valid server-side project API key can list its project's login providers and enable an eligible one. The setting applies to every app in the project across networks.
+
+### SDK examples
+
+```typescript
+const providers = await swig.idp.listProviders();
+const email = providers.find((provider) => provider.providerKey === "email");
+if (email?.eligible && !email.enabled) {
+  await swig.idp.enableProvider(email.providerKey);
+}
+```
+
+### Endpoints
+
+| Method | Route | Input |
+| :--- | :--- | :--- |
+| `GET` | `/identity/api/providers` | Project scope comes from the API key. |
+| `POST` | `/identity/api/providers/{provider_key}/enable` | Use the provider key returned by the list. Send an empty JSON object. |
+
+### Returned result
+
+The list returns a `providers` array in ProtoJSON. The SDK returns that array directly. Each entry includes `providerKey`, `label`, `enabled` (the project's setting) and `eligible` (the current plan includes it). Activation returns the selected provider with `enabled: true`. Calling it again preserves the project's existing settings. Swig manages upstream provider configuration and credentials.
+
+### Errors
+
+| Code | Meaning |
+| :--- | :--- |
+| `UNAUTHENTICATED` | The project API key is missing, invalid or revoked. |
+| `INVALID_ARGUMENT` | The provider key has an invalid format. |
+| `NOT_FOUND` | The provider is unavailable in this project's catalog. |
+| `PERMISSION_DENIED` | The project plan does not include this provider. |
+
 ## Register an email wallet app
 
-`POST /identity/api/email-wallet-apps/ensure` creates the registration or returns the same client ID when all settings match. Enable the project's email provider first. Use this endpoint once the registration service and the matching Developer SDK are released.
+`POST /identity/api/email-wallet-apps/ensure` creates the registration or returns the same client ID when all settings match. Enable the project's email provider first using `swig.idp.enableProvider("email")`.
 
 ```typescript
 const payer = await swig.paymaster.getBalance({ network: "devnet", kind: "api" });
@@ -100,7 +134,7 @@ Request accounting is covered in [Pricing & quotas](/query).
   doing so leaks a server credential into a client-facing call path.
 - Do not model login as a server-to-server call. The user's client completes the
   flow; your server verifies the result.
-- Organization-provider configuration belongs to the developer portal.
+- A project API key can manage provider enablement through the project login provider endpoints above.
 
 ## What is not here
 
