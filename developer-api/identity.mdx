@@ -7,7 +7,7 @@ The Developer SDK registers a Devnet email wallet app using the project API key 
 
 ## Register an email wallet app
 
-`POST /identity/api/email-wallet-apps/ensure` creates the registration or returns the same client ID when all settings match. Enable the project's email provider first.
+`POST /identity/api/email-wallet-apps/ensure` creates the registration or returns the same client ID when all settings match. Enable the project's email provider first. Use this endpoint once the registration service and the matching Developer SDK are released.
 
 ```typescript
 const payer = await swig.paymaster.getBalance({ network: "devnet", kind: "api" });
@@ -25,9 +25,9 @@ const app = await swig.idp.ensureEmailWalletApp({
 | Input | Meaning |
 | :--- | :--- |
 | `network` | Use `devnet` in the SDK or `NETWORK_DEVNET` in ProtoJSON. |
-| `callbackUrl` | Exact HTTPS browser callback URL. HTTP is supported on localhost and 127.0.0.1. |
-| `walletTemplateId` | Project wallet template with an at-creation owner and an at-creation trading agent with recurring SOL and Devnet USDC limits. |
-| `agentPublicKey` | Public Ed25519 key of the agent. Keep its signing key in your app. |
+| `callbackUrl` | Exact HTTPS browser callback URL with no query string or fragment. HTTP is supported on localhost and 127.0.0.1. |
+| `walletTemplateId` | Project wallet template with one at-creation owner with All and one at-creation agent. Give the agent exactly ProgramAll and recurring SOL and Devnet USDC limits with the same slot window. ProgramAll also permits transfers within these limits. Leave recovery and rent claimer unset. |
+| `agentPublicKey` | Public Ed25519 key of the agent. Keep its signing key in the server-side signer. |
 | `projectPaymasterAddress` | Optional active API paymaster owned by this project. Its Devnet balance covers setup fees and rent, and setup transactions count toward the project's sponsorship allowance. Omit this field to use the dedicated IdP paymaster. |
 
 The response contains the public `clientId`, registered callback, template ID, agent public key and, when selected, project paymaster address. The verified email determines the wallet address before the user approves creation.
@@ -35,6 +35,7 @@ The response contains the public `clientId`, registered callback, template ID, a
 | Error | Meaning |
 | :--- | :--- |
 | `FAILED_PRECONDITION` | The template is incompatible or the selected paymaster is unavailable for this project. |
+| `PERMISSION_DENIED` | The project subscription does not allow this provider. |
 | `NOT_FOUND` | The email provider is unavailable or disabled. |
 | `ALREADY_EXISTS` | The same callback already has different settings or the app is disabled. |
 
@@ -45,7 +46,7 @@ SMS OTP, session handling, and how a completed login becomes a Swig session.
 
 <Warning>
   The currently published IDP SDK defaults still target retired
-  `/identity/api/*` routes and its endpoint model does not fully represent the
+  login routes under `/identity/api/auth/` and its endpoint model does not fully represent the
   public OTP and setup contract below. Treat the route table on this page as
   the current backend contract until the IDP SDK is refreshed.
 </Warning>
