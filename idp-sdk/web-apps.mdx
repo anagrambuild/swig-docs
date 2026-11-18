@@ -69,5 +69,24 @@ const session = await swig.completeOAuthFromUrl(window.location.href);
 - you can pass a custom `storage` adapter
 - `completeOAuthFromUrl()` parses the callback and saves the session
 
-The documented web path today centers on OAuth redirects. Email and SMS OTP
-convenience methods are part of the mobile provider API.
+## Email OTP with an agent role
+
+The browser preview is available from the public SDK source. Use it with the matching scoped email wallet release on your IdP host.
+
+```sh
+npm install --legacy-peer-deps git+https://github.com/anagrambuild/swig-idp-sdk.git#b0204a84ccd840679e56476110654519b7316d9f
+```
+
+Register the Devnet app on your server and supply its public client ID to the browser. Your server creates a single-use state and OIDC nonce for each login. [Email wallet app registration](/developer-api/identity#register-an-email-wallet-app)
+
+```typescript
+const email = swig.auth.email;
+const challenge = await email.start({ email: emailAddress, clientId, state, oidcNonce });
+const result = await email.verify({ challengeId: challenge.challengeId, code });
+if (result.status === "approval_required" && result.wallet) {
+  // Show the derived address and agent limits before the user approves creation.
+  showPreview(result.wallet);
+}
+```
+
+Call `email.approve({ challengeId: challenge.challengeId })` directly from the user's click. A returning user whose agent role already matches can receive `complete` from `verify`. In both cases, verify the returned ID token's signature, issuer, audience, expiry and nonce on your server, and match the state to the initiating browser session.

@@ -3,12 +3,41 @@ title: "Identity Boundary"
 sidebarTitle: "Identity"
 ---
 
-Runtime identity is **not** an API-key Developer API surface. The endpoints that
-start and complete a login are public IdP routes, called by the end user's
-browser or app, not by your server with a Swig API key.
+The Developer SDK registers a Devnet email wallet app using the project API key on your server. The end user verifies their email in the browser using the public IdP routes.
 
-This page exists to mark that boundary so you do not wire identity into a
-server-to-server integration where it does not belong.
+## Register an email wallet app
+
+`POST /identity/api/email-wallet-apps/ensure` creates the registration or returns the same client ID when all settings match. Enable the project's email provider first. Use this endpoint once the registration service and the matching Developer SDK are released.
+
+```typescript
+const payer = await swig.paymaster.getBalance({ network: "devnet", kind: "api" });
+if (!payer.configured) throw new Error("Configure a project API paymaster first");
+
+const app = await swig.idp.ensureEmailWalletApp({
+  network: "devnet",
+  callbackUrl: "http://localhost:4181/auth/callback",
+  walletTemplateId,
+  agentPublicKey,
+  projectPaymasterAddress: payer.address,
+});
+```
+
+| Input | Meaning |
+| :--- | :--- |
+| `network` | Use `devnet` in the SDK or `NETWORK_DEVNET` in ProtoJSON. |
+| `callbackUrl` | Exact HTTPS browser callback URL with no query string or fragment. HTTP is supported on localhost and 127.0.0.1. |
+| `walletTemplateId` | Project wallet template with one at-creation owner with All and one at-creation agent. Give the agent exactly ProgramAll and recurring SOL and Devnet USDC limits with the same slot window. ProgramAll also permits transfers within these limits. Leave recovery and rent claimer unset. |
+| `agentPublicKey` | Public Ed25519 key of the agent. Keep its signing key in the server-side signer. |
+| `projectPaymasterAddress` | Optional active API paymaster owned by this project. Its Devnet balance covers setup fees and rent, and setup transactions count toward the project's sponsorship allowance. Omit this field to use the dedicated IdP paymaster. |
+
+The response contains the public `clientId`, registered callback, template ID, agent public key and, when selected, project paymaster address. The verified email determines the wallet address before the user approves creation.
+
+| Error | Meaning |
+| :--- | :--- |
+| `FAILED_PRECONDITION` | The template is incompatible or the selected paymaster is unavailable for this project. |
+| `PERMISSION_DENIED` | The project subscription does not allow this provider. |
+| `NOT_FOUND` | The email provider is unavailable or disabled. |
+| `ALREADY_EXISTS` | The same callback already has different settings or the app is disabled. |
 
 ## Who owns identity integration
 
@@ -17,7 +46,7 @@ SMS OTP, session handling, and how a completed login becomes a Swig session.
 
 <Warning>
   The currently published IDP SDK defaults still target retired
-  `/identity/api/*` routes and its endpoint model does not fully represent the
+  login routes under `/identity/api/auth/` and its endpoint model does not fully represent the
   public OTP and setup contract below. Treat the route table on this page as
   the current backend contract until the IDP SDK is refreshed.
 </Warning>
@@ -36,7 +65,7 @@ wallet = swig.wallets.from_idp_session(session)
 
 </CodeGroup>
 
-That handoff is the only place identity and the Developer SDK meet.
+Use the returned client ID in the browser email flow. Keep the project API key on the server.
 
 <span id="what-you-can-query" />
 
@@ -71,8 +100,7 @@ Request accounting is covered in [Pricing & quotas](/query).
   doing so leaks a server credential into a client-facing call path.
 - Do not model login as a server-to-server call. The user's client completes the
   flow; your server verifies the result.
-- Identity client and organization-provider configuration is a developer-portal
-  admin flow, not a runtime endpoint.
+- Organization-provider configuration belongs to the developer portal.
 
 ## What is not here
 
