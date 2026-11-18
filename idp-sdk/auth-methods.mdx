@@ -20,9 +20,8 @@ configured IdP.
 Use email OTP when users should verify ownership of an email address without a
 separate OAuth provider flow.
 
-- available in Expo / React Native through `startEmailOtp()`
-- the user enters the address and verification code inside the isolated host
-- the host app does not receive the email address, OTP code, or callback JWT
+- Expo and React Native use `startEmailOtp()`. The user enters their email and code inside the isolated host.
+- Browser apps can provide their own form with `auth.email.start()` and `auth.email.verify()`. The isolated host handles the proof key and approval. [Browser email OTP](/idp-sdk/web-apps#email-otp-with-an-agent-role)
 
 ## SMS OTP
 
