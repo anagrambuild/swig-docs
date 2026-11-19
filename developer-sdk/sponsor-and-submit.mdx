@@ -65,6 +65,8 @@ signed = await swig.transactions.sign(
     network="mainnet",
     external_id="order-42",
 )
+request_id = signed.request_id
+signed_transaction = signed.signed_transaction
 ```
 
 ```rust Rust
@@ -76,6 +78,8 @@ let signed = paymaster
         external_id: Some("order-42".to_owned()),
     })
     .await?;
+let request_id = signed.request_id;
+let signed_transaction = signed.signed_transaction;
 ```
 
 </CodeGroup>
